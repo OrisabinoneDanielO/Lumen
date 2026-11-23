@@ -109,3 +109,25 @@ Chosen with the user: batch 12 builds an AppImage (with linuxdeploy) and leaves 
 ### Tests and stray renderers
 
 Tests start renderers with `--watch-pid=<test pid>`, so a test that crashes or times out cannot leave a renderer playing video in the background (as happened during the batch 9 soak).
+
+## Batch 13: stage display
+
+### Its own render process
+
+The stage display is a second `lumen-render`, started with `--stage` (server `<name>-stage`), not a second window of the audience renderer. A problem on the stage (a crash, a hung driver on that screen) cannot touch the audience output, which is the reason the renderer is separate in the first place. It costs one more process; both are small next to the video they decode.
+
+### Stage state, not a second scene
+
+The operator side sends a stage state (the item and slide on air, the next slide, group, key, notes, arrangement with the current part, a timer, a message, the layout; see `protocol.h`), not the audience layers. The stage renderer draws `render/Stage.qml`, laid out as `design/mockups/Stage.html`, and counts the clock and the timer from its own clock, like the audience timers. The state is sent only when it changes.
+
+### Screens
+
+The operator window is on the primary screen and the audience output on the first other one, so the stage goes on the second other screen; with fewer screens it opens as a window. It is off by default (setting `stage/enabled`) and turned on from the Stage popover (click the Stage light in the toolbar).
+
+### Layouts
+
+Three built-in layouts: Default (the mockup), Lyrics (now and next, large, for singers) and Clock (time and timer, large, for the speaker). The data model's StageLayout (stored widgets) waits for the layout editor in the full editor (batch 16).
+
+### Messages to the stage
+
+A message sent from the Stage popover shows only on the stage, never on the audience output; the audience banner (Message in the toolbar) is separate.

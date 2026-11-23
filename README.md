@@ -47,6 +47,8 @@ Plans and backups: the **Plan** menu above the service plan makes, opens, rename
 
 Timers and messages: **Timers** in the toolbar starts, pauses and resets countdowns (for a set time or to a time of day) and count-up clocks, and shows one in the banner at the top of the output. Countdown slides, such as a pre-service loop, show the time live. The output counts on its own clock, so a timer keeps time even if the operator window stops. **Message** puts a line of text in the banner over the slides ("Parent of 42, please come to the nursery") and keeps recent ones a click away; Clear Msg (F4) takes it down.
 
+Stage display: click **Stage** in the toolbar to turn on a confidence monitor for the musicians and speaker. It shows the slide on air (NOW) and the next one, the group, key, notes and arrangement, the time of day, a timer and a message to the stage only ("Repeat the last verse"). It runs in its own render process on a third screen (a window when there is none), in one of three layouts: Default, Lyrics (now and next, large) or Clock (time and timer, large).
+
 Offline: Lumen makes no network connections. `tests/offline_check.sh` checks this on Linux by tracing the app and its output, and by running them with no network at all.
 
 Linux AppImage: see `packaging/README.md`.

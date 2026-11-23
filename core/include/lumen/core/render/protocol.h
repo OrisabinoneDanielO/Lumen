@@ -41,7 +41,9 @@ namespace lumen::core::render {
 // v3 (batch 8): text content may carry a theme style and a footer.
 // v4 (batch 9): video content; "preload"; video statistics in "status".
 // v5 (batch 12): timer content; "clock" takes "wallMs".
-inline constexpr int protocolVersion = 5;
+// v6 (batch 13): stage displays (lumen-render --stage): "stage" with the
+//     stage state; "texts" (test mode); "status" reports "kind" and "screen".
+inline constexpr int protocolVersion = 6;
 
 // Longest line either side accepts, to bound memory use.
 inline constexpr qsizetype maxLineBytes = 1024 * 1024;

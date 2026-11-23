@@ -94,6 +94,7 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
     const QString author = meta.value(QStringLiteral("author")).toString();
     const QString subtitle = meta.value(QStringLiteral("subtitle")).toString();
     view.subtitle = subtitle.isEmpty() ? author : subtitle;
+    view.key = meta.value(QStringLiteral("key")).toString();
 
     QStringList detail;
     if (!author.isEmpty())

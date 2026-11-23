@@ -12,6 +12,9 @@ Rectangle {
     property string timerSummary
     signal timersRequested()
     signal messageRequested()
+    signal stageRequested()
+    // Whether the stage display is up (batch 13).
+    property bool stageConnected: false
 
     implicitHeight: 58
     color: Theme.panel
@@ -170,8 +173,8 @@ Rectangle {
             }
         }
 
-        // Only the main output exists so far; Stage and Stream (NDI) arrive in
-        // batches 13 and 15, so their lights stay grey.
+        // Main and Stage (batch 13); Stream (NDI) arrives in batch 15, so its
+        // light stays grey.
         Row {
             spacing: 12
             visible: root.width >= 1360
@@ -179,7 +182,7 @@ Rectangle {
             Repeater {
                 model: [
                     { name: qsTr("Main"), connected: root.controller.outputConnected },
-                    { name: qsTr("Stage"), connected: false },
+                    { name: qsTr("Stage"), connected: root.stageConnected },
                     { name: qsTr("Stream (NDI)"), connected: false }
                 ]
 
@@ -205,13 +208,14 @@ Rectangle {
                         font.pixelSize: 12
                         color: Theme.textMuted
                     }
-                    // Main turns the output on and off.
+                    // Main turns the output on and off; Stage opens the stage
+                    // display's settings.
                     TapHandler {
-                        enabled: output.index === 0
-                        onTapped: root.controller.toggleOutput()
+                        enabled: output.index <= 1
+                        onTapped: output.index === 0 ? root.controller.toggleOutput() : root.stageRequested()
                     }
                     HoverHandler {
-                        enabled: output.index === 0
+                        enabled: output.index <= 1
                         cursorShape: Qt.PointingHandCursor
                     }
                 }
