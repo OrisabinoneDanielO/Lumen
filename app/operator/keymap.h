@@ -24,6 +24,7 @@ enum class KeyAction {
     JumpToGroup,   // argument: label prefix, e.g. "Chorus"
     VersePrefix,   // V: the next digit picks a verse
     JumpToSection, // argument: 1-based section number
+    OpenScripture, // Ctrl+B (Cmd+B on macOS)
 };
 
 struct KeyBinding
@@ -32,10 +33,11 @@ struct KeyBinding
     KeyAction action = KeyAction::NextSlide;
     QString group;        // JumpToGroup
     int section = 0;      // JumpToSection
+    Qt::KeyboardModifiers modifiers = Qt::NoModifier;
 };
 
-// The default bindings, as data, so they can be made remappable later. Only
-// unmodified keys are bound, so Ctrl/Alt shortcuts stay free.
+// The default bindings, as data, so they can be made remappable later. Live
+// actions use unmodified keys; Ctrl+B opens scripture search.
 class KeyMap
 {
 public:

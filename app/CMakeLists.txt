@@ -17,6 +17,7 @@ target_link_libraries(lumen PRIVATE
     Lumen::Show
     Lumen::Operator
     Lumen::Songs
+    Lumen::Scripture
     lumen_ui
     lumen_uiplugin
     Qt6::Gui
@@ -27,3 +28,4 @@ include(GNUInstallDirs)
 install(TARGETS lumen
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+add_dependencies(lumen bibles)

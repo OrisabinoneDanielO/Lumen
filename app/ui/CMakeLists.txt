@@ -25,6 +25,7 @@ qt_add_qml_module(lumen_ui
         PreviewLivePanel.qml
         LibraryPanel.qml
         EditorPanel.qml
+        ScripturePanel.qml
     RESOURCES
         # Inter 4.1 (SIL Open Font License 1.1, see fonts/OFL.txt), bundled so
         # the operator UI looks the same on every machine.

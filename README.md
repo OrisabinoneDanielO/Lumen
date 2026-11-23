@@ -35,6 +35,8 @@ In Show mode, click a slide to send it live, or use the keyboard: Space or → n
 
 Songs: **Import songs…** or **Import folder…** in the library reads plain-text lyrics (`.txt`, with or without `Verse 1`/`Chorus` headers) and OpenLyrics (`.xml`). Sections are split into slides of 2 lines (setting `songs/linesPerSlide`; a `---` line forces a break). Search matches the start of words in titles, authors, CCLI numbers and lyrics, ignoring case and accents. Click a song to show it, then **Add to plan**.
 
+Scripture: press **Ctrl+B** (Cmd+B on macOS), type a reference such as `jn 3 16-18`, `rom 8:28-30`, `ps 23` or a translation's own book name (`Johanu 3:16`), pick a translation and press Enter. Ten free Bibles are bundled (English WEB, KJV, BSB and ASV; Yoruba, Hausa, Igbo and Swahili; French LSG; Spanish RV1909); see `bibles/README.md` for their licences. The build imports them into `bibles.db`. Other USFM or USFX Bibles can be added from a folder.
+
 CI (`.github/workflows/ci.yml`) builds and tests on Windows, macOS and Linux with Qt 6.8 LTS.
 
 ## Layout
@@ -47,6 +49,7 @@ plugins/    integrations (SongSelect, NDI, DeckLink, MIDI/OSC)
 bibles/     bundled translation files and their licences
 tests/      unit and integration tests
 packaging/  installers for Windows, macOS, Linux
+tools/      build-time tools (lumen-bible-build)
 docs/       design doc and diagrams
 design/     UI mockups
 ```

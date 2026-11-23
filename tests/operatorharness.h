@@ -5,6 +5,7 @@
 // library the test provides. The song library (search, import) is attached.
 
 #include "operatorcontroller.h"
+#include "scripturecontroller.h"
 #include "servicedata.h"
 
 #include "lumen/core/data/database.h"
@@ -29,6 +30,7 @@ public:
     ~OperatorHarness()
     {
         engine.reset();
+        scripture.reset();
         controller.reset();
         songs.reset();
         m_db.reset();
@@ -61,10 +63,13 @@ public:
         }
         controller->setPlan(plan.value());
         controller->attachLibrary(*m_db, *songs);
+        scripture = std::make_unique<app::ScriptureController>(*controller);
+        scripture->setStores(bibles, nullptr);
 
         engine = std::make_unique<QQmlApplicationEngine>();
         engine->setInitialProperties(
-            {{QStringLiteral("controller"), QVariant::fromValue<QObject *>(controller.get())}});
+            {{QStringLiteral("controller"), QVariant::fromValue<QObject *>(controller.get())},
+             {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(scripture.get())}});
         engine->loadFromModule("Lumen.Ui", "Main");
         if (engine->rootObjects().isEmpty()) {
             *error = QStringLiteral("Main.qml did not load");
@@ -132,8 +137,12 @@ public:
 
     core::data::Database &database() { return *m_db; }
 
+    // Set before load() to give the scripture panel Bibles.
+    core::scripture::BibleStore *bibles = nullptr;
+
     core::show::ShowController show;
     std::unique_ptr<core::songs::SongLibrary> songs;
+    std::unique_ptr<app::ScriptureController> scripture;
     std::unique_ptr<app::OperatorController> controller;
     std::unique_ptr<QQmlApplicationEngine> engine;
     QQuickWindow *window = nullptr;
