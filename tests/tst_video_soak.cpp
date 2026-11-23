@@ -26,7 +26,10 @@ using namespace lumen::core::show;
 // slow decoder) and the run continues; a dropped frame ends it at once.
 //
 // LUMEN_SOAK_SECONDS sets the length (default 120 for routine runs; the
-// reference run uses 7200). LUMEN_REQUIRE_HW=1 also requires every frame to
+// reference run uses 7200). LUMEN_SOAK_SCREEN=<n> plays fullscreen on screen
+// n, as a real output does; by default a window is used, and a window that
+// is covered or on another workspace may stop being drawn (the compositor
+// holds it), which shows up as pauses. LUMEN_REQUIRE_HW=1 also requires every frame to
 // arrive as a GPU texture (hardware decode). LUMEN_SOAK_REPORT names a file
 // to write the result to.
 class TestVideoSoak : public QObject
@@ -43,7 +46,9 @@ private slots:
         RenderLink::Options options;
         options.serverName = QStringLiteral("lumen-soak-") + QUuid::createUuid().toString(QUuid::Id128).left(12);
         options.executable = QStringLiteral(LUMEN_RENDER_PATH);
-        options.arguments = {QStringLiteral("--windowed"), QStringLiteral("--test-mode")};
+        const QString screen = qEnvironmentVariable("LUMEN_SOAK_SCREEN");
+        options.arguments = {screen.isEmpty() ? QStringLiteral("--windowed") : QStringLiteral("--screen=") + screen,
+                             QStringLiteral("--test-mode")};
         RenderLink link(options);
         auto started = link.start();
         QVERIFY2(started.ok(), started.ok() ? "" : qPrintable(started.error().message));
@@ -71,6 +76,9 @@ private slots:
         while (status().value("frames").toInteger() == 0 && waiting.elapsed() < 10000)
             QThread::msleep(50);
         QVERIFY2(status().value("frames").toInteger() > 0, "the video never started");
+        // Starting (opening the window, the first frames) is measured by
+        // tst_video_start; the soak counts from 5 seconds after it.
+        QTest::qWait(5000);
 
         const QStringList lyrics{QStringLiteral("I once was lost, but now am found;\nWas blind, but now I see."),
                                  QStringLiteral("'Twas grace that taught my heart to fear,\nAnd grace my fears relieved;"),
@@ -117,13 +125,13 @@ private slots:
                 qInfo("%s", qPrintable(note));
                 notes << note;
             }
-            if (latest.value("dropped").toInteger() > 0)
+            if (latest.value("dropped").toInteger() > atStart.value("dropped").toInteger())
                 break; // fail fast with the numbers below
         }
         const double elapsed = clock.elapsed() / 1000.0;
         const qint64 frames = latest.value("frames").toInteger() - atStart.value("frames").toInteger();
-        const qint64 dropped = latest.value("dropped").toInteger();
-        const qint64 stalls = latest.value("stalls").toInteger();
+        const qint64 dropped = latest.value("dropped").toInteger() - atStart.value("dropped").toInteger();
+        const qint64 stalls = latest.value("stalls").toInteger() - atStart.value("stalls").toInteger();
         const qint64 loops = latest.value("loops").toInteger();
         const qint64 gpu = latest.value("gpuFrames").toInteger();
         const qint64 total = latest.value("frames").toInteger();
