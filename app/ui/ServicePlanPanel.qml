@@ -452,6 +452,7 @@ Rectangle {
                     SearchField {
                         id: input
                         objectName: "planInput"
+                        inputName: "planInputText"
                         width: parent.width
                         onAccepted: root.acceptInput()
                         onEscaped: root.menuPage = ""

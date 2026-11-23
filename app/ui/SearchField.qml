@@ -7,6 +7,8 @@ Rectangle {
 
     property alias text: input.text
     property string placeholder
+    // Tests find the text input by this name.
+    property string inputName: "searchInput"
     readonly property bool inputFocused: input.activeFocus
     signal escaped()
     signal accepted()
@@ -24,7 +26,7 @@ Rectangle {
 
     TextInput {
         id: input
-        objectName: "searchInput"
+        objectName: root.inputName
         anchors.fill: parent
         anchors.leftMargin: 10
         anchors.rightMargin: 10
