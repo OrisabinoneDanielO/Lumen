@@ -157,3 +157,21 @@ set_tests_properties(tst_plans PROPERTIES TIMEOUT 180)
 # Timers and basic messages (batch 12).
 lumen_add_test(tst_timers tst_timers.cpp operatorharness.h rendercheck.h)
 target_link_libraries(tst_timers PRIVATE lumen_render_lib lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
+
+# The MVP stand-in (batch 12): a whole scripted service on the real renderer
+# with zero output failures. LUMEN_REHEARSAL_SECONDS=3600 for a full hour.
+lumen_add_test(tst_rehearsal tst_rehearsal.cpp operatorharness.h)
+target_link_libraries(tst_rehearsal PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Lumen::RenderLink Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(tst_rehearsal PRIVATE
+    LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>"
+    LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media"
+    LUMEN_DECKS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/decks")
+add_dependencies(tst_rehearsal lumen-render)
+set_tests_properties(tst_rehearsal PROPERTIES TIMEOUT 300)
+
+# Offline check (batch 12, Linux): the app and renderer open no internet
+# sockets, and run with no network at all.
+if(UNIX AND NOT APPLE)
+    add_test(NAME offline_check COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/offline_check.sh $<TARGET_FILE:lumen>)
+    set_tests_properties(offline_check PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60)
+endif()

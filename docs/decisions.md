@@ -79,3 +79,33 @@ A zip archive with `lumen.json` (the plan and its presentations) and the media f
 ### Plan menu
 
 The mockups show no plan controls, so the "+ Add" button in the Service Plan header became a **Plan** menu: New, Open, Rename, Duplicate, Add header, Export, Import, Back up now and Restore. Right-clicking an item moves it, edits its notes or removes it. Notes show under the item in the plan.
+
+## Batch 12: timers, messages, output, AppImage, offline
+
+### What stands in for the MVP gate
+
+The batch's "Done when" is a field trial (10 pilot churches, 4 Sundays, zero output failures) that only people can run. Chosen with the user, the automated stand-in is `tst_rehearsal`: the real operator window drives a real `lumen-render` through a whole service again and again (countdown slide and timer, motion background, every item of the sample service slide by slide, a video, a PowerPoint deck, a message, Logo, Black, Clear All). Any change not on screen within a second, any renderer restart and any dropped video frame is a failure. Routine runs last 90 seconds (about 13 services and 530 changes); `LUMEN_REHEARSAL_SECONDS=3600` runs a full hour. The pilot itself is still the real gate.
+
+### Timers are counted by the renderer
+
+A timer goes to the output as wall-clock times (when a countdown ends, when a count-up started, or the value it is paused at), not as a stream of numbers. The render process works out what to show from its own clock every frame, so a timer keeps time if the operator window freezes, and the UI only sends something when the operator starts, pauses or resets it. Countdowns stop at 0:00. The three default timers are "Service start" (a countdown to 10:00), "Sermon" (30 minutes) and "Elapsed". Whether a timer is running is not saved; after a restart countdowns are back at their full time (countdowns to a time of day are unaffected).
+
+### Messages
+
+Basic messages (this batch) are a line of text in the top banner on the Messages layer, with the last eight kept for reuse. Templates with fields ("Parent of {number}") are batch 14.
+
+### The output is on by default
+
+The audience output starts with the app (setting `output/enabled`, default on; `--no-output` to skip it; the design preview leaves it off unless `--output` is given). The **Main** light in the toolbar turns it off and on.
+
+### Linux AppImage only
+
+Chosen with the user: batch 12 builds an AppImage (with linuxdeploy) and leaves Windows and macOS installers, Flatpak, .deb and .rpm for later. AppImages need a glibc at least as new as the build machine's, so the CI job builds on Ubuntu 22.04. The AppImage has not been built on this laptop yet: running the downloaded linuxdeploy tools needs the user's permission.
+
+### Offline check
+
+`tests/offline_check.sh` (a CTest test on Linux) runs the real app and output under `strace` and fails on any internet socket (`AF_INET`/`AF_INET6`); local sockets for the render link, D-Bus and the display are allowed. It then runs both again in a network namespace with no network at all.
+
+### Tests and stray renderers
+
+Tests start renderers with `--watch-pid=<test pid>`, so a test that crashes or times out cannot leave a renderer playing video in the background (as happened during the batch 9 soak).

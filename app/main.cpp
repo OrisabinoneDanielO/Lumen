@@ -178,7 +178,11 @@ int main(int argc, char *argv[])
     const QCommandLineOption renderOption(QStringLiteral("render-option"),
                                           QStringLiteral("Extra argument for lumen-render (repeatable)."),
                                           QStringLiteral("argument"));
-    parser.addOptions({designPreview, outputOption, noOutputOption, renderServer, renderExecutable, renderOption});
+    // For automated checks (the offline test): quit normally after a while.
+    const QCommandLineOption quitAfter(QStringLiteral("quit-after"),
+                                       QStringLiteral("Quit after <ms> milliseconds (for tests)."),
+                                       QStringLiteral("ms"));
+    parser.addOptions({designPreview, outputOption, noOutputOption, renderServer, renderExecutable, renderOption, quitAfter});
     parser.process(app);
 
     const QSettings settings;
@@ -322,5 +326,7 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("timerController"), QVariant::fromValue<QObject *>(&timerController)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
+    if (parser.isSet(quitAfter))
+        QTimer::singleShot(parser.value(quitAfter).toInt(), &app, &QCoreApplication::quit);
     return QGuiApplication::exec();
 }
