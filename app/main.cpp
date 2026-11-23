@@ -6,6 +6,7 @@
 #include "messagetemplates.h"
 #include "propscontroller.h"
 #include "stagecontroller.h"
+#include "streamcontroller.h"
 #include "timercontroller.h"
 
 #include "lumen/core/buildinfo.h"
@@ -45,6 +46,11 @@ namespace {
 constexpr auto outputEnabledKey = "output/enabled"; // on by default since batch 12
 constexpr auto stageEnabledKey = "stage/enabled";   // off by default (needs a screen)
 constexpr auto stageLayoutKey = "stage/layout";
+constexpr auto streamEnabledKey = "stream/enabled";   // off by default
+constexpr auto streamKeyFillKey = "stream/keyFill";
+constexpr auto streamNdiKey = "stream/ndi";
+constexpr auto streamNdiNameKey = "stream/ndiName";
+constexpr auto experimentalNdiKey = "experimental/ndi"; // untested: off by default
 constexpr auto experimentalEditorKey = "experimental/editor";
 constexpr auto linesPerSlideKey = "songs/linesPerSlide"; // auto-split limit, 2 by default
 constexpr auto backupFolderKey = "backups/folder"; // default: "backups" beside the library
@@ -383,8 +389,81 @@ int main(int argc, char *argv[])
             QSettings().setValue(QLatin1String(stageEnabledKey), on);
     });
 
+    // The stream output (batch 15): Slide and Props on transparency, as key
+    // and fill and/or NDI, from a render process of its own that follows the
+    // show (it never hands its scene back).
+    app::StreamController streamController(settings.value(QLatin1String(experimentalNdiKey), false).toBool());
+    streamController.setKeyFill(settings.value(QLatin1String(streamKeyFillKey), true).toBool());
+    streamController.setNdi(settings.value(QLatin1String(streamNdiKey), false).toBool());
+    streamController.setNdiName(settings.value(QLatin1String(streamNdiNameKey), QStringLiteral("Lumen Presenter")).toString());
+    struct Stream
+    {
+        std::unique_ptr<render::RenderLink> link;
+        std::unique_ptr<show::OutputBridge> bridge;
+    };
+    std::unique_ptr<Stream> stream;
+    const auto stopStream = [&] {
+        if (!stream)
+            return;
+        stream->bridge.reset();
+        (void)stream->link->quit();
+        stream.reset();
+        streamController.setConnected(false);
+    };
+    const auto startStream = [&] {
+        if (stream)
+            return;
+        render::RenderLink::Options options;
+        options.serverName = (parser.value(renderServer).isEmpty() ? render::defaultServerName() : parser.value(renderServer))
+                             + QStringLiteral("-stream");
+        options.executable = parser.value(renderExecutable);
+        options.arguments = streamController.renderArguments();
+        const QList<QScreen *> screens = QGuiApplication::screens();
+        QList<int> others;
+        for (int i = 0; i < screens.size(); ++i) {
+            if (screens.at(i) != QGuiApplication::primaryScreen())
+                others << i;
+        }
+        // Key and fill go fullscreen on two spare screens if there are any
+        // (after the audience output's and the stage's), else in windows.
+        if (streamController.keyFill() && others.size() >= 4)
+            options.arguments << QStringLiteral("--fill-screen=%1").arg(others.at(2)) << QStringLiteral("--key-screen=%1").arg(others.at(3));
+        auto started = std::make_unique<Stream>();
+        started->link = std::make_unique<render::RenderLink>(options);
+        if (auto ok = started->link->start(); !ok.ok()) {
+            streamController.setConnected(false, QObject::tr("The stream output did not start: %1").arg(ok.error().message));
+            return;
+        }
+        started->bridge = std::make_unique<show::OutputBridge>(show, *started->link);
+        started->bridge->follow();
+        auto status = started->link->request({{QStringLiteral("cmd"), QStringLiteral("status")}});
+        stream = std::move(started);
+        streamController.setConnected(true, status.ok() ? status.value().value(QStringLiteral("stream")).toString() : QString());
+    };
+    if (!parser.isSet(designPreview) && settings.value(QLatin1String(streamEnabledKey), false).toBool())
+        startStream();
+    QObject::connect(&streamController, &app::StreamController::toggleRequested, &app, [&](bool on) {
+        on ? startStream() : stopStream();
+        if (!parser.isSet(designPreview))
+            QSettings().setValue(QLatin1String(streamEnabledKey), on);
+    });
+    QObject::connect(&streamController, &app::StreamController::restartRequested, &app, [&] {
+        stopStream();
+        startStream();
+    });
+    QObject::connect(&streamController, &app::StreamController::changed, &app, [&] {
+        if (parser.isSet(designPreview))
+            return;
+        QSettings stored;
+        stored.setValue(QLatin1String(streamKeyFillKey), streamController.keyFill());
+        stored.setValue(QLatin1String(streamNdiKey), streamController.ndi());
+        stored.setValue(QLatin1String(streamNdiNameKey), streamController.ndiName());
+    });
+
     // A normal quit closes the outputs; a crash leaves them showing.
-    QObject::connect(&app, &QCoreApplication::aboutToQuit, [&output, &stage] {
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, [&output, &stage, &stream] {
+        if (stream)
+            (void)stream->link->quit();
         if (stage)
             (void)stage->quit();
         if (output)
@@ -401,7 +480,8 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("timerController"), QVariant::fromValue<QObject *>(&timerController)},
                                  {QStringLiteral("stageController"), QVariant::fromValue<QObject *>(&stageController)},
                                  {QStringLiteral("propsController"), QVariant::fromValue<QObject *>(&propsController)},
-                                 {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(&messageTemplates)}});
+                                 {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(&messageTemplates)},
+                                 {QStringLiteral("streamController"), QVariant::fromValue<QObject *>(&streamController)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     if (parser.isSet(quitAfter))

@@ -187,7 +187,10 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
                         {QStringLiteral("timing"), timingJson},
                         {QStringLiteral("presentedSequence"), qint64(m_output.presentedSequence())},
                         {QStringLiteral("pid"), QCoreApplication::applicationPid()},
-                        {QStringLiteral("kind"), m_output.kind() == OutputWindow::Kind::Stage ? QStringLiteral("stage") : QStringLiteral("audience")},
+                        {QStringLiteral("kind"), m_output.kind() == OutputWindow::Kind::Stage    ? QStringLiteral("stage")
+                                                 : m_output.kind() == OutputWindow::Kind::Stream ? QStringLiteral("stream")
+                                                                                                 : QStringLiteral("audience")},
+                        {QStringLiteral("stream"), m_output.streamStatus()},
                         {QStringLiteral("screen"), m_output.screenName()},
                         {QStringLiteral("server"), m_server.serverName()}});
     }

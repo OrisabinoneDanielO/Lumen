@@ -26,6 +26,13 @@ Result<Scene> OutputBridge::attach()
     return *onAir;
 }
 
+void OutputBridge::follow()
+{
+    connect(&m_controller, &ShowController::sceneChanged, this, &OutputBridge::push,
+            Qt::UniqueConnection);
+    push(m_controller.scene());
+}
+
 void OutputBridge::preload(const QString &videoPath)
 {
     if (auto sent = m_link.send({{QStringLiteral("cmd"), QStringLiteral("preload")},

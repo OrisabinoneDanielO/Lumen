@@ -51,6 +51,8 @@ Props: **Props** in the toolbar keeps lower thirds (a name and a title) and logo
 
 Stage display: click **Stage** in the toolbar to turn on a confidence monitor for the musicians and speaker. It shows the slide on air (NOW) and the next one, the group, key, notes and arrangement, the time of day, a timer and a message to the stage only ("Repeat the last verse"). It runs in its own render process on a third screen (a window when there is none), in one of three layouts: Default, Lyrics (now and next, large) or Clock (time and timer, large).
 
+Stream output: click **Stream** in the toolbar for an output with only the slide text and props, on transparency, for streaming software and video switchers. It shows as key and fill (the picture over black and its transparency as grey, in two windows, or fullscreen on two spare screens) for switchers that take key and fill over HDMI. NDI is experimental (setting `experimental/ndi`): with the free NDI Runtime installed (from ndi.video) the stream is sent as an NDI source with its transparency. Nothing from NDI ships with Lumen. SDI cards (DeckLink) are not supported yet.
+
 Offline: Lumen makes no network connections. `tests/offline_check.sh` checks this on Linux by tracing the app and its output, and by running them with no network at all.
 
 Linux AppImage: see `packaging/README.md`.

@@ -43,7 +43,9 @@ namespace lumen::core::render {
 // v5 (batch 12): timer content; "clock" takes "wallMs".
 // v6 (batch 13): stage displays (lumen-render --stage): "stage" with the
 //     stage state; "texts" (test mode); "status" reports "kind" and "screen".
-inline constexpr int protocolVersion = 6;
+// v7 (batch 15): stream outputs (lumen-render --stream): "status" kind
+//     "stream" and "stream" (where its frames go).
+inline constexpr int protocolVersion = 7;
 
 // Longest line either side accepts, to bound memory use.
 inline constexpr qsizetype maxLineBytes = 1024 * 1024;

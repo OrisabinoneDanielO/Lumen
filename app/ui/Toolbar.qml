@@ -14,6 +14,8 @@ Rectangle {
     signal messageRequested()
     signal stageRequested()
     signal propsRequested()
+    signal streamRequested()
+    property bool streamConnected: false
     // Whether the stage display is up (batch 13).
     property bool stageConnected: false
 
@@ -179,8 +181,8 @@ Rectangle {
             }
         }
 
-        // Main and Stage (batch 13); Stream (NDI) arrives in batch 15, so its
-        // light stays grey.
+        // Main, Stage (batch 13) and Stream (batch 15): click Main to turn
+        // the output off or on, Stage or Stream for their settings.
         Row {
             spacing: 12
             visible: root.width >= 1360
@@ -189,7 +191,7 @@ Rectangle {
                 model: [
                     { name: qsTr("Main"), connected: root.controller.outputConnected },
                     { name: qsTr("Stage"), connected: root.stageConnected },
-                    { name: qsTr("Stream (NDI)"), connected: false }
+                    { name: qsTr("Stream"), connected: root.streamConnected }
                 ]
 
                 delegate: Row {
@@ -217,11 +219,10 @@ Rectangle {
                     // Main turns the output on and off; Stage opens the stage
                     // display's settings.
                     TapHandler {
-                        enabled: output.index <= 1
-                        onTapped: output.index === 0 ? root.controller.toggleOutput() : root.stageRequested()
+                        onTapped: output.index === 0 ? root.controller.toggleOutput()
+                                  : output.index === 1 ? root.stageRequested() : root.streamRequested()
                     }
                     HoverHandler {
-                        enabled: output.index <= 1
                         cursorShape: Qt.PointingHandCursor
                     }
                 }

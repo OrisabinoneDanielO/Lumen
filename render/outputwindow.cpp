@@ -1,6 +1,8 @@
 #include "outputwindow.h"
 
 #include <QCursor>
+#include <QQuickRenderControl>
+#include <QQuickRenderTarget>
 #include <QFontDatabase>
 #include <QGuiApplication>
 #include <QQuickItem>
@@ -30,11 +32,89 @@ OutputWindow::OutputWindow(Kind kind, QObject *parent) : QObject(parent), m_kind
     connect(&m_tick, &QTimer::timeout, this, &OutputWindow::tick);
 }
 
-OutputWindow::~OutputWindow() = default;
+OutputWindow::~OutputWindow()
+{
+    // The QML items go before the window that shows them.
+    if (m_offscreen)
+        m_engine.clearComponentCache();
+}
+
+void OutputWindow::setStreamFormat(QSize size, int fps)
+{
+    if (size.isValid())
+        m_streamSize = size;
+    if (fps > 0)
+        m_streamFps = fps;
+}
+
+bool OutputWindow::createStream()
+{
+    // Drawn by Qt Quick's software renderer straight into a picture with an
+    // alpha channel: the stream shows text and pictures (Slide and Props),
+    // never video, so this is cheap, and the frames are where NDI and key and
+    // fill need them, in memory.
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::Software);
+    QQuickWindow::setSceneGraphBackend(QStringLiteral("software"));
+    m_control = std::make_unique<QQuickRenderControl>();
+    m_offscreen = std::make_unique<QQuickWindow>(m_control.get());
+    m_offscreen->setColor(Qt::transparent);
+    m_offscreen->resize(m_streamSize);
+    m_offscreen->contentItem()->setSize(m_streamSize);
+
+    m_engine.setInitialProperties({{QStringLiteral("scene"), QVariant::fromValue<QObject *>(&m_model)}});
+    m_engine.loadFromModule("Lumen.Render", "StreamScene");
+    auto *root = m_engine.rootObjects().isEmpty() ? nullptr : qobject_cast<QQuickItem *>(m_engine.rootObjects().constFirst());
+    if (!root) {
+        qWarning("lumen-render: the stream scene did not load");
+        return false;
+    }
+    root->setParentItem(m_offscreen->contentItem());
+    root->setSize(m_streamSize);
+
+    m_frame = QImage(m_streamSize, QImage::Format_ARGB32_Premultiplied);
+    m_frame.fill(Qt::transparent);
+    m_offscreen->setRenderTarget(QQuickRenderTarget::fromPaintDevice(&m_frame));
+    // The software renderer draws into the picture directly; initialize()
+    // is only for the GPU (QRhi) renderers.
+    const bool software = QQuickWindow::sceneGraphBackend() == QLatin1String("software");
+    if (!software && !m_control->initialize()) {
+        qWarning("lumen-render: the stream renderer could not start (%s)", qPrintable(QQuickWindow::sceneGraphBackend()));
+        return false;
+    }
+    connect(m_control.get(), &QQuickRenderControl::renderRequested, this, [this] { m_dirty = true; });
+    connect(m_control.get(), &QQuickRenderControl::sceneChanged, this, [this] { m_dirty = true; });
+    m_window = m_offscreen.get();
+    m_tick.setInterval(1000 / m_streamFps);
+    m_tick.start();
+    return true;
+}
+
+void OutputWindow::renderStream()
+{
+    if (!m_dirty)
+        return;
+    m_dirty = false;
+    m_syncedSequence = m_model.scene().sequence;
+    // No clearing here: the software renderer repaints only what changed
+    // (clearing those parts to the window's transparent colour itself).
+    const bool software = QQuickWindow::sceneGraphBackend() == QLatin1String("software");
+    m_control->polishItems();
+    if (!software)
+        m_control->beginFrame();
+    m_control->sync();
+    m_control->render();
+    if (!software)
+        m_control->endFrame();
+    m_presentedSequence = m_syncedSequence.load();
+    ++m_frames;
+    emit streamFrame(m_frame);
+}
 
 bool OutputWindow::create()
 {
     core::show::registerOutputFonts();
+    if (m_kind == Kind::Stream)
+        return createStream();
     if (m_kind == Kind::Stage) {
         for (const char *file : {"Inter-Regular", "Inter-Medium", "Inter-SemiBold", "Inter-Bold"})
             QFontDatabase::addApplicationFont(QStringLiteral(":/lumen/stage/fonts/%1.ttf").arg(QLatin1String(file)));
@@ -80,6 +160,10 @@ void OutputWindow::tick()
     }
     m_lastTickMs = now;
     m_model.update(m_clock.now());
+    if (m_kind == Kind::Stream) {
+        renderStream();
+        return;
+    }
     watchVideos();
     if (m_window)
         m_window->update();
@@ -169,7 +253,7 @@ int OutputWindow::videosPlaying() const
 
 void OutputWindow::place(QScreen *screen, bool fullscreen, QSize windowedSize)
 {
-    if (!m_window)
+    if (!m_window || m_kind == Kind::Stream) // drawn off screen
         return;
     if (screen)
         m_window->setScreen(screen);
@@ -197,7 +281,8 @@ void OutputWindow::setScene(const core::show::Scene &scene)
 {
     m_sceneAtMs = m_since.elapsed();
     m_model.apply(scene, m_clock.now());
-    if (m_window)
+    m_dirty = true;
+    if (m_window && m_kind != Kind::Stream)
         m_window->update();
 }
 
@@ -212,7 +297,8 @@ bool OutputWindow::advanceClock(qint64 ms)
         return false;
     m_clock.advance(ms);
     m_model.update(m_clock.now());
-    if (m_window)
+    m_dirty = true;
+    if (m_window && m_kind != Kind::Stream)
         m_window->update();
     return true;
 }
@@ -246,6 +332,10 @@ QString OutputWindow::screenName() const
 
 QImage OutputWindow::grab()
 {
+    if (m_kind == Kind::Stream) {
+        renderStream(); // if anything changed since the last frame
+        return m_frame.copy();
+    }
     return m_window ? m_window->grabWindow() : QImage();
 }
 
