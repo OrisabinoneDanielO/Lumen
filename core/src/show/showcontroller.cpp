@@ -25,6 +25,14 @@ void ShowController::setContent(Layer layer, const Content &content)
     commit(next);
 }
 
+void ShowController::setContents(const std::vector<std::pair<Layer, Content>> &changes)
+{
+    Scene next = m_scene;
+    for (const auto &[layer, content] : changes)
+        next.layer(layer).content = content;
+    commit(next);
+}
+
 void ShowController::clear(Layer layer)
 {
     setContent(layer, Content::empty());

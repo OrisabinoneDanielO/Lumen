@@ -4,6 +4,9 @@
 
 #include <QObject>
 
+#include <utility>
+#include <vector>
+
 namespace lumen::core::show {
 
 // Owns what is on air. Every change produces a new Scene with a higher
@@ -20,6 +23,9 @@ public:
     const Scene &scene() const { return m_scene; }
 
     void setContent(Layer layer, const Content &content);
+    // Several layers in one change (one snapshot), e.g. a themed slide and
+    // its background, so no frame shows one without the other.
+    void setContents(const std::vector<std::pair<Layer, Content>> &changes);
     void clear(Layer layer);
     // Empties all six layers. Logo and Black are separate controls and stay
     // as they are.

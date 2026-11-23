@@ -6,6 +6,7 @@
 // same user can open. Every request gets exactly one reply line, in order. A
 // request may carry an "id", which its reply echoes.
 //
+// (Examples show v2; the current version is protocolVersion.)
 //   {"v":2,"cmd":"scene","scene":{...}}  -> {"v":2,"ok":true}
 //       The whole on-air scene (lumen/core/show/scene.h). Snapshots with a
 //       sequence lower than the one on screen are refused as stale.
@@ -30,7 +31,8 @@
 
 namespace lumen::core::render {
 
-inline constexpr int protocolVersion = 2;
+// v3 (batch 8): text content may carry a theme style and a footer.
+inline constexpr int protocolVersion = 3;
 
 // Longest line either side accepts, to bound memory use.
 inline constexpr qsizetype maxLineBytes = 1024 * 1024;

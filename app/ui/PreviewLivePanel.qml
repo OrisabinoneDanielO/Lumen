@@ -43,6 +43,9 @@ Rectangle {
                     objectName: "previewFrame"
                     width: parent.width
                     text: root.controller.previewText
+                    slideStyle: root.controller.previewStyle
+                    footer: root.controller.previewFooter
+                    background: root.controller.previewBackground
                     frameColor: Theme.next
                 }
             }
@@ -73,6 +76,9 @@ Rectangle {
                     objectName: "liveFrame"
                     width: parent.width
                     text: root.controller.liveText
+                    slideStyle: root.controller.liveStyle
+                    footer: root.controller.liveFooter
+                    background: root.controller.liveBackground
                     frameColor: Theme.live
                     frameWidth: 3
                     fontSize: 15

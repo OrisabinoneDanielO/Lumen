@@ -40,6 +40,13 @@ class OperatorController : public QObject
     Q_PROPERTY(QString liveText READ liveText NOTIFY stateChanged)
     Q_PROPERTY(QString previewText READ previewText NOTIFY stateChanged)
     Q_PROPERTY(QString liveLabel READ liveLabel NOTIFY stateChanged)
+    // How the Preview and Live frames draw their slides (batch 8 themes).
+    Q_PROPERTY(QVariantMap previewStyle READ previewStyle NOTIFY stateChanged)
+    Q_PROPERTY(QString previewFooter READ previewFooter NOTIFY stateChanged)
+    Q_PROPERTY(QColor previewBackground READ previewBackground NOTIFY stateChanged)
+    Q_PROPERTY(QVariantMap liveStyle READ liveStyle NOTIFY stateChanged)
+    Q_PROPERTY(QString liveFooter READ liveFooter NOTIFY stateChanged)
+    Q_PROPERTY(QColor liveBackground READ liveBackground NOTIFY stateChanged)
     Q_PROPERTY(QVariantList layers READ layers NOTIFY stateChanged)
     Q_PROPERTY(bool logoOn READ logoOn NOTIFY stateChanged)
     Q_PROPERTY(bool blackOn READ blackOn NOTIFY stateChanged)
@@ -78,6 +85,12 @@ public:
     QString liveText() const;
     QString previewText() const;
     QString liveLabel() const;
+    QVariantMap previewStyle() const;
+    QString previewFooter() const;
+    QColor previewBackground() const;
+    QVariantMap liveStyle() const;
+    QString liveFooter() const;
+    QColor liveBackground() const;
     QVariantList layers() const;
     bool logoOn() const { return m_show.scene().logo; }
     bool blackOn() const { return m_show.scene().black; }
@@ -103,6 +116,9 @@ public:
     // Shows an item that is not in the plan or song list (e.g. a scripture
     // passage) in the slide grid, ready to send live.
     bool showItem(ItemView item);
+    // Re-applies themes to every item after a theme changed (what is on
+    // screen now is left alone; the next slide sent uses the new look).
+    void refreshThemes();
     core::data::Database *database() const { return m_db; }
     // Imports song files and folders; returns the summary line.
     Q_INVOKABLE QString importSongs(const QList<QUrl> &urls);

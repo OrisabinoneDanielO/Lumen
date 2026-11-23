@@ -1,5 +1,7 @@
 #include "operatorcontroller.h"
 
+#include "themes.h"
+
 #include "lumen/core/data/repository.h"
 
 #include <QFileInfo>
@@ -101,6 +103,28 @@ bool OperatorController::showItem(ItemView item)
     m_current = libraryItem;
     showSelected();
     return true;
+}
+
+void OperatorController::refreshThemes()
+{
+    if (!m_db)
+        return;
+    auto restyle = [this](ItemView &item) {
+        if (item.presentationId.isEmpty() || item.presentationId.startsWith(QLatin1String("scripture:")))
+            return;
+        auto presentation = core::data::Repository<core::data::Presentation>(*m_db).get(item.presentationId);
+        if (!presentation.ok())
+            return;
+        if (const auto theme = themeFor(*m_db, presentation.value()))
+            applyTheme(item, theme->style, theme->background);
+    };
+    if (m_plan) {
+        for (ItemView &item : m_plan->items)
+            restyle(item);
+    }
+    if (m_librarySong)
+        restyle(*m_librarySong);
+    emit stateChanged();
 }
 
 bool OperatorController::addSongToPlan(int row)
@@ -266,6 +290,48 @@ QString OperatorController::previewText() const
     return view && index >= 0 ? view->slides[std::size_t(index)].text : QString();
 }
 
+QVariantMap OperatorController::previewStyle() const
+{
+    const ItemView *view = selected();
+    const int index = previewSlide();
+    if (!view || index < 0 || !view->style)
+        return {};
+    return styleWithSize(*view->style, view->slides[std::size_t(index)].fontSize).toVariantMap();
+}
+
+QString OperatorController::previewFooter() const
+{
+    const ItemView *view = selected();
+    const int index = previewSlide();
+    return view && index >= 0 ? view->slides[std::size_t(index)].footer : QString();
+}
+
+QColor OperatorController::previewBackground() const
+{
+    const ItemView *view = selected();
+    if (view) {
+        if (const auto background = backgroundContent(view->background); background && background->kind == Content::Kind::Colour)
+            return background->colour;
+    }
+    return QColor(0x14, 0x21, 0x3D);
+}
+
+QVariantMap OperatorController::liveStyle() const
+{
+    return m_show.scene().layer(Layer::Slide).content.style.toVariantMap();
+}
+
+QString OperatorController::liveFooter() const
+{
+    return m_show.scene().layer(Layer::Slide).content.footer;
+}
+
+QColor OperatorController::liveBackground() const
+{
+    const Content &background = m_show.scene().layer(Layer::Background).content;
+    return background.kind == Content::Kind::Colour ? background.colour : QColor(0x14, 0x21, 0x3D);
+}
+
 QString OperatorController::liveLabel() const
 {
     return m_onAir ? m_positionLabel : tr("Clear");
@@ -347,11 +413,20 @@ bool OperatorController::goLive(int index)
     m_positionSlide = index;
     m_positionLabel = tr("%1 · slide %2").arg(view->slides[std::size_t(index)].group).arg(index + 1);
     m_onAir = true;
-    const Content content = Content::textContent(view->slides[std::size_t(index)].text);
-    if (m_show.scene().layer(Layer::Slide).content == content)
+    const SlideView &slide = view->slides[std::size_t(index)];
+
+    const Content content = view->style
+                                ? Content::styledText(slide.text, styleWithSize(*view->style, slide.fontSize), slide.footer)
+                                : Content::textContent(slide.text);
+    // A themed item brings its background with it, in the same change.
+    std::vector<std::pair<Layer, Content>> changes{{Layer::Slide, content}};
+    if (const auto background = backgroundContent(view->background))
+        changes.push_back({Layer::Background, *background});
+
+    const quint64 before = m_show.scene().sequence;
+    m_show.setContents(changes);
+    if (m_show.scene().sequence == before)
         emit stateChanged(); // same text, new position (e.g. a repeated chorus)
-    else
-        m_show.setContent(Layer::Slide, content);
     return true;
 }
 

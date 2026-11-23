@@ -6,7 +6,10 @@
 #include <QScreen>
 #include <QtQml/qqmlextensionplugin.h>
 
+#include "lumen/core/show/textstyle.h"
+
 Q_IMPORT_QML_PLUGIN(Lumen_RenderPlugin)
+Q_IMPORT_QML_PLUGIN(Lumen_SlidesPlugin)
 
 namespace lumen::render {
 
@@ -23,6 +26,7 @@ OutputWindow::~OutputWindow() = default;
 
 bool OutputWindow::create()
 {
+    core::show::registerOutputFonts();
     m_engine.setInitialProperties({{QStringLiteral("scene"), QVariant::fromValue<QObject *>(&m_model)}});
     m_engine.loadFromModule("Lumen.Render", "Output");
     if (m_engine.rootObjects().isEmpty())

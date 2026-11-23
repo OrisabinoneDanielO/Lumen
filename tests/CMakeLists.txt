@@ -97,3 +97,13 @@ target_compile_definitions(tst_scripture_bundled PRIVATE
     LUMEN_BIBLES_DB="${LUMEN_BIBLES_DB}"
     LUMEN_BIBLES_MANIFEST="${CMAKE_SOURCE_DIR}/bibles/manifest.json")
 add_dependencies(tst_scripture_bundled bibles)
+
+# Themes (batch 8). Done when: long verses fit; diacritics render correctly.
+lumen_add_test(tst_theme_fit tst_theme_fit.cpp)
+target_link_libraries(tst_theme_fit PRIVATE lumen_render_lib Lumen::Operator Qt6::QuickTest)
+target_compile_definitions(tst_theme_fit PRIVATE LUMEN_BIBLES_DB="${LUMEN_BIBLES_DB}")
+add_dependencies(tst_theme_fit bibles)
+set_tests_properties(tst_theme_fit PROPERTIES TIMEOUT 180)
+
+lumen_add_test(tst_themes tst_themes.cpp operatorharness.h)
+target_link_libraries(tst_themes PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)

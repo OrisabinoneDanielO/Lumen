@@ -6,10 +6,12 @@ add_library(lumen_core STATIC
     include/lumen/core/result.h
     include/lumen/core/render/protocol.h
     include/lumen/core/show/scene.h
+    include/lumen/core/show/textstyle.h
     include/lumen/core/textfold.h
     src/buildinfo.cpp
     src/render/protocol.cpp
     src/show/scene.cpp
+    src/show/textstyle.cpp
     src/textfold.cpp
 )
 add_library(Lumen::Core ALIAS lumen_core)
@@ -19,6 +21,19 @@ target_compile_definitions(lumen_core PRIVATE LUMEN_VERSION="${PROJECT_VERSION}"
 target_link_libraries(lumen_core
     PUBLIC Qt6::Core Qt6::Gui
     PRIVATE lumen_warnings)
+
+# Output fonts: Noto Sans and Noto Serif (SIL OFL 1.1, see fonts/OFL.txt),
+# used by the renderer to draw and by the UI to fit text the same way.
+qt_add_resources(lumen_core "output_fonts"
+    PREFIX "/lumen/fonts"
+    BASE fonts
+    FILES
+        fonts/NotoSans-Regular.ttf
+        fonts/NotoSans-Bold.ttf
+        fonts/NotoSerif-Regular.ttf
+        fonts/NotoSerif-Bold.ttf
+        fonts/OFL.txt
+)
 
 # Data layer: SQLite schema, migrations and repositories.
 add_library(lumen_data STATIC
@@ -91,4 +106,5 @@ qt_add_resources(lumen_data "lumen_migrations"
     FILES
         src/data/migrations/0001_initial.sql
         src/data/migrations/0002_song_search.sql
+        src/data/migrations/0003_default_themes.sql
 )
