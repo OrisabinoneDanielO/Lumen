@@ -208,3 +208,12 @@ Status Database::migrate()
 }
 
 } // namespace lumen::core::data
+
+namespace lumen::core::data {
+
+Status Database::inTransaction(const std::function<Status()> &work)
+{
+    return detail::inTransaction(connection(), work);
+}
+
+} // namespace lumen::core::data

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.9">
+  <properties>
+    <titles>
+      <title lang="en">Praise to the Lord, the Almighty</title>
+      <title lang="de">Lobe den Herren</title>
+    </titles>
+    <authors>
+      <author>Joachim Neander</author>
+      <author type="translation" lang="en">Catherine Winkworth</author>
+    </authors>
+  </properties>
+  <lyrics>
+    <verse name="v1" lang="en">
+      <lines><chord root="F">Praise</chord> to the Lord, the Almighty, the King of creation!<br/>O my soul, praise Him, for He is thy health and salvation!<br/>All ye who hear,<br/>Now to His temple draw near;<br/>Praise Him in glad adoration.</lines>
+    </verse>
+    <verse name="v1" lang="de">
+      <lines>Lobe den Herren, den mächtigen König der Ehren,<br/>lob ihn, o Seele, vereint mit den himmlischen Chören.</lines>
+    </verse>
+  </lyrics>
+</song>

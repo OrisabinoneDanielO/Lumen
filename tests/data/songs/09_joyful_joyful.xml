@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.9">
+  <properties>
+    <titles><title>Joyful, Joyful, We Adore Thee</title></titles>
+    <authors><author>Henry van Dyke</author></authors>
+    <key>G</key>
+    <tempo type="bpm">96</tempo>
+  </properties>
+  <lyrics>
+    <verse name="v1">
+      <lines><chord name="G"/>Joyful, joyful, <chord name="C"/>we adore Thee,<br/><chord name="D"/>God of glory, Lord of love;<br/>Hearts unfold like flowers before Thee,<br/>Opening to the sun above.</lines>
+    </verse>
+  </lyrics>
+</song>

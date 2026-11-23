@@ -33,7 +33,8 @@ struct ArrangementChip
 
 struct ItemView
 {
-    QString planItemId;
+    QString planItemId;     // empty for a song shown from the library
+    QString presentationId; // empty for a header
     QString kind;     // "SONG", "BIBLE", "SLIDES", "MEDIA", "TIMER"; empty for a header
     QString title;
     QString subtitle; // under the title in the plan
@@ -56,6 +57,7 @@ struct SongRow
     QString author;
     QString copyright;
     QString key;
+    QString presentationId;
 };
 
 // Colour for a group with none set: verses blue, choruses red, bridges
@@ -66,6 +68,11 @@ QColor defaultGroupColour(const QString &label);
 QString groupAbbreviation(const QString &label);
 
 core::Result<PlanView> loadPlan(core::data::Database &db, const QString &planId);
+
+// One presentation as a plan row would show it, in the given arrangement (or
+// its default). Used for songs shown straight from the library.
+core::Result<ItemView> loadPresentationView(core::data::Database &db, const QString &presentationId,
+                                            const QString &arrangementId = {});
 
 // The plan with the latest date, or nothing if there are no plans.
 core::Result<std::optional<PlanView>> loadLatestPlan(core::data::Database &db);

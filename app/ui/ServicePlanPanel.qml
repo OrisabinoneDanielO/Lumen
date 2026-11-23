@@ -131,7 +131,7 @@ Rectangle {
         anchors.centerIn: parent
         width: parent.width - 48
         visible: root.controller.plan.count === 0
-        text: qsTr("No items yet. Drag songs, scripture and media here from the library.")
+        text: qsTr("No items yet. Pick a song in the library below and choose Add to plan.")
         wrapMode: Text.WordWrap
         horizontalAlignment: Text.AlignHCenter
         color: Theme.textMuted
