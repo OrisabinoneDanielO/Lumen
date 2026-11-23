@@ -107,4 +107,5 @@ qt_add_resources(lumen_data "lumen_migrations"
         src/data/migrations/0001_initial.sql
         src/data/migrations/0002_song_search.sql
         src/data/migrations/0003_default_themes.sql
+        src/data/migrations/0004_props.sql
 )

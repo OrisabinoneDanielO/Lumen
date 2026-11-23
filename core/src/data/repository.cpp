@@ -165,6 +165,15 @@ struct EnumNames<TimerMode>
     }};
 };
 
+template <>
+struct EnumNames<PropKind>
+{
+    static constexpr std::array<std::pair<PropKind, const char *>, 2> items{{
+        {PropKind::LowerThird, "lower_third"},
+        {PropKind::Bug, "bug"},
+    }};
+};
+
 template <typename E>
 QString enumText(E value)
 {
@@ -516,6 +525,21 @@ struct Table<Timer>
     }
 };
 
+template <>
+struct Table<Prop>
+{
+    static constexpr const char *name = "props";
+    static constexpr const char *parentWhere = nullptr;
+    static constexpr const char *orderBy = "kind, name, id";
+    static QStringList columns() { return {"name", "kind", "data"}; }
+    static QVariantList values(const Prop &e) { return {e.name, enumText(e.kind), jsonText(e.data)}; }
+    static Prop read(const QSqlQuery &q)
+    {
+        return {q.value(0).toString(), q.value(1).toString(), enumFrom(q.value(2), PropKind::LowerThird),
+                objectFrom(q.value(3))};
+    }
+};
+
 // Entities with rows in a second table (only Arrangement today).
 template <typename T>
 concept HasChildRows = requires(QSqlDatabase db, const T &in, T &out) {
@@ -697,5 +721,6 @@ template class Repository<Output>;
 template class Repository<StageLayout>;
 template class Repository<Message>;
 template class Repository<Timer>;
+template class Repository<Prop>;
 
 } // namespace lumen::core::data

@@ -30,6 +30,7 @@ qt_add_qml_module(lumen_ui
         TimersPopover.qml
         MessagePopover.qml
         StagePopover.qml
+        PropsPopover.qml
     RESOURCES
         # Inter 4.1 (SIL Open Font License 1.1, see fonts/OFL.txt), bundled so
         # the operator UI looks the same on every machine.

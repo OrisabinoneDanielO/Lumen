@@ -182,3 +182,9 @@ lumen_add_test(tst_stage tst_stage.cpp operatorharness.h rendercheck.h)
 target_link_libraries(tst_stage PRIVATE lumen_render_lib lumen_ui lumen_uiplugin Lumen::Operator Lumen::RenderLink Qt6::Quick Qt6::QuickTest)
 target_compile_definitions(tst_stage PRIVATE LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>")
 add_dependencies(tst_stage lumen-render)
+
+# Props, lower thirds and messages with fields (batch 14). Done when: props
+# persist across slides and clear independently.
+lumen_add_test(tst_props tst_props.cpp operatorharness.h rendercheck.h)
+target_link_libraries(tst_props PRIVATE lumen_render_lib lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(tst_props PRIVATE LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")

@@ -3,6 +3,8 @@
 #include "servicedata.h"
 #include "themecontroller.h"
 #include "themes.h"
+#include "messagetemplates.h"
+#include "propscontroller.h"
 #include "stagecontroller.h"
 #include "timercontroller.h"
 
@@ -287,6 +289,10 @@ int main(int argc, char *argv[])
     app::ThemeController themeController(controller);
     app::TimerController timerController(controller, show);
     timerController.attach(*library);
+    app::PropsController propsController(show);
+    propsController.attach(*library);
+    app::MessageTemplates messageTemplates(controller);
+    messageTemplates.attach(*library);
     themeController.attach(*library);
 
     // Media: thumbnails go beside the library (a temporary folder for the
@@ -393,7 +399,9 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(&scriptureController)},
                                  {QStringLiteral("themes"), QVariant::fromValue<QObject *>(&themeController)},
                                  {QStringLiteral("timerController"), QVariant::fromValue<QObject *>(&timerController)},
-                                 {QStringLiteral("stageController"), QVariant::fromValue<QObject *>(&stageController)}});
+                                 {QStringLiteral("stageController"), QVariant::fromValue<QObject *>(&stageController)},
+                                 {QStringLiteral("propsController"), QVariant::fromValue<QObject *>(&propsController)},
+                                 {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(&messageTemplates)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     if (parser.isSet(quitAfter))

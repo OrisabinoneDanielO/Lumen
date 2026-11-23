@@ -361,6 +361,17 @@ private slots:
                   });
     }
 
+    // Batch 14.
+    void crudProp()
+    {
+        checkCrud(Prop{.name = "Pastor", .kind = PropKind::LowerThird,
+                       .data = {{"line1", "Pastor Ade Johnson"}, {"line2", "Lead pastor"}}},
+                  [](Prop &e) {
+                      e.kind = PropKind::Bug;
+                      e.data = {{"image", "/logos/church.png"}, {"corner", "topRight"}, {"size", 0.12}};
+                  });
+    }
+
     // ---- ordering -----------------------------------------------------
 
     void childrenListInPositionOrder()

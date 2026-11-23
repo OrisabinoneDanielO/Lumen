@@ -193,6 +193,21 @@ struct Message
     bool operator==(const Message &) const = default;
 };
 
+// An overlay that stays up across slides (batch 14): a lower third (data
+// {"line1", "line2"}) or a bug, a logo in a corner (data {"image", "corner",
+// "size"}).
+enum class PropKind { LowerThird, Bug };
+
+struct Prop
+{
+    QString id{};
+    QString name{};
+    PropKind kind = PropKind::LowerThird;
+    QJsonObject data{};
+
+    bool operator==(const Prop &) const = default;
+};
+
 enum class TimerMode { Countdown, CountdownToTime, Elapsed };
 
 struct Timer

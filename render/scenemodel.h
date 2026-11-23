@@ -34,6 +34,7 @@ class ContentModel : public QObject
     Q_PROPERTY(bool loop READ loop NOTIFY changed)
     Q_PROPERTY(double volume READ volume NOTIFY changed)
     Q_PROPERTY(QVariantMap timer READ timer NOTIFY changed)
+    Q_PROPERTY(QVariantMap prop READ prop NOTIFY changed)
 
 public:
     using QObject::QObject;
@@ -52,6 +53,7 @@ public:
     bool loop() const { return m_content.loop; }
     double volume() const { return m_content.volume; }
     QVariantMap timer() const { return m_content.timer.toVariantMap(); }
+    QVariantMap prop() const { return m_content.prop.toVariantMap(); }
 
 signals:
     void changed();

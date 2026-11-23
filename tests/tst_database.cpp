@@ -64,7 +64,9 @@ private slots:
         const QStringList expected{
             "arrangement_groups", "arrangements", "elements", "libraries",
             "media_assets",       "messages",     "outputs",  "plan_items",
-            "plans",              "presentations", "slide_groups", "slides",
+            "plans",              "presentations",
+            "props", // batch 14
+            "slide_groups", "slides",
             "song_index", // batch 6
             "stage_layouts",      "themes",       "timers"};
         QCOMPARE(tables, expected);
