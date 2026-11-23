@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lumen Presenter, show mode</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#0F1115}
+a{color:#8DB4FF}a:hover{color:#B8D0FF}
+button{font-family:inherit;cursor:pointer}
+</style>
+</head>
+<body>
+
+
+<div style="min-height: 900px; display: flex; flex-direction: column; background: #0F1115; color: #E9ECF1; font-family: Inter, system-ui, sans-serif; font-size: 13px">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 10px 16px; background: #171A20; border-bottom: 1px solid #2B303A">
+  <div style="display: flex; align-items: center; gap: 8px">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" style="stroke: #F08A24; stroke-width: 2; stroke-linecap: round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"></path></svg>
+    <span style="font-weight: 700; font-size: 16px">Lumen</span>
+  </div>
+  <div style="display: flex; padding: 3px; gap: 2px; background: #0F1115; border: 1px solid #2B303A; border-radius: 8px">
+    <span style="padding: 6px 14px; border-radius: 6px; background: #2B303A; font-weight: 600">Show</span>
+    <a href="Editor.html" style="padding: 6px 14px; border-radius: 6px; color: #A3ACBA; text-decoration: none">Edit</a>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <span style="font-weight: 600">Sunday Service</span>
+    <span style="font-size: 12px; color: #A3ACBA">[Service date] · 9 items</span>
+  </div>
+  <div style="flex: 1 1 0px"></div>
+  <div style="display: flex; flex-wrap: wrap; gap: 6px">
+    <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 8px; font-size: 12px">Clear BG <span style="color: #A3ACBA">F1</span></button>
+    <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 8px; font-size: 12px">Clear Slide <span style="color: #A3ACBA">F2</span></button>
+    <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 8px; font-size: 12px">Clear Props <span style="color: #A3ACBA">F3</span></button>
+    <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 8px; font-size: 12px">Clear Msg <span style="color: #A3ACBA">F4</span></button>
+    <button style="min-height: 36px; padding: 0 14px; background: #3A2A1E; color: #FFD8B0; border: 1px solid #6B4523; border-radius: 8px; font-size: 12px; font-weight: 600">Clear All <span style="color: #E8B98A">F5</span></button>
+    <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 8px; font-size: 12px">Logo</button>
+    <button style="min-height: 36px; padding: 0 12px; background: #000000; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 8px; font-size: 12px">Black</button>
+  </div>
+  <div style="display: flex; gap: 12px; align-items: center; font-size: 12px; color: #A3ACBA">
+    <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #3DCB8A"></span>Main</span>
+    <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #3DCB8A"></span>Stage</span>
+    <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #3DCB8A"></span>Stream (NDI)</span>
+  </div>
+</header>
+
+<div style="flex: 1 1 auto; display: flex; flex-wrap: wrap; min-height: 560px">
+
+  <aside style="flex: 1 1 240px; min-width: 0; background: #171A20; border-right: 1px solid #2B303A; display: flex; flex-direction: column">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #A3ACBA">SERVICE PLAN</span>
+      <button style="min-height: 32px; padding: 0 10px; background: transparent; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">+ Add</button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px 12px">
+      
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: transparent">
+          <span style="width: 6px; height: 6px; border-radius: 3px; background: transparent"></span>
+          <span style="width: 52px; flex: 0 0 52px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #A3ACBA">TIMER</span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Pre-service countdown</span>
+            <span style="font-size: 11.5px; color: #A3ACBA">Announcement loop</span>
+          </span>
+        </div>
+      
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: transparent">
+          <span style="width: 6px; height: 6px; border-radius: 3px; background: transparent"></span>
+          <span style="width: 52px; flex: 0 0 52px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #A3ACBA">SLIDES</span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Welcome</span>
+            <span style="font-size: 11.5px; color: #A3ACBA">Native slides</span>
+          </span>
+        </div>
+      
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: #252B36">
+          <span style="width: 6px; height: 6px; border-radius: 3px; background: #F08A24"></span>
+          <span style="width: 52px; flex: 0 0 52px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #A3ACBA">SONG</span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Amazing Grace</span>
+            <span style="font-size: 11.5px; color: #A3ACBA">John Newton</span>
+          </span>
+        </div>
+      
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: transparent">
+          <span style="width: 6px; height: 6px; border-radius: 3px; background: transparent"></span>
+          <span style="width: 52px; flex: 0 0 52px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #A3ACBA">SONG</span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Holy, Holy, Holy</span>
+            <span style="font-size: 11.5px; color: #A3ACBA">Reginald Heber</span>
+          </span>
+        </div>
+      
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: transparent">
+          <span style="width: 6px; height: 6px; border-radius: 3px; background: transparent"></span>
+          <span style="width: 52px; flex: 0 0 52px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #A3ACBA">BIBLE</span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">John 3:16-18</span>
+            <span style="font-size: 11.5px; color: #A3ACBA">World English Bible</span>
+          </span>
+        </div>
+      
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: transparent">
+          <span style="width: 6px; height: 6px; border-radius: 3px; background: transparent"></span>
+          <span style="width: 52px; flex: 0 0 52px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #A3ACBA">SLIDES</span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Announcements</span>
+            <span style="font-size: 11.5px; color: #A3ACBA">PowerPoint import</span>
+          </span>
+        </div>
+      
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: transparent">
+          <span style="width: 6px; height: 6px; border-radius: 3px; background: transparent"></span>
+          <span style="width: 52px; flex: 0 0 52px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #A3ACBA">MEDIA</span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Offering video</span>
+            <span style="font-size: 11.5px; color: #A3ACBA">[Video file]</span>
+          </span>
+        </div>
+      
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: transparent">
+          <span style="width: 6px; height: 6px; border-radius: 3px; background: transparent"></span>
+          <span style="width: 52px; flex: 0 0 52px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #A3ACBA">SLIDES</span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">[Sermon title]</span>
+            <span style="font-size: 11.5px; color: #A3ACBA">Sermon points</span>
+          </span>
+        </div>
+      
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: transparent">
+          <span style="width: 6px; height: 6px; border-radius: 3px; background: transparent"></span>
+          <span style="width: 52px; flex: 0 0 52px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #A3ACBA">SONG</span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Be Thou My Vision</span>
+            <span style="font-size: 11.5px; color: #A3ACBA">Trad. Irish</span>
+          </span>
+        </div>
+      
+    </div>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; padding: 16px 20px; gap: 14px">
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 22px; font-weight: 700">Amazing Grace</h1>
+        <span style="color: #A3ACBA">John Newton · Public domain · Theme: Lyrics, centred</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+        <span style="color: #A3ACBA; font-size: 12px; margin-right: 4px">Arrangement</span>
+        <span style="padding: 4px 10px; border-radius: 6px; background: #22304A; color: #BFD3FF; font-size: 12px; font-weight: 600">V1</span>
+        <span style="padding: 4px 10px; border-radius: 6px; background: #1C3A37; color: #A6E6DC; font-size: 12px; font-weight: 600">V2</span>
+        <span style="padding: 4px 10px; border-radius: 6px; background: #30264A; color: #D9C6FF; font-size: 12px; font-weight: 600">V3</span>
+        <span style="padding: 4px 10px; border-radius: 6px; background: #3D2A1C; color: #FFD0A8; font-size: 12px; font-weight: 600">V4</span>
+        <span style="padding: 4px 10px; border-radius: 6px; background: #2B303A; color: #E9ECF1; font-size: 12px; font-weight: 600">Tag</span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px">
+      
+        <button aria-label="Send slide 1 live" style="display: flex; flex-direction: column; padding: 0; background: #171A20; color: #E9ECF1; border: 2px solid #2B303A; border-radius: 10px; overflow: hidden; text-align: left">
+          <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; width: 100%; box-sizing: border-box">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 2px; background: #5B8DEF"></span>Verse 1</span>
+            <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #8DB4FF"></span>
+          </span>
+          <span style="display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; padding: 10px; box-sizing: border-box; background: #14213D; color: #FFFFFF; font-size: 12px; line-height: 1.4; text-align: center; white-space: pre-line">Amazing grace! How sweet the sound
+That saved a wretch like me!</span>
+        </button>
+      
+        <button aria-label="Send slide 2 live" style="display: flex; flex-direction: column; padding: 0; background: #171A20; color: #E9ECF1; border: 2px solid #2B303A; border-radius: 10px; overflow: hidden; text-align: left">
+          <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; width: 100%; box-sizing: border-box">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 2px; background: #5B8DEF"></span>Verse 1</span>
+            <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #8DB4FF"></span>
+          </span>
+          <span style="display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; padding: 10px; box-sizing: border-box; background: #14213D; color: #FFFFFF; font-size: 12px; line-height: 1.4; text-align: center; white-space: pre-line">I once was lost, but now am found;
+Was blind, but now I see.</span>
+        </button>
+      
+        <button aria-label="Send slide 3 live" style="display: flex; flex-direction: column; padding: 0; background: #171A20; color: #E9ECF1; border: 2px solid #F08A24; border-radius: 10px; overflow: hidden; text-align: left">
+          <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; width: 100%; box-sizing: border-box">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 2px; background: #3FB7A6"></span>Verse 2</span>
+            <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #F08A24">LIVE</span>
+          </span>
+          <span style="display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; padding: 10px; box-sizing: border-box; background: #14213D; color: #FFFFFF; font-size: 12px; line-height: 1.4; text-align: center; white-space: pre-line">'Twas grace that taught my heart to fear,
+And grace my fears relieved;</span>
+        </button>
+      
+        <button aria-label="Send slide 4 live" style="display: flex; flex-direction: column; padding: 0; background: #171A20; color: #E9ECF1; border: 2px solid #4C8DFF; border-radius: 10px; overflow: hidden; text-align: left">
+          <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; width: 100%; box-sizing: border-box">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 2px; background: #3FB7A6"></span>Verse 2</span>
+            <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #8DB4FF">NEXT</span>
+          </span>
+          <span style="display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; padding: 10px; box-sizing: border-box; background: #14213D; color: #FFFFFF; font-size: 12px; line-height: 1.4; text-align: center; white-space: pre-line">How precious did that grace appear
+The hour I first believed.</span>
+        </button>
+      
+        <button aria-label="Send slide 5 live" style="display: flex; flex-direction: column; padding: 0; background: #171A20; color: #E9ECF1; border: 2px solid #2B303A; border-radius: 10px; overflow: hidden; text-align: left">
+          <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; width: 100%; box-sizing: border-box">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 2px; background: #A779E9"></span>Verse 3</span>
+            <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #8DB4FF"></span>
+          </span>
+          <span style="display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; padding: 10px; box-sizing: border-box; background: #14213D; color: #FFFFFF; font-size: 12px; line-height: 1.4; text-align: center; white-space: pre-line">Through many dangers, toils and snares,
+I have already come;</span>
+        </button>
+      
+        <button aria-label="Send slide 6 live" style="display: flex; flex-direction: column; padding: 0; background: #171A20; color: #E9ECF1; border: 2px solid #2B303A; border-radius: 10px; overflow: hidden; text-align: left">
+          <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; width: 100%; box-sizing: border-box">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 2px; background: #A779E9"></span>Verse 3</span>
+            <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #8DB4FF"></span>
+          </span>
+          <span style="display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; padding: 10px; box-sizing: border-box; background: #14213D; color: #FFFFFF; font-size: 12px; line-height: 1.4; text-align: center; white-space: pre-line">'Tis grace hath brought me safe thus far,
+And grace will lead me home.</span>
+        </button>
+      
+        <button aria-label="Send slide 7 live" style="display: flex; flex-direction: column; padding: 0; background: #171A20; color: #E9ECF1; border: 2px solid #2B303A; border-radius: 10px; overflow: hidden; text-align: left">
+          <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; width: 100%; box-sizing: border-box">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 2px; background: #E8833A"></span>Verse 4</span>
+            <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #8DB4FF"></span>
+          </span>
+          <span style="display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; padding: 10px; box-sizing: border-box; background: #14213D; color: #FFFFFF; font-size: 12px; line-height: 1.4; text-align: center; white-space: pre-line">When we've been there ten thousand years,
+Bright shining as the sun,</span>
+        </button>
+      
+        <button aria-label="Send slide 8 live" style="display: flex; flex-direction: column; padding: 0; background: #171A20; color: #E9ECF1; border: 2px solid #2B303A; border-radius: 10px; overflow: hidden; text-align: left">
+          <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; width: 100%; box-sizing: border-box">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 2px; background: #E8833A"></span>Verse 4</span>
+            <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #8DB4FF"></span>
+          </span>
+          <span style="display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; padding: 10px; box-sizing: border-box; background: #14213D; color: #FFFFFF; font-size: 12px; line-height: 1.4; text-align: center; white-space: pre-line">We've no less days to sing God's praise
+Than when we'd first begun.</span>
+        </button>
+      
+        <button aria-label="Send slide 9 live" style="display: flex; flex-direction: column; padding: 0; background: #171A20; color: #E9ECF1; border: 2px solid #2B303A; border-radius: 10px; overflow: hidden; text-align: left">
+          <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; width: 100%; box-sizing: border-box">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 2px; background: #C9CED6"></span>Tag</span>
+            <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #8DB4FF"></span>
+          </span>
+          <span style="display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; padding: 10px; box-sizing: border-box; background: #14213D; color: #FFFFFF; font-size: 12px; line-height: 1.4; text-align: center; white-space: pre-line">Was blind, but now I see.</span>
+        </button>
+      
+    </div>
+  </main>
+
+  <section style="flex: 1 1 360px; min-width: 0; background: #171A20; border-left: 1px solid #2B303A; display: flex; flex-direction: column; gap: 14px; padding: 16px">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #8DB4FF">PREVIEW (NEXT)</span>
+      <div style="display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 9; padding: 12px; border: 2px solid #4C8DFF; border-radius: 8px; background: #14213D; color: #FFFFFF; font-size: 12px; text-align: center; white-space: pre-line">How precious did that grace appear
+The hour I first believed.</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: #F08A24">LIVE</span>
+        <span style="font-size: 12px; color: #A3ACBA">Verse 2 · slide 3</span>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 9; padding: 16px; border: 3px solid #F08A24; border-radius: 8px; background: #14213D; color: #FFFFFF; font-size: 15px; font-weight: 600; line-height: 1.45; text-align: center; white-space: pre-line">'Twas grace that taught my heart to fear,
+And grace my fears relieved;</div>
+      <div style="display: flex; gap: 8px">
+        <button style="flex: 1 1 0px; min-height: 44px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 8px; font-size: 13px">Previous</button>
+        <button style="flex: 2 1 0px; min-height: 44px; background: #F08A24; color: #0F1115; border: 0; border-radius: 8px; font-size: 13px; font-weight: 700">Next slide (Space)</button>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #A3ACBA; margin-bottom: 4px">LAYERS</span>
+      <div style="display: flex; justify-content: space-between; padding: 8px 10px; background: #1E222A; border-radius: 6px"><span>Messages</span><span style="color: #A3ACBA">Off</span></div>
+      <div style="display: flex; justify-content: space-between; padding: 8px 10px; background: #1E222A; border-radius: 6px"><span>Props</span><span style="color: #A3ACBA">Church logo bug</span></div>
+      <div style="display: flex; justify-content: space-between; padding: 8px 10px; background: #1E222A; border-radius: 6px"><span>Slide</span><span style="color: #E9ECF1">Verse 2 · slide 3</span></div>
+      <div style="display: flex; justify-content: space-between; padding: 8px 10px; background: #1E222A; border-radius: 6px"><span>Media</span><span style="color: #A3ACBA">Off</span></div>
+      <div style="display: flex; justify-content: space-between; padding: 8px 10px; background: #1E222A; border-radius: 6px"><span>Background</span><span style="color: #A3ACBA">Motion loop: Slow light</span></div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 8px">
+      <label style="display: flex; flex-direction: column; gap: 4px; flex: 1 1 140px; font-size: 12px; color: #A3ACBA">Transition
+        <select style="min-height: 36px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; padding: 0 8px; font-family: inherit">
+          <option>Fade, 0.5 s</option><option>Cut</option><option>Dissolve, 1 s</option><option>Push left</option>
+        </select>
+      </label>
+      <button style="flex: 1 1 140px; min-height: 36px; align-self: flex-end; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Show message…</button>
+    </div>
+  </section>
+</div>
+
+<footer style="background: #171A20; border-top: 1px solid #2B303A; padding: 0 16px 14px">
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px; border-bottom: 1px solid #2B303A">
+    <button style="min-height: 40px; padding: 0 14px; background: transparent; color: #E9ECF1; border: 0; border-bottom: 2px solid #F08A24; font-size: 13px; font-weight: 600">Songs</button>
+    <button style="min-height: 40px; padding: 0 14px; background: transparent; color: #A3ACBA; border: 0; font-size: 13px">Scripture</button>
+    <button style="min-height: 40px; padding: 0 14px; background: transparent; color: #A3ACBA; border: 0; font-size: 13px">Media</button>
+    <button style="min-height: 40px; padding: 0 14px; background: transparent; color: #A3ACBA; border: 0; font-size: 13px">Presentations</button>
+    <button style="min-height: 40px; padding: 0 14px; background: transparent; color: #A3ACBA; border: 0; font-size: 13px">Themes</button>
+    <div style="flex: 1 1 0px"></div>
+    <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #A3ACBA">Search
+      <input type="search" placeholder="Title, lyrics or author" style="width: 240px; min-height: 32px; padding: 0 10px; background: #0F1115; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-family: inherit">
+    </label>
+    <button style="min-height: 32px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Import from SongSelect</button>
+  </div>
+  <div style="overflow-x: auto">
+    <div style="display: grid; grid-template-columns: minmax(200px, 2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(100px, 1fr); min-width: 600px; font-size: 12.5px">
+      <span style="padding: 8px 6px; color: #A3ACBA; font-weight: 600">Title</span><span style="padding: 8px 6px; color: #A3ACBA; font-weight: 600">Author</span><span style="padding: 8px 6px; color: #A3ACBA; font-weight: 600">Copyright</span><span style="padding: 8px 6px; color: #A3ACBA; font-weight: 600">Default key</span>
+      <span style="padding: 7px 6px; background: #22304A; border-radius: 6px 0 0 6px">Amazing Grace</span><span style="padding: 7px 6px; background: #22304A">John Newton</span><span style="padding: 7px 6px; background: #22304A">Public domain</span><span style="padding: 7px 6px; background: #22304A; border-radius: 0 6px 6px 0">G</span>
+      <span style="padding: 7px 6px">Be Thou My Vision</span><span style="padding: 7px 6px">Trad. Irish, tr. Mary Byrne</span><span style="padding: 7px 6px">Public domain</span><span style="padding: 7px 6px">Eb</span>
+      <span style="padding: 7px 6px">Holy, Holy, Holy</span><span style="padding: 7px 6px">Reginald Heber</span><span style="padding: 7px 6px">Public domain</span><span style="padding: 7px 6px">D</span>
+      <span style="padding: 7px 6px">It Is Well with My Soul</span><span style="padding: 7px 6px">Horatio Spafford</span><span style="padding: 7px 6px">Public domain</span><span style="padding: 7px 6px">C</span>
+    </div>
+  </div>
+</footer>
+</div>
+
+
+</body>
+</html>

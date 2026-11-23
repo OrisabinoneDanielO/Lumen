@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lumen Presenter, edit mode</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#0F1115}
+a{color:#8DB4FF}a:hover{color:#B8D0FF}
+button{font-family:inherit;cursor:pointer}
+</style>
+</head>
+<body>
+
+
+<div style="min-height: 900px; display: flex; flex-direction: column; background: #0F1115; color: #E9ECF1; font-family: Inter, system-ui, sans-serif; font-size: 13px">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 10px 16px; background: #171A20; border-bottom: 1px solid #2B303A">
+  <div style="display: flex; align-items: center; gap: 8px">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" style="stroke: #F08A24; stroke-width: 2; stroke-linecap: round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"></path></svg>
+    <span style="font-weight: 700; font-size: 16px">Lumen</span>
+  </div>
+  <div style="display: flex; padding: 3px; gap: 2px; background: #0F1115; border: 1px solid #2B303A; border-radius: 8px">
+    <a href="Main.html" style="padding: 6px 14px; border-radius: 6px; color: #A3ACBA; text-decoration: none">Show</a>
+    <span style="padding: 6px 14px; border-radius: 6px; background: #2B303A; font-weight: 600">Edit</span>
+  </div>
+  <span style="font-weight: 600">Amazing Grace</span>
+  <span style="font-size: 12px; color: #A3ACBA">Unsaved changes. Nothing reaches the screen until you save.</span>
+  <div style="flex: 1 1 0px"></div>
+  <a href="Main.html" style="display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 8px; text-decoration: none">Cancel</a>
+  <a href="Main.html" style="display: inline-flex; align-items: center; min-height: 36px; padding: 0 16px; background: #4C8DFF; color: #0F1115; border-radius: 8px; font-weight: 700; text-decoration: none">Save</a>
+</header>
+
+<div style="flex: 1 1 auto; display: flex; flex-wrap: wrap">
+
+  <aside style="flex: 1 1 300px; min-width: 0; background: #171A20; border-right: 1px solid #2B303A; display: flex; flex-direction: column; gap: 12px; padding: 16px">
+    <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #A3ACBA">LYRICS</span>
+    <p style="margin: 0; font-size: 12px; color: #A3ACBA; line-height: 1.5">Type or paste lyrics. A blank line starts a new slide; a line like [Verse 2] starts a new group.</p>
+    <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #A3ACBA">Song text
+      <textarea rows="22" style="background: #0F1115; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 12.5px; line-height: 1.55; resize: vertical">[Verse 1]
+Amazing grace! How sweet the sound
+That saved a wretch like me!
+
+I once was lost, but now am found;
+Was blind, but now I see.
+
+[Verse 2]
+'Twas grace that taught my heart to fear,
+And grace my fears relieved;
+
+How precious did that grace appear
+The hour I first believed.
+
+[Verse 3]
+Through many dangers, toils and snares,
+I have already come;</textarea>
+    </label>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px">
+      <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Auto-split slides</button>
+      <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Edit arrangement</button>
+    </div>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px; padding: 16px 20px">
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center">
+      <span style="font-size: 12px; color: #A3ACBA; margin-right: 6px">Insert</span>
+      <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Text box</button>
+      <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Shape</button>
+      <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Image</button>
+      <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Video</button>
+      <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Clock</button>
+      <button style="min-height: 36px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Countdown</button>
+      <div style="flex: 1 1 0px"></div>
+      <span style="font-size: 12px; color: #A3ACBA">1920 × 1080 · 100%</span>
+    </div>
+
+    <div style="position: relative; aspect-ratio: 16 / 9; width: 100%; background: #14213D; border-radius: 6px; overflow: hidden">
+      <div style="position: absolute; left: 5%; top: 5%; right: 5%; bottom: 5%; border: 1px dashed #5B6B8C; border-radius: 2px"></div>
+      <span style="position: absolute; left: 5.5%; top: 5.8%; font-size: 10.5px; color: #9FB0D0">Title safe area</span>
+      <div style="position: absolute; left: 12%; top: 32%; right: 12%; bottom: 32%; border: 2px solid #4C8DFF; display: flex; align-items: center; justify-content: center; padding: 8px; box-sizing: border-box">
+        <span style="color: #FFFFFF; font-size: 30px; font-weight: 600; line-height: 1.35; text-align: center; text-shadow: 0 2px 8px #000000">Amazing grace! How sweet the sound<br>That saved a wretch like me!</span>
+        <span style="position: absolute; left: -6px; top: -6px; width: 10px; height: 10px; background: #4C8DFF; border-radius: 2px"></span>
+        <span style="position: absolute; right: -6px; top: -6px; width: 10px; height: 10px; background: #4C8DFF; border-radius: 2px"></span>
+        <span style="position: absolute; left: -6px; bottom: -6px; width: 10px; height: 10px; background: #4C8DFF; border-radius: 2px"></span>
+        <span style="position: absolute; right: -6px; bottom: -6px; width: 10px; height: 10px; background: #4C8DFF; border-radius: 2px"></span>
+      </div>
+      <span style="position: absolute; left: 0; right: 0; bottom: 6%; text-align: center; color: #C9D3E6; font-size: 12px">Amazing Grace · John Newton · Public domain</span>
+    </div>
+
+    <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px">
+      <button aria-label="Slide 1, Verse 1, selected" style="flex: 0 0 150px; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: #171A20; border: 2px solid #4C8DFF; border-radius: 8px; color: #E9ECF1; font-size: 11px; text-align: left"><span style="color: #BFD3FF">Verse 1 · 1</span><span style="aspect-ratio: 16 / 9; background: #14213D; border-radius: 4px"></span></button>
+      <button aria-label="Slide 2, Verse 1" style="flex: 0 0 150px; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: #171A20; border: 2px solid #2B303A; border-radius: 8px; color: #E9ECF1; font-size: 11px; text-align: left"><span style="color: #BFD3FF">Verse 1 · 2</span><span style="aspect-ratio: 16 / 9; background: #14213D; border-radius: 4px"></span></button>
+      <button aria-label="Slide 3, Verse 2" style="flex: 0 0 150px; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: #171A20; border: 2px solid #2B303A; border-radius: 8px; color: #E9ECF1; font-size: 11px; text-align: left"><span style="color: #A6E6DC">Verse 2 · 3</span><span style="aspect-ratio: 16 / 9; background: #14213D; border-radius: 4px"></span></button>
+      <button aria-label="Slide 4, Verse 2" style="flex: 0 0 150px; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: #171A20; border: 2px solid #2B303A; border-radius: 8px; color: #E9ECF1; font-size: 11px; text-align: left"><span style="color: #A6E6DC">Verse 2 · 4</span><span style="aspect-ratio: 16 / 9; background: #14213D; border-radius: 4px"></span></button>
+      <button aria-label="Slide 5, Verse 3" style="flex: 0 0 150px; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: #171A20; border: 2px solid #2B303A; border-radius: 8px; color: #E9ECF1; font-size: 11px; text-align: left"><span style="color: #D9C6FF">Verse 3 · 5</span><span style="aspect-ratio: 16 / 9; background: #14213D; border-radius: 4px"></span></button>
+    </div>
+  </main>
+
+  <section style="flex: 1 1 320px; min-width: 0; background: #171A20; border-left: 1px solid #2B303A; display: flex; flex-direction: column; gap: 18px; padding: 16px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #A3ACBA">THEME</span>
+      <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #A3ACBA">Applied theme
+        <select style="min-height: 36px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; padding: 0 8px; font-family: inherit"><option>Lyrics, centred</option><option>Lyrics, lower third</option><option>Scripture</option></select>
+      </label>
+      <span style="font-size: 12px; color: #A3ACBA">Changes here update every song using this theme.</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #A3ACBA">TEXT</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #A3ACBA">Font
+          <select style="min-height: 36px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; padding: 0 8px; font-family: inherit"><option>Inter Semibold</option><option>Montserrat</option><option>Noto Sans</option></select>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #A3ACBA">Size (px)
+          <input type="number" value="72" style="min-height: 34px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; padding: 0 8px; font-family: inherit">
+        </label>
+      </div>
+      <div style="display: flex; gap: 6px" aria-label="Alignment">
+        <button style="flex: 1 1 0px; min-height: 36px; background: #1E222A; color: #A3ACBA; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Left</button>
+        <button style="flex: 1 1 0px; min-height: 36px; background: #2B303A; color: #E9ECF1; border: 1px solid #4C8DFF; border-radius: 6px; font-size: 12px">Centre</button>
+        <button style="flex: 1 1 0px; min-height: 36px; background: #1E222A; color: #A3ACBA; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Right</button>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #A3ACBA">Colour
+        <button aria-label="White" style="width: 28px; height: 28px; border-radius: 14px; background: #FFFFFF; border: 2px solid #4C8DFF"></button>
+        <button aria-label="Warm yellow" style="width: 28px; height: 28px; border-radius: 14px; background: #FFE7A3; border: 1px solid #2B303A"></button>
+        <button aria-label="Light blue" style="width: 28px; height: 28px; border-radius: 14px; background: #BFD3FF; border: 1px solid #2B303A"></button>
+        <button aria-label="Black" style="width: 28px; height: 28px; border-radius: 14px; background: #000000; border: 1px solid #5B6576"></button>
+      </div>
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px"><input type="checkbox" checked> Shrink text to fit the box</label>
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px"><input type="checkbox" checked> Drop shadow</label>
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px"><input type="checkbox"> Outline, 2 px</label>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #A3ACBA">BACKGROUND</span>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+        <button aria-label="Deep navy, selected" style="aspect-ratio: 16 / 9; background: #14213D; border: 2px solid #4C8DFF; border-radius: 6px"></button>
+        <button aria-label="Charcoal" style="aspect-ratio: 16 / 9; background: #23262D; border: 1px solid #2B303A; border-radius: 6px"></button>
+        <button aria-label="Plum" style="aspect-ratio: 16 / 9; background: #2E1F3A; border: 1px solid #2B303A; border-radius: 6px"></button>
+      </div>
+      <button style="min-height: 36px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Choose image or motion loop…</button>
+    </div>
+
+    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #A3ACBA">Slide transition
+      <select style="min-height: 36px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; padding: 0 8px; font-family: inherit"><option>Use theme default (Fade, 0.5 s)</option><option>Cut</option><option>Dissolve</option></select>
+    </label>
+  </section>
+</div>
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Scripture quick search</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#0F1115}
+button{font-family:inherit;cursor:pointer}
+</style>
+</head>
+<body>
+
+
+<div style="width: 960px; height: 640px; box-sizing: border-box; display: flex; flex-direction: column; background: #171A20; color: #E9ECF1; font-family: Inter, system-ui, sans-serif; font-size: 13px; border: 1px solid #2B303A; border-radius: 12px; overflow: hidden">
+  <div style="display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #2B303A">
+    <span style="font-weight: 700; font-size: 15px">Scripture</span>
+    <label style="flex: 1 1 auto; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; background: #0F1115; border: 2px solid #4C8DFF; border-radius: 8px">
+      <span style="font-size: 12px; color: #A3ACBA">Reference</span>
+      <input type="text" value="rom 8 28-30" style="flex: 1 1 auto; background: transparent; color: #E9ECF1; border: 0; font-size: 16px; font-family: inherit; outline: none">
+      <span style="font-size: 12px; color: #A3ACBA">Romans 8:28–30</span>
+    </label>
+    <button aria-label="Close" style="width: 36px; height: 36px; background: transparent; color: #A3ACBA; border: 1px solid #2B303A; border-radius: 8px; font-size: 16px">×</button>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 12px 20px; border-bottom: 1px solid #2B303A">
+    <span style="font-size: 12px; color: #A3ACBA; margin-right: 6px">Translation</span>
+    <button style="min-height: 32px; padding: 0 12px; background: #22304A; color: #BFD3FF; border: 1px solid #4C8DFF; border-radius: 6px; font-size: 12px; font-weight: 600">WEB</button>
+    <button style="min-height: 32px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">KJV</button>
+    <button style="min-height: 32px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">BSB</button>
+    <button style="min-height: 32px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Yorùbá</button>
+    <button style="min-height: 32px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Hausa</button>
+    <button style="min-height: 32px; padding: 0 12px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; font-size: 12px">Igbo</button>
+    <button style="min-height: 32px; padding: 0 12px; background: transparent; color: #8DB4FF; border: 1px dashed #2B303A; border-radius: 6px; font-size: 12px">+ Add from file</button>
+    <div style="flex: 1 1 0px"></div>
+    <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px"><input type="checkbox"> Show second translation side by side</label>
+  </div>
+
+  <div style="flex: 1 1 auto; display: flex; min-height: 0">
+    <div style="flex: 1 1 50%; display: flex; flex-direction: column; gap: 8px; padding: 16px 20px; border-right: 1px solid #2B303A; overflow: auto">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #A3ACBA">VERSES · ONE PER SLIDE</span>
+      <div style="display: flex; gap: 12px; padding: 12px; background: #22304A; border: 1px solid #4C8DFF; border-radius: 8px">
+        <span style="font-weight: 700; color: #BFD3FF">28</span>
+        <span style="line-height: 1.5">We know that all things work together for good for those who love God, for those who are called according to his purpose.</span>
+      </div>
+      <div style="display: flex; gap: 12px; padding: 12px; background: #1E222A; border-radius: 8px">
+        <span style="font-weight: 700; color: #A3ACBA">29</span>
+        <span style="line-height: 1.5">For whom he foreknew, he also predestined to be conformed to the image of his Son, that he might be the firstborn among many brothers.</span>
+      </div>
+      <div style="display: flex; gap: 12px; padding: 12px; background: #1E222A; border-radius: 8px">
+        <span style="font-weight: 700; color: #A3ACBA">30</span>
+        <span style="line-height: 1.5">Whom he predestined, those he also called. Whom he called, those he also justified. Whom he justified, those he also glorified.</span>
+      </div>
+    </div>
+
+    <div style="flex: 1 1 50%; display: flex; flex-direction: column; gap: 12px; padding: 16px 20px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #A3ACBA">SLIDE PREVIEW · SCRIPTURE THEME</span>
+      <div style="aspect-ratio: 16 / 9; display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 22px 26px; box-sizing: border-box; background: #1B1F2B; border-radius: 8px">
+        <span style="color: #FFFFFF; font-size: 15px; line-height: 1.5">We know that all things work together for good for those who love God, for those who are called according to his purpose.</span>
+        <span style="color: #F2C38B; font-size: 12px; font-weight: 600">Romans 8:28 (WEB)</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #A3ACBA">Verses per slide
+          <select style="min-height: 36px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; padding: 0 8px; font-family: inherit"><option>1</option><option>2</option><option>Fit to slide</option></select>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #A3ACBA">Reference position
+          <select style="min-height: 36px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 6px; padding: 0 8px; font-family: inherit"><option>Below text</option><option>Above text</option><option>Lower third only</option></select>
+        </label>
+      </div>
+      <div style="flex: 1 1 auto"></div>
+      <div style="display: flex; gap: 8px">
+        <button style="flex: 1 1 0px; min-height: 44px; background: #1E222A; color: #E9ECF1; border: 1px solid #2B303A; border-radius: 8px; font-size: 13px">Add to plan</button>
+        <button style="flex: 1 1 0px; min-height: 44px; background: #F08A24; color: #0F1115; border: 0; border-radius: 8px; font-size: 13px; font-weight: 700">Show now (Enter)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>
