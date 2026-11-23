@@ -23,8 +23,28 @@ target_link_libraries(tst_database PRIVATE Lumen::Data)
 lumen_add_test(tst_repositories tst_repositories.cpp)
 target_link_libraries(tst_repositories PRIVATE Lumen::Data)
 
-# The render process stub must build and run on every platform.
+# The render process executable must build and run on every platform.
+# (Since batch 3 it is a GUI app, so it needs the offscreen platform here.)
 add_test(NAME render_stub_runs COMMAND lumen-render --version)
 set_tests_properties(render_stub_runs PROPERTIES
     PASS_REGULAR_EXPRESSION "lumen-render ${PROJECT_VERSION}"
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
     TIMEOUT 30)
+
+# Render process (batch 3).
+lumen_add_test(tst_screen_choice tst_screen_choice.cpp)
+target_link_libraries(tst_screen_choice PRIVATE lumen_render_lib)
+
+lumen_add_test(tst_render_scene tst_render_scene.cpp rendercheck.h)
+target_link_libraries(tst_render_scene PRIVATE lumen_render_lib)
+
+lumen_add_test(tst_render_server tst_render_server.cpp rendercheck.h)
+target_link_libraries(tst_render_server PRIVATE lumen_render_lib)
+
+# Done when: killing the UI process leaves the last frame on screen.
+lumen_add_test(tst_render_survives_ui_kill tst_render_survives_ui_kill.cpp rendercheck.h)
+target_link_libraries(tst_render_survives_ui_kill PRIVATE Lumen::RenderLink Qt6::Gui)
+target_compile_definitions(tst_render_survives_ui_kill PRIVATE
+    LUMEN_APP_PATH="$<TARGET_FILE:lumen>"
+    LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>")
+add_dependencies(tst_render_survives_ui_kill lumen lumen-render)

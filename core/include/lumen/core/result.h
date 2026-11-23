@@ -18,6 +18,7 @@ struct Error
         SchemaTooNew, // database written by a newer Lumen than this one
         Migration,    // schema upgrade failed (database left unchanged)
         Invalid,      // the call itself makes no sense (e.g. wrong entity type)
+        Unavailable,  // another process (e.g. the renderer) cannot be reached
     };
 
     Code code = Code::Database;
