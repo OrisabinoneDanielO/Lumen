@@ -13,7 +13,7 @@ flowchart TB
   end
   subgraph CORE["Core services (main process)"]
     LIB["Library service<br/>SQLite index, files, import/export"]
-    MED["Media service<br/>decode, thumbnails, preload"]
+    MED["Media library<br/>import, thumbnails, preload requests"]
     SHOW["Show controller<br/>layer state, cues, transitions"]
     PLG["Plugin host<br/>SongSelect, Bibles, song file importers"]
   end
@@ -21,12 +21,14 @@ flowchart TB
     APIS["API server<br/>HTTP, WebSocket, OSC, MIDI, remote app"]
   end
   subgraph RENDER["Render process (GPU)"]
+    DEC["Video decode<br/>FFmpeg, hardware where available"]
     COMP["Compositor<br/>6 layers, transitions, locked 60 fps"]
     OUT["Output targets<br/>screens, NDI, SDI key/fill, stage displays"]
   end
   UI -- "commands and edits" --> CORE
   APIS -- "remote commands" --> CORE
-  MED -- "video frames" --> COMP
+  MED -- "file paths, preload (IPC)" --> DEC
+  DEC -- "GPU frames" --> COMP
   SHOW -- "scene state (IPC)" --> COMP
   COMP --> OUT
 ```

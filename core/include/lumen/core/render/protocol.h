@@ -14,6 +14,12 @@
 //   {"v":2,"cmd":"status"}    -> {"v":2,"ok":true,"frames":123,"pid":4567,
 //                                 "presentedSequence":12}  (scene in the last frame)
 //   {"v":2,"cmd":"quit"}      -> {"v":2,"ok":true}, then the renderer exits
+//   {"v":4,"cmd":"preload","video":"/path"}  -> opens a video ahead of use
+//       (the item in Preview), so it starts at once when sent live
+//   "status" also reports "video": {frames, dropped, loops, stalls,
+//       maxGapMs, gpuFrames, startMs, starts, playing} for the videos on screen
+//   and "timing": {tickMaxGapMs, tickStalls, swapMaxGapMs, swapStalls}: gaps
+//       over 100 ms in the render process's own main loop and frame swaps
 //   Only with --test-mode:
 //   {"v":2,"cmd":"grab","path":"/tmp/f.png"}
 //   {"v":2,"cmd":"clock","mode":"manual"|"real"}
@@ -32,7 +38,8 @@
 namespace lumen::core::render {
 
 // v3 (batch 8): text content may carry a theme style and a footer.
-inline constexpr int protocolVersion = 3;
+// v4 (batch 9): video content; "preload"; video statistics in "status".
+inline constexpr int protocolVersion = 4;
 
 // Longest line either side accepts, to bound memory use.
 inline constexpr qsizetype maxLineBytes = 1024 * 1024;

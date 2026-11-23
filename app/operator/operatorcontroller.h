@@ -1,6 +1,7 @@
 #pragma once
 
 #include "keymap.h"
+#include "medialibrary.h"
 #include "rowmodel.h"
 #include "servicedata.h"
 
@@ -27,6 +28,13 @@ class OperatorController : public QObject
     Q_PROPERTY(QObject *plan READ plan CONSTANT)
     Q_PROPERTY(QObject *slides READ slides CONSTANT)
     Q_PROPERTY(QObject *songs READ songs CONSTANT)
+    Q_PROPERTY(QObject *media READ media CONSTANT)
+    Q_PROPERTY(int selectedMedia READ selectedMedia NOTIFY stateChanged)
+    Q_PROPERTY(QString mediaSummary READ mediaSummary NOTIFY stateChanged)
+    Q_PROPERTY(bool mediaAvailable READ mediaAvailable NOTIFY stateChanged)
+    // Pictures for the Preview and Live frames when they show media.
+    Q_PROPERTY(QUrl previewPoster READ previewPoster NOTIFY stateChanged)
+    Q_PROPERTY(QUrl livePoster READ livePoster NOTIFY stateChanged)
     Q_PROPERTY(QString planName READ planName NOTIFY stateChanged)
     Q_PROPERTY(QString planDetail READ planDetail NOTIFY stateChanged)
     Q_PROPERTY(int currentItem READ currentItem NOTIFY stateChanged)
@@ -72,6 +80,21 @@ public:
     QObject *plan() { return &m_planModel; }
     QObject *slides() { return &m_slideModel; }
     QObject *songs() { return &m_songModel; }
+    QObject *media() { return &m_mediaModel; }
+    int selectedMedia() const { return m_selectedMedia; }
+    QString mediaSummary() const { return m_mediaSummary; }
+    bool mediaAvailable() const { return m_mediaLibrary != nullptr; }
+    QUrl previewPoster() const;
+    QUrl livePoster() const;
+
+    // Turns on the Media tab (batch 9).
+    void attachMedia(MediaLibrary &media);
+    Q_INVOKABLE QString importMedia(const QList<QUrl> &urls);
+    Q_INVOKABLE bool showMedia(int row);       // in the slide grid, ready to send live
+    Q_INVOKABLE bool useAsBackground(int row); // a looping, silent motion background
+    Q_INVOKABLE bool addMediaToPlan(int row);
+    // The video Space would send next, if any (the renderer preloads it).
+    QString previewVideo() const;
     QString planName() const;
     QString planDetail() const;
     int currentItem() const { return m_current; }
@@ -146,6 +169,7 @@ public:
 signals:
     void stateChanged();
     void scriptureRequested(); // Ctrl+B
+    void previewVideoChanged(const QString &path);
 
 private:
     static constexpr int libraryItem = -2; // m_current when showing a library song
@@ -187,8 +211,19 @@ private:
     bool m_versePending = false;
     QTimer m_verseTimeout;
 
+    void refreshMedia();
+    void updatePreviewVideo();
+
+    MediaLibrary *m_mediaLibrary = nullptr;
+    int m_selectedMedia = -1;
+    QString m_mediaSummary;
+    QString m_previewVideo;
+    // The operator chose a background (e.g. a motion loop); themes leave it.
+    bool m_manualBackground = false;
+
     RowModel m_planModel{{"kind", "title", "subtitle"}};
-    RowModel m_slideModel{{"group", "colour", "text"}};
+    RowModel m_mediaModel{{"title", "kind", "duration", "thumbnail", "presentationId", "path", "loop"}};
+    RowModel m_slideModel{{"group", "colour", "text", "thumbnail"}};
     RowModel m_songModel{{"title", "author", "copyright", "key", "presentationId"}};
 };
 

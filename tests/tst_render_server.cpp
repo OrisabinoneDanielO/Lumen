@@ -136,10 +136,16 @@ private slots:
     {
         RenderServer server(*m_output, false);
         QTRY_VERIFY(m_output->framesPresented() > 0);
+        QTRY_VERIFY(m_output->timing().tickMaxGapMs > 0);
         const QJsonObject reply = server.handle(request("status"));
         QVERIFY(ok(reply));
         QVERIFY(reply.value(QStringLiteral("frames")).toInteger() > 0);
         QCOMPARE(reply.value(QStringLiteral("pid")).toInteger(), QCoreApplication::applicationPid());
+        // The renderer's own smoothness, used to explain video pauses.
+        const QJsonObject timing = reply.value(QStringLiteral("timing")).toObject();
+        for (const char *key : {"tickMaxGapMs", "tickStalls", "swapMaxGapMs", "swapStalls"})
+            QVERIFY2(timing.contains(QLatin1String(key)), key);
+        QVERIFY(timing.value(QStringLiteral("tickMaxGapMs")).toDouble() > 0);
     }
 
     // Writing files on request is for tests only.

@@ -26,6 +26,14 @@ Result<Scene> OutputBridge::attach()
     return *onAir;
 }
 
+void OutputBridge::preload(const QString &videoPath)
+{
+    if (auto sent = m_link.send({{QStringLiteral("cmd"), QStringLiteral("preload")},
+                                 {QStringLiteral("video"), videoPath}});
+        !sent.ok())
+        emit sendFailed(sent.error().message);
+}
+
 void OutputBridge::push(const Scene &scene)
 {
     auto sent = m_link.send({{QStringLiteral("cmd"), QStringLiteral("scene")},

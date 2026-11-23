@@ -20,6 +20,7 @@
 #include <QQmlApplicationEngine>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QTemporaryDir>
 #include <QtQml/qqmlextensionplugin.h>
 
 #include <memory>
@@ -194,11 +195,27 @@ int main(int argc, char *argv[])
     app::ThemeController themeController(controller);
     themeController.attach(*library);
 
+    // Media: thumbnails go beside the library (a temporary folder for the
+    // design preview, so it leaves nothing behind).
+    QTemporaryDir previewThumbnails;
+    const QString thumbnailFolder =
+        parser.isSet(designPreview)
+            ? previewThumbnails.path()
+            : QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).filePath(QStringLiteral("thumbnails"));
+    app::MediaLibrary mediaLibrary(*library, thumbnailFolder);
+    controller.attachMedia(mediaLibrary);
+
     std::unique_ptr<Output> output;
     if (parser.isSet(experimentalOutput) || settings.value(QLatin1String(experimentalOutputKey), false).toBool()) {
         output = startOutput(show, parser.value(renderServer), parser.value(renderExecutable),
                              parser.values(renderOption));
         controller.setOutputConnected(output != nullptr);
+        // The video Space would send next is opened ahead of time, so it
+        // starts at once when it goes live.
+        if (output) {
+            QObject::connect(&controller, &app::OperatorController::previewVideoChanged, output->bridge.get(),
+                             &show::OutputBridge::preload);
+        }
     }
     // A normal quit closes the output; a crash leaves it showing the last frame.
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&output] {

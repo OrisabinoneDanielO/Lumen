@@ -186,7 +186,7 @@ void ScriptureController::rebuild()
             const QString group = parts.size() > 1
                                       ? QStringLiteral("%1 (%2/%3)").arg(reference).arg(p + 1).arg(parts.size())
                                       : reference;
-            view.slides.push_back({{}, group, scriptureColour, parts[p], footer, 0});
+            view.slides.push_back({{}, group, scriptureColour, parts[p], footer, 0, {}, {}, {}});
         }
     }
     applyTheme(view, theme.style, theme.background);

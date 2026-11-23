@@ -26,6 +26,10 @@ struct SlideView
     QString text;   // text elements, top to bottom
     QString footer; // e.g. "Amazing Grace · John Newton · Public domain"
     int fontSize = 0; // fitted pixel size (1080p) when the item has a theme
+    // A media slide (batch 9): a video or picture instead of text.
+    QString mediaKind; // "video", "image" or empty
+    QString mediaPath;
+    QString thumbnail;
 };
 
 struct ArrangementChip
