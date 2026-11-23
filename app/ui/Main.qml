@@ -2,10 +2,22 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
 
-// Main operator window: the five fixed regions from design/mockups/Main.html.
-// Batch 1 shows them empty; batch 5 builds the real shell.
+// Main operator window in Show mode, laid out as design/mockups/Main.html.
+// The regions are static until batch 5 wires them up. With designPreview set
+// (the --design-preview flag) they show the mockup's sample content; otherwise
+// they show empty states, so the app never presents made-up service data.
 Window {
     id: window
+
+    property bool designPreview: false
+
+    readonly property var idleLayers: [
+        { name: qsTr("Messages"), value: qsTr("Off"), active: false },
+        { name: qsTr("Props"), value: qsTr("Off"), active: false },
+        { name: qsTr("Slide"), value: qsTr("Off"), active: false },
+        { name: qsTr("Media"), value: qsTr("Off"), active: false },
+        { name: qsTr("Background"), value: qsTr("Off"), active: false }
+    ]
 
     width: 1440
     height: 900
@@ -19,11 +31,14 @@ Window {
         anchors.fill: parent
         spacing: 0
 
-        RegionPlaceholder {
+        Toolbar {
             objectName: "toolbar"
-            title: qsTr("TOOLBAR")
             Layout.fillWidth: true
-            Layout.preferredHeight: Theme.toolbarHeight
+            Layout.preferredHeight: implicitHeight
+            planName: window.designPreview ? SampleData.planName : qsTr("No service plan")
+            planDetail: window.designPreview ? SampleData.planDetail
+                                             : qsTr("Create or open a plan to begin")
+            outputsConnected: window.designPreview
         }
 
         RowLayout {
@@ -31,34 +46,43 @@ Window {
             Layout.fillHeight: true
             spacing: 0
 
-            RegionPlaceholder {
+            ServicePlanPanel {
                 objectName: "servicePlan"
-                title: qsTr("SERVICE PLAN")
                 Layout.preferredWidth: Theme.planWidth
                 Layout.fillHeight: true
+                items: window.designPreview ? SampleData.planItems : []
+                currentIndex: window.designPreview ? SampleData.currentPlanIndex : -1
             }
 
-            RegionPlaceholder {
+            SlideGridPanel {
                 objectName: "slideGrid"
-                title: qsTr("SLIDES")
-                fill: Theme.window
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                title: window.designPreview ? SampleData.itemTitle : ""
+                detail: window.designPreview ? SampleData.itemDetail : ""
+                arrangement: window.designPreview ? SampleData.arrangement : []
+                slides: window.designPreview ? SampleData.slides : []
+                liveIndex: window.designPreview ? SampleData.liveIndex : -1
+                nextIndex: window.designPreview ? SampleData.nextIndex : -1
             }
 
-            RegionPlaceholder {
+            PreviewLivePanel {
                 objectName: "previewLive"
-                title: qsTr("PREVIEW AND LIVE")
                 Layout.preferredWidth: Theme.previewWidth
                 Layout.fillHeight: true
+                nextText: window.designPreview ? SampleData.slides[SampleData.nextIndex].text : ""
+                liveText: window.designPreview ? SampleData.slides[SampleData.liveIndex].text : ""
+                liveLabel: window.designPreview ? SampleData.liveLabel : qsTr("Clear")
+                layers: window.designPreview ? SampleData.layers : window.idleLayers
             }
         }
 
-        RegionPlaceholder {
+        LibraryPanel {
             objectName: "library"
-            title: qsTr("LIBRARY")
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.libraryHeight
+            songs: window.designPreview ? SampleData.songs : []
+            selectedIndex: window.designPreview ? 0 : -1
         }
     }
 }
