@@ -2,14 +2,19 @@
 
 #include "renderclock.h"
 #include "scenemodel.h"
+#include "videomonitor.h"
 
+#include <QElapsedTimer>
 #include <QImage>
 #include <QObject>
+#include <QPointer>
 #include <QQmlApplicationEngine>
 #include <QSize>
 #include <QTimer>
 
 #include <atomic>
+#include <memory>
+#include <vector>
 
 class QQuickWindow;
 class QScreen;
@@ -48,11 +53,31 @@ public:
     // Sequence number of the scene shown in the most recently presented frame.
     quint64 presentedSequence() const { return m_presentedSequence.load(); }
 
+    // Opens a video ahead of use so it starts at once when sent live.
+    void preload(const QString &path) { m_model.preload(path); }
+    // What the videos shown so far have done (batch 9).
+    VideoStats videoStats() const;
+    int videosPlaying() const;
+
+    // How smoothly this process itself ran: the longest gap between ticks of
+    // the main loop and between swapped frames, and how many exceeded 100 ms.
+    // A video stall with a matching gap here means the whole process was held
+    // up (by the system or the compositor), not the video decoder.
+    struct Timing
+    {
+        double tickMaxGapMs = 0;
+        quint64 tickStalls = 0;
+        double swapMaxGapMs = 0;
+        quint64 swapStalls = 0;
+    };
+    Timing timing() const;
+
     QImage grab();
     QQuickWindow *window() const { return m_window; }
 
 private:
     void tick();
+    void watchVideos();
 
     RenderClock m_clock;
     SceneModel m_model;
@@ -62,6 +87,24 @@ private:
     std::atomic<quint64> m_syncedSequence{0};
     std::atomic<quint64> m_presentedSequence{0};
     QTimer m_tick;
+    QElapsedTimer m_tickClock;
+    qint64 m_lastTickMs = -1;
+    Timing m_tickTiming;
+    QElapsedTimer m_swapClock; // read on the render thread only
+    qint64 m_lastSwapMs = -1;
+    std::atomic<qint64> m_swapMaxGapUs{0};
+    std::atomic<quint64> m_swapStalls{0};
+
+    struct Watched
+    {
+        QPointer<QObject> output; // the VideoOutput item
+        std::unique_ptr<VideoMonitor> monitor;
+    };
+    QElapsedTimer m_since;
+    qint64 m_sceneAtMs = 0;
+    std::vector<Watched> m_videos;
+    VideoStats m_finished; // videos no longer on screen
+    qint64 m_lastStartMs = -1;
 };
 
 } // namespace lumen::render

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Window
+import QtMultimedia
 import Lumen.Slides
 
 // The audience output: six layers (bottom to top: Background, Media, Slide,
@@ -37,6 +38,9 @@ Window {
                 image: content.image
                 style: content.style
                 footer: content.footer
+                video: content.video
+                loop: content.loop
+                volume: content.volume
                 layerName: layer.modelData.name
                 opacity: layer.modelData.current.opaque ? 1.0 : 1.0 - layer.modelData.progress
                 visible: opacity > 0 && layer.modelData.progress < 1.0
@@ -50,6 +54,9 @@ Window {
                 image: content.image
                 style: content.style
                 footer: content.footer
+                video: content.video
+                loop: content.loop
+                volume: content.volume
                 layerName: layer.modelData.name
                 opacity: layer.modelData.progress
             }
@@ -74,6 +81,27 @@ Window {
             style: content.style
             footer: content.footer
             layerName: "logo"
+        }
+    }
+
+    // Videos opened ahead of use (the item in Preview): decoded to their
+    // first frame and paused, out of sight, so going live starts at once.
+    Repeater {
+        model: output.scene.preloads
+        delegate: Item {
+            required property url modelData
+            width: 2
+            height: 2
+            opacity: 0
+            MediaPlayer {
+                source: parent.modelData
+                videoOutput: warm
+                Component.onCompleted: { play(); pause() }
+            }
+            VideoOutput {
+                id: warm
+                anchors.fill: parent
+            }
         }
     }
 

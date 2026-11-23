@@ -16,10 +16,14 @@ OperatorController::OperatorController(ShowController &show, bool editAvailable,
 {
     connect(&m_show, &ShowController::sceneChanged, this, [this] {
         // Something else (e.g. Clear Slide) took the slide off air.
-        if (m_show.scene().layer(Layer::Slide).content.isEmpty())
+        const auto &scene = m_show.scene();
+        if (scene.layer(Layer::Slide).content.isEmpty() && scene.layer(Layer::Media).content.isEmpty())
             m_onAir = false;
+        if (scene.layer(Layer::Background).content.isEmpty())
+            m_manualBackground = false;
         emit stateChanged();
     });
+    connect(this, &OperatorController::stateChanged, this, &OperatorController::updatePreviewVideo);
     m_verseTimeout.setSingleShot(true);
     m_verseTimeout.setInterval(1500);
     connect(&m_verseTimeout, &QTimer::timeout, this, [this] { m_versePending = false; });
@@ -92,6 +96,123 @@ bool OperatorController::showSong(int row)
     m_current = libraryItem;
     showSelected();
     return true;
+}
+
+void OperatorController::attachMedia(MediaLibrary &media)
+{
+    m_mediaLibrary = &media;
+    refreshMedia();
+}
+
+void OperatorController::refreshMedia()
+{
+    if (!m_mediaLibrary)
+        return;
+    auto rows = m_mediaLibrary->list();
+    QList<QVariantMap> list;
+    if (rows.ok()) {
+        for (const MediaRow &row : rows.value()) {
+            const qint64 seconds = (row.durationMs + 500) / 1000;
+            list << QVariantMap{{"title", row.title},
+                                {"kind", row.kind},
+                                {"duration", row.kind == QLatin1String("video")
+                                                 ? QStringLiteral("%1:%2").arg(seconds / 60).arg(seconds % 60, 2, 10, QLatin1Char('0'))
+                                                 : QString()},
+                                {"thumbnail", row.thumbnail.isEmpty() ? QUrl() : QUrl::fromLocalFile(row.thumbnail)},
+                                {"presentationId", row.presentationId},
+                                {"path", row.path},
+                                {"loop", row.loop}};
+        }
+    }
+    m_mediaModel.setRows(list);
+    m_selectedMedia = -1;
+    emit stateChanged();
+}
+
+QString OperatorController::importMedia(const QList<QUrl> &urls)
+{
+    if (!m_mediaLibrary)
+        return {};
+    QStringList paths;
+    for (const QUrl &url : urls)
+        paths << (url.isLocalFile() ? url.toLocalFile() : url.toString());
+    const MediaImportReport report = m_mediaLibrary->importFiles(paths);
+    m_mediaSummary = report.summary();
+    refreshMedia();
+    return m_mediaSummary;
+}
+
+bool OperatorController::showMedia(int row)
+{
+    const QString id = m_mediaModel.get(row).value(QStringLiteral("presentationId")).toString();
+    if (!m_db || id.isEmpty())
+        return false;
+    auto view = loadPresentationView(*m_db, id);
+    if (!view.ok() || !showItem(std::move(view).value()))
+        return false;
+    m_selectedMedia = row;
+    emit stateChanged();
+    return true;
+}
+
+bool OperatorController::useAsBackground(int row)
+{
+    const QVariantMap media = m_mediaModel.get(row);
+    if (media.isEmpty())
+        return false;
+    const QString path = media.value(QStringLiteral("path")).toString();
+    const Content background = media.value(QStringLiteral("kind")) == QLatin1String("video")
+                                   ? Content::video(path, true, 0.0, media.value("thumbnail").toUrl().toLocalFile())
+                                   : Content::image(path);
+    m_manualBackground = true;
+    m_show.setContent(Layer::Background, background);
+    m_selectedMedia = row;
+    emit stateChanged();
+    return true;
+}
+
+bool OperatorController::addMediaToPlan(int row)
+{
+    return addPresentationToPlan(m_mediaModel.get(row).value(QStringLiteral("presentationId")).toString());
+}
+
+QString OperatorController::previewVideo() const
+{
+    const ItemView *view = selected();
+    const int index = previewSlide();
+    if (!view || index < 0)
+        return {};
+    const SlideView &slide = view->slides[std::size_t(index)];
+    return slide.mediaKind == QLatin1String("video") ? slide.mediaPath : QString();
+}
+
+void OperatorController::updatePreviewVideo()
+{
+    const QString path = previewVideo();
+    if (path == m_previewVideo)
+        return;
+    m_previewVideo = path;
+    if (!path.isEmpty())
+        emit previewVideoChanged(path);
+}
+
+QUrl OperatorController::previewPoster() const
+{
+    const ItemView *view = selected();
+    const int index = previewSlide();
+    if (!view || index < 0 || view->slides[std::size_t(index)].thumbnail.isEmpty())
+        return {};
+    return QUrl::fromLocalFile(view->slides[std::size_t(index)].thumbnail);
+}
+
+QUrl OperatorController::livePoster() const
+{
+    const Content &media = m_show.scene().layer(Layer::Media).content;
+    if (media.kind == Content::Kind::Image)
+        return QUrl::fromLocalFile(media.imagePath);
+    if (media.kind == Content::Kind::Video && !media.imagePath.isEmpty())
+        return QUrl::fromLocalFile(media.imagePath);
+    return {};
 }
 
 bool OperatorController::showItem(ItemView item)
@@ -346,6 +467,9 @@ QVariantList OperatorController::layers() const
         case Content::Kind::Empty: value = tr("Off"); break;
         case Content::Kind::Colour: value = tr("Colour %1").arg(content.colour.name().toUpper()); break;
         case Content::Kind::Image: value = QFileInfo(content.imagePath).fileName(); break;
+        case Content::Kind::Video:
+            value = (content.loop ? tr("Motion loop: %1") : tr("Video: %1")).arg(QFileInfo(content.videoPath).completeBaseName());
+            break;
         case Content::Kind::Text:
             value = (layer == Layer::Slide && m_onAir) ? liveLabel() : content.text.section(u'\n', 0, 0);
             break;
@@ -382,8 +506,10 @@ void OperatorController::showSelected()
     m_selected = 0;
     QList<QVariantMap> rows;
     if (const ItemView *view = selected()) {
-        for (const SlideView &slide : view->slides)
-            rows << QVariantMap{{"group", slide.group}, {"colour", slide.colour}, {"text", slide.text}};
+        for (const SlideView &slide : view->slides) {
+            rows << QVariantMap{{"group", slide.group}, {"colour", slide.colour}, {"text", slide.text},
+                                {"thumbnail", slide.thumbnail.isEmpty() ? QUrl() : QUrl::fromLocalFile(slide.thumbnail)}};
+        }
     }
     m_slideModel.setRows(rows);
     emit stateChanged();
@@ -415,13 +541,25 @@ bool OperatorController::goLive(int index)
     m_onAir = true;
     const SlideView &slide = view->slides[std::size_t(index)];
 
-    const Content content = view->style
-                                ? Content::styledText(slide.text, styleWithSize(*view->style, slide.fontSize), slide.footer)
-                                : Content::textContent(slide.text);
-    // A themed item brings its background with it, in the same change.
-    std::vector<std::pair<Layer, Content>> changes{{Layer::Slide, content}};
-    if (const auto background = backgroundContent(view->background))
-        changes.push_back({Layer::Background, *background});
+    std::vector<std::pair<Layer, Content>> changes;
+    if (!slide.mediaKind.isEmpty()) {
+        // A video or picture fills the Media layer; the slide text goes.
+        const Content media = slide.mediaKind == QLatin1String("video")
+                                  ? Content::video(slide.mediaPath, false, 1.0, slide.thumbnail)
+                                  : Content::image(slide.mediaPath);
+        changes = {{Layer::Media, media}, {Layer::Slide, Content::empty()}};
+    } else {
+        const Content content = view->style
+                                    ? Content::styledText(slide.text, styleWithSize(*view->style, slide.fontSize), slide.footer)
+                                    : Content::textContent(slide.text);
+        changes = {{Layer::Slide, content}};
+        // Full-screen media gives way to the next slide.
+        if (!m_show.scene().layer(Layer::Media).content.isEmpty())
+            changes.push_back({Layer::Media, Content::empty()});
+        // A themed item brings its background, unless the operator chose one.
+        if (const auto background = backgroundContent(view->background); background && !m_manualBackground)
+            changes.push_back({Layer::Background, *background});
+    }
 
     const quint64 before = m_show.scene().sequence;
     m_show.setContents(changes);
@@ -511,7 +649,13 @@ bool OperatorController::jumpToSection(int number)
 
 void OperatorController::clearLayer(const QString &name)
 {
-    if (const auto layer = layerFromName(name))
+    const auto layer = layerFromName(name);
+    if (!layer)
+        return;
+    // Clear Slide also stops full-screen media (videos sent as slides).
+    if (*layer == Layer::Slide)
+        m_show.setContents({{Layer::Slide, Content::empty()}, {Layer::Media, Content::empty()}});
+    else
         m_show.clear(*layer);
 }
 
@@ -542,7 +686,7 @@ bool OperatorController::handleKey(int key, int modifiers)
     case KeyAction::OpenScripture: emit scriptureRequested(); return true;
     // Safety controls work in both modes: they only ever take things away.
     case KeyAction::ClearBackground: m_show.clear(Layer::Background); return true;
-    case KeyAction::ClearSlide: m_show.clear(Layer::Slide); return true;
+    case KeyAction::ClearSlide: clearLayer(QStringLiteral("slide")); return true;
     case KeyAction::ClearProps: m_show.clear(Layer::Props); return true;
     case KeyAction::ClearMessages: m_show.clear(Layer::Messages); return true;
     case KeyAction::ClearAll: m_show.clearAll(); return true;

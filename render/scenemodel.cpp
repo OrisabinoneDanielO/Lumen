@@ -22,6 +22,7 @@ QString ContentModel::kind() const
     case Content::Kind::Colour: return QStringLiteral("colour");
     case Content::Kind::Text: return QStringLiteral("text");
     case Content::Kind::Image: return QStringLiteral("image");
+    case Content::Kind::Video: return QStringLiteral("video");
     case Content::Kind::Empty: break;
     }
     return QStringLiteral("empty");
@@ -29,7 +30,13 @@ QString ContentModel::kind() const
 
 QUrl ContentModel::image() const
 {
-    return m_content.kind == Content::Kind::Image ? QUrl::fromLocalFile(m_content.imagePath) : QUrl();
+    // An image, or a video's poster picture.
+    return m_content.imagePath.isEmpty() ? QUrl() : QUrl::fromLocalFile(m_content.imagePath);
+}
+
+QUrl ContentModel::video() const
+{
+    return m_content.kind == Content::Kind::Video ? QUrl::fromLocalFile(m_content.videoPath) : QUrl();
 }
 
 bool ContentModel::opaque() const
@@ -137,6 +144,16 @@ void SceneModel::apply(const Scene &scene, qint64 nowMs)
     const bool blackMoved = m_blackFader.setTarget(scene.black ? 1.0 : 0.0, overrideMs, nowMs);
     if (logoMoved || blackMoved)
         emit levelsChanged();
+}
+
+void SceneModel::preload(const QString &path)
+{
+    const QUrl url = QUrl::fromLocalFile(path);
+    m_preloads.removeAll(url);
+    m_preloads.append(url);
+    while (m_preloads.size() > 2)
+        m_preloads.removeFirst();
+    emit preloadsChanged();
 }
 
 void SceneModel::update(qint64 nowMs)

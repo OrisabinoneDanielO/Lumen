@@ -132,12 +132,22 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
             if (!slideElements.ok())
                 return slideElements.error();
             QStringList lines;
+            SlideView media;
             for (const Element &element : slideElements.value()) {
                 if (element.type == ElementType::Text && !element.content.isEmpty())
                     lines << element.content;
                 hasTimer = hasTimer || element.type == ElementType::Timer;
+                if ((element.type == ElementType::Video || element.type == ElementType::Image)
+                    && !element.mediaAssetId.isEmpty() && media.mediaKind.isEmpty()) {
+                    if (auto asset = Repository<MediaAsset>(db).get(element.mediaAssetId); asset.ok()) {
+                        media.mediaKind = element.type == ElementType::Video ? QStringLiteral("video") : QStringLiteral("image");
+                        media.mediaPath = asset.value().filePath;
+                        media.thumbnail = asset.value().thumbnailPath;
+                    }
+                }
             }
-            view.slides.push_back({slide.id, group->label, colour, lines.join(u'\n'), {}, 0});
+            view.slides.push_back({slide.id, group->label, colour, lines.join(u'\n'), {}, 0,
+                                   media.mediaKind, media.mediaPath, media.thumbnail});
         }
     }
     view.kind = kindLabel(p, hasTimer);

@@ -3,7 +3,8 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 
 // Bottom drawer: library tabs, search, import and the song table. Clicking a
-// song shows its slides; Add to plan appends it to the service plan.
+// song shows its slides; Add to plan appends it to the service plan. The
+// Media tab lists imported videos and pictures as cards.
 Rectangle {
     id: root
 
@@ -12,6 +13,8 @@ Rectangle {
     readonly property bool searchHasFocus: search.inputFocused
     signal searchDone()
     signal themesRequested()
+    // 0: Songs, 2: Media (Scripture and Themes open their own panels).
+    property int page: 0
 
     // Relative column widths: Title, Author, Copyright, Default key.
     readonly property var columnWeights: [2, 1.5, 1, 1]
@@ -83,10 +86,10 @@ Rectangle {
                     id: tab
                     required property string modelData
                     required property int index
-                    readonly property bool active: index === 0
-                    // Songs are listed here; Scripture and Themes open their
-                    // panels; Media and Presentations arrive in batches 9-10.
-                    readonly property bool available: index !== 2 && index !== 3
+                    readonly property bool active: index === root.page
+                    // Songs and Media are listed here; Scripture and Themes
+                    // open their panels; Presentations arrive in batch 10.
+                    readonly property bool available: index !== 3 && (index !== 2 || root.controller.mediaAvailable)
                     objectName: "libraryTab-" + index
                     opacity: available ? 1 : 0.45
 
@@ -114,7 +117,9 @@ Rectangle {
                         enabled: tab.available && !tab.active
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            if (tab.index === 1)
+                            if (tab.index === 0 || tab.index === 2)
+                                root.page = tab.index
+                            else if (tab.index === 1)
                                 root.controller.scriptureRequested()
                             else if (tab.index === 4)
                                 root.themesRequested()
@@ -131,7 +136,7 @@ Rectangle {
             LText {
                 objectName: "importSummary"
                 Layout.maximumWidth: 260
-                visible: text !== ""
+                visible: text !== "" && root.page === 0
                 text: root.controller.importSummary
                 font.pixelSize: 12
                 color: Theme.textMuted
@@ -142,9 +147,43 @@ Rectangle {
                     onClicked: details.visible = !details.visible
                 }
             }
+            LText {
+                objectName: "mediaSummary"
+                Layout.maximumWidth: 260
+                visible: text !== "" && root.page === 2
+                text: root.controller.mediaSummary
+                font.pixelSize: 12
+                color: Theme.textMuted
+            }
+            LButton {
+                objectName: "mediaToPlan"
+                visible: root.page === 2
+                implicitHeight: 32
+                radius: 6
+                text: qsTr("Add to plan")
+                opacity: root.controller.selectedMedia >= 0 ? 1.0 : 0.5
+                onClicked: root.controller.addMediaToPlan(root.controller.selectedMedia)
+            }
+            LButton {
+                objectName: "useAsBackground"
+                visible: root.page === 2
+                implicitHeight: 32
+                radius: 6
+                text: qsTr("Use as background")
+                opacity: root.controller.selectedMedia >= 0 ? 1.0 : 0.5
+                onClicked: root.controller.useAsBackground(root.controller.selectedMedia)
+            }
+            LButton {
+                objectName: "importMedia"
+                visible: root.page === 2
+                implicitHeight: 32
+                radius: 6
+                text: qsTr("Import media…")
+                onClicked: mediaDialog.active = true
+            }
             LButton {
                 objectName: "addToPlan"
-                visible: root.controller.libraryAvailable
+                visible: root.controller.libraryAvailable && root.page === 0
                 implicitHeight: 32
                 radius: 6
                 text: qsTr("Add to plan")
@@ -153,7 +192,7 @@ Rectangle {
             }
             LButton {
                 objectName: "importSongs"
-                visible: root.controller.libraryAvailable
+                visible: root.controller.libraryAvailable && root.page === 0
                 implicitHeight: 32
                 radius: 6
                 text: qsTr("Import songs…")
@@ -161,7 +200,7 @@ Rectangle {
             }
             LButton {
                 objectName: "importFolder"
-                visible: root.controller.libraryAvailable
+                visible: root.controller.libraryAvailable && root.page === 0
                 implicitHeight: 32
                 radius: 6
                 text: qsTr("Import folder…")
@@ -169,6 +208,7 @@ Rectangle {
             }
             LText {
                 Layout.leftMargin: 8
+                visible: root.page === 0
                 text: qsTr("Search")
                 font.pixelSize: 12
                 color: Theme.textMuted
@@ -176,6 +216,7 @@ Rectangle {
             SearchField {
                 id: search
                 objectName: "librarySearch"
+                visible: root.page === 0
                 onEscaped: root.searchDone()
                 onTextChanged: root.controller.searchSongs(text)
                 Layout.preferredWidth: 240
@@ -193,6 +234,7 @@ Rectangle {
         Flickable {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: root.page === 0
             clip: true
             contentHeight: table.height
             boundsBehavior: Flickable.StopAtBounds
@@ -221,12 +263,99 @@ Rectangle {
                 }
             }
         }
+
+        // Media: one card per video or picture. Click to show it in the
+        // slide grid (then send it live like a slide).
+        Flickable {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.topMargin: 10
+            visible: root.page === 2
+            clip: true
+            contentHeight: mediaGrid.height
+            boundsBehavior: Flickable.StopAtBounds
+
+            Flow {
+                id: mediaGrid
+                width: parent.width
+                spacing: 10
+
+                Repeater {
+                    model: root.controller.media
+                    delegate: Rectangle {
+                        id: card
+                        required property int index
+                        required property string title
+                        required property string kind
+                        required property string duration
+                        required property url thumbnail
+                        required property bool loop
+                        objectName: "mediaCard-" + index
+                        width: 168
+                        height: 124
+                        radius: 8
+                        color: Theme.raised
+                        border.width: 2
+                        border.color: index === root.controller.selectedMedia ? Theme.next : Theme.border
+                        Accessible.role: Accessible.Button
+                        Accessible.name: title
+
+                        Rectangle {
+                            x: 2
+                            y: 2
+                            width: parent.width - 4
+                            height: Math.round(width * 9 / 16)
+                            radius: 6
+                            color: "#000000"
+                            Image {
+                                anchors.fill: parent
+                                source: card.thumbnail
+                                fillMode: Image.PreserveAspectFit
+                                asynchronous: true
+                            }
+                            LText {
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                anchors.margins: 4
+                                visible: card.duration !== ""
+                                text: card.loop ? qsTr("Loop · %1").arg(card.duration) : card.duration
+                                font.pixelSize: 10
+                                color: "#FFFFFF"
+                                style: Text.Outline
+                                styleColor: "#000000"
+                            }
+                        }
+                        LText {
+                            x: 8
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 8
+                            width: parent.width - 16
+                            text: card.title
+                            font.pixelSize: 12
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.controller.showMedia(card.index)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     LText {
         anchors.horizontalCenter: parent.horizontalCenter
         y: 120
-        visible: root.controller.songs.count === 0
+        visible: root.page === 2 && root.controller.media.count === 0
+        text: qsTr("No media yet. Import videos and pictures to use them in services.")
+        color: Theme.textMuted
+    }
+
+    LText {
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: 120
+        visible: root.page === 0 && root.controller.songs.count === 0
         text: search.text !== "" ? qsTr("No songs match \"%1\".").arg(search.text)
                                  : qsTr("No songs yet. Import songs to build your library.")
         color: Theme.textMuted
@@ -275,6 +404,22 @@ Rectangle {
                 fileDialog.active = false
             }
             onRejected: fileDialog.active = false
+        }
+    }
+    Loader {
+        id: mediaDialog
+        active: false
+        sourceComponent: FileDialog {
+            title: qsTr("Import videos and pictures")
+            fileMode: FileDialog.OpenFiles
+            nameFilters: [qsTr("Videos and pictures (*.mp4 *.m4v *.mov *.webm *.mkv *.avi *.mpg *.mpeg *.wmv *.png *.jpg *.jpeg *.bmp *.gif *.webp)"),
+                          qsTr("All files (*)")]
+            Component.onCompleted: open()
+            onAccepted: {
+                root.controller.importMedia(selectedFiles)
+                mediaDialog.active = false
+            }
+            onRejected: mediaDialog.active = false
         }
     }
     Loader {

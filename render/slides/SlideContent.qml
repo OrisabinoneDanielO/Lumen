@@ -1,4 +1,5 @@
 import QtQuick
+import QtMultimedia
 
 // Draws one piece of slide content. Shared by the audience output and the
 // operator's Preview and Live frames.
@@ -12,13 +13,18 @@ Item {
     id: view
     objectName: "slideContent"
 
-    property string kind: "empty" // empty | colour | text | image
+    property string kind: "empty" // empty | colour | text | image | video
     property color colour: "white"
     property string text
     property url image
     property var style: ({})      // TextStyle JSON plus "size"
     property string footer
     property string layerName
+    // Video: the renderer plays it; the operator's frames show its poster.
+    property url video
+    property bool loop: false
+    property real volume: 1.0
+    property bool playVideo: true
 
     readonly property bool themed: kind === "text" && style !== null && style !== undefined
                                    && style.size !== undefined
@@ -42,10 +48,38 @@ Item {
 
     Image {
         anchors.fill: parent
-        visible: view.kind === "image"
-        source: view.kind === "image" ? view.image : ""
+        visible: view.kind === "image" || (view.kind === "video" && !view.playVideo)
+        source: view.kind === "image" || view.kind === "video" ? view.image : ""
         fillMode: view.layerName === "background" ? Image.PreserveAspectCrop : Image.PreserveAspectFit
         smooth: true
+    }
+
+    // Video, decoded here in the render process (hardware decode where the
+    // GPU supports the codec). Motion backgrounds loop silently.
+    Loader {
+        anchors.fill: parent
+        active: view.kind === "video" && view.playVideo && view.video.toString() !== ""
+        sourceComponent: Item {
+            MediaPlayer {
+                id: player
+                source: view.video
+                loops: view.loop ? MediaPlayer.Infinite : 1
+                videoOutput: output
+                audioOutput: AudioOutput {
+                    volume: view.volume
+                    muted: view.volume <= 0
+                }
+                Component.onCompleted: play()
+            }
+            VideoOutput {
+                id: output
+                objectName: "videoOutput"
+                // Read by the renderer's frame monitor (microseconds).
+                property real mediaDurationUs: player.duration * 1000
+                anchors.fill: parent
+                fillMode: view.layerName === "background" ? VideoOutput.PreserveAspectCrop : VideoOutput.PreserveAspectFit
+            }
+        }
     }
 
     // ---- unthemed text (batch 4 placement) --------------------------------

@@ -8,6 +8,7 @@ Rectangle {
     property string groupLabel
     property color groupColor: Theme.textMuted
     property string slideText
+    required property url thumbnail // media slides: a picture of the video or image
     signal clicked()
     property string status // "live", "next" or ""
 
@@ -75,6 +76,14 @@ Rectangle {
             color: parent.color
         }
 
+        Image {
+            objectName: "thumbnail"
+            anchors.fill: parent
+            visible: root.thumbnail.toString() !== ""
+            source: root.thumbnail
+            fillMode: Image.PreserveAspectFit
+            asynchronous: true
+        }
         LText {
             anchors.fill: parent
             anchors.margins: 10

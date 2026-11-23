@@ -107,3 +107,33 @@ set_tests_properties(tst_theme_fit PROPERTIES TIMEOUT 180)
 
 lumen_add_test(tst_themes tst_themes.cpp operatorharness.h)
 target_link_libraries(tst_themes PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
+
+# Media (batch 9).
+lumen_add_test(tst_video_playback tst_video_playback.cpp)
+target_link_libraries(tst_video_playback PRIVATE lumen_render_lib)
+target_compile_definitions(tst_video_playback PRIVATE LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
+set_tests_properties(tst_video_playback PROPERTIES TIMEOUT 120)
+
+# Done when: a 2-hour loop plays with zero dropped frames on the reference PC.
+# Routine runs play 2 minutes; set LUMEN_SOAK_SECONDS=7200 for the full run.
+lumen_add_test(tst_video_soak tst_video_soak.cpp)
+target_link_libraries(tst_video_soak PRIVATE Lumen::RenderLink Lumen::Core)
+target_compile_definitions(tst_video_soak PRIVATE
+    LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>"
+    LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
+add_dependencies(tst_video_soak lumen-render)
+set_tests_properties(tst_video_soak PROPERTIES TIMEOUT 300)
+
+# Requirement: a video preloaded in Preview starts in under 200 ms.
+lumen_add_test(tst_video_start tst_video_start.cpp)
+target_link_libraries(tst_video_start PRIVATE Lumen::RenderLink Lumen::Core)
+target_compile_definitions(tst_video_start PRIVATE
+    LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>"
+    LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
+add_dependencies(tst_video_start lumen-render)
+
+# Importing media, media slides, motion backgrounds and the Media tab.
+lumen_add_test(tst_media tst_media.cpp operatorharness.h)
+target_link_libraries(tst_media PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(tst_media PRIVATE LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
+set_tests_properties(tst_media PROPERTIES TIMEOUT 120)

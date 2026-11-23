@@ -121,6 +121,14 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
         return okReply();
     }
 
+    if (command == QLatin1String("preload")) {
+        const QString path = request.value(QStringLiteral("video")).toString();
+        if (path.isEmpty())
+            return errorReply(QStringLiteral("\"preload\" needs a \"video\""));
+        m_output.preload(path);
+        return okReply();
+    }
+
     if (command == QLatin1String("getScene"))
         return okReply({{QStringLiteral("scene"), core::show::toJson(m_output.scene())}});
 
@@ -141,7 +149,24 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
     }
 
     if (command == QLatin1String("status")) {
+        const VideoStats video = m_output.videoStats();
+        const QJsonObject videoJson{{"frames", qint64(video.frames)},
+                                    {"dropped", qint64(video.dropped)},
+                                    {"loops", qint64(video.loops)},
+                                    {"stalls", qint64(video.stalls)},
+                                    {"gpuFrames", qint64(video.gpuFrames)},
+                                    {"maxGapMs", video.maxGapMs},
+                                    {"startMs", video.startMs},
+                                    {"starts", qint64(video.starts)},
+                                    {"playing", m_output.videosPlaying()}};
+        const OutputWindow::Timing timing = m_output.timing();
+        const QJsonObject timingJson{{"tickMaxGapMs", timing.tickMaxGapMs},
+                                     {"tickStalls", qint64(timing.tickStalls)},
+                                     {"swapMaxGapMs", timing.swapMaxGapMs},
+                                     {"swapStalls", qint64(timing.swapStalls)}};
         return okReply({{QStringLiteral("frames"), qint64(m_output.framesPresented())},
+                        {QStringLiteral("video"), videoJson},
+                        {QStringLiteral("timing"), timingJson},
                         {QStringLiteral("presentedSequence"), qint64(m_output.presentedSequence())},
                         {QStringLiteral("pid"), QCoreApplication::applicationPid()},
                         {QStringLiteral("server"), m_server.serverName()}});

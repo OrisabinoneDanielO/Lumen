@@ -15,6 +15,7 @@ QString kindName(Content::Kind kind)
     case Content::Kind::Colour: return QStringLiteral("colour");
     case Content::Kind::Text: return QStringLiteral("text");
     case Content::Kind::Image: return QStringLiteral("image");
+    case Content::Kind::Video: return QStringLiteral("video");
     case Content::Kind::Empty: break;
     }
     return QStringLiteral("empty");
@@ -30,6 +31,8 @@ std::optional<Content::Kind> kindFromName(const QString &name)
         return Content::Kind::Text;
     if (name == QLatin1String("image"))
         return Content::Kind::Image;
+    if (name == QLatin1String("video"))
+        return Content::Kind::Video;
     return std::nullopt;
 }
 
@@ -47,6 +50,13 @@ QJsonObject contentJson(const Content &content)
     }
     if (content.kind == Content::Kind::Image)
         json.insert(QStringLiteral("image"), content.imagePath);
+    if (content.kind == Content::Kind::Video) {
+        json.insert(QStringLiteral("video"), content.videoPath);
+        json.insert(QStringLiteral("loop"), content.loop);
+        json.insert(QStringLiteral("volume"), content.volume);
+        if (!content.imagePath.isEmpty())
+            json.insert(QStringLiteral("poster"), content.imagePath);
+    }
     return json;
 }
 
@@ -70,6 +80,14 @@ std::optional<Content> contentFrom(const QJsonValue &value)
     }
     if (*kind == Content::Kind::Image)
         content.imagePath = json.value(QStringLiteral("image")).toString();
+    if (*kind == Content::Kind::Video) {
+        content.videoPath = json.value(QStringLiteral("video")).toString();
+        content.loop = json.value(QStringLiteral("loop")).toBool();
+        content.volume = qBound(0.0, json.value(QStringLiteral("volume")).toDouble(1.0), 1.0);
+        content.imagePath = json.value(QStringLiteral("poster")).toString();
+        if (content.videoPath.isEmpty())
+            return std::nullopt;
+    }
     return content;
 }
 

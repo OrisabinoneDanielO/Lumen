@@ -11,7 +11,7 @@ The operator UI bundles the [Inter](https://github.com/rsms/inter) typeface (v4.
 
 ## Building
 
-Needs CMake 3.24+, Ninja, a C++20 compiler and Qt 6.5+ (Core, Gui, Qml, Quick, Test).
+Needs CMake 3.24+, Ninja, a C++20 compiler and Qt 6.5+ (Core, Gui, Qml, Quick, Multimedia, Test).
 
 ```sh
 cmake --preset debug          # or: release
@@ -25,7 +25,7 @@ On Fedora, the tools can live in a toolbox container instead of the host:
 ```sh
 toolbox create lumen
 toolbox run -c lumen sudo dnf install -y cmake ninja-build gcc-c++ \
-    qt6-qtbase-devel qt6-qtdeclarative-devel mesa-libGL-devel
+    qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtmultimedia-devel mesa-libGL-devel
 toolbox run -c lumen cmake --preset debug   # and so on
 ```
 
@@ -38,6 +38,8 @@ Songs: **Import songs…** or **Import folder…** in the library reads plain-te
 Scripture: press **Ctrl+B** (Cmd+B on macOS), type a reference such as `jn 3 16-18`, `rom 8:28-30`, `ps 23` or a translation's own book name (`Johanu 3:16`), pick a translation and press Enter. Ten free Bibles are bundled (English WEB, KJV, BSB and ASV; Yoruba, Hausa, Igbo and Swahili; French LSG; Spanish RV1909); see `bibles/README.md` for their licences. The build imports them into `bibles.db`. Other USFM or USFX Bibles can be added from a folder.
 
 Themes: **Library > Themes** edits the look of songs, scripture and lower thirds (font, sizes, colour, alignment, outline, shadow, background, margins and the footer) with a live preview. Text shrinks to fit the theme's safe area and long passages split across slides. The output uses the bundled Noto Sans and Noto Serif fonts (SIL OFL 1.1, `core/fonts/OFL.txt`), which cover Yoruba, Igbo and Hausa letters and tone marks.
+
+Media: the **Media** tab in the library imports videos (`.mp4`, `.mov`, `.webm`, `.mkv` and more) and pictures. Each gets a thumbnail; videos of a minute or less are marked as loops. Click a card to show it in the slide grid and send it live like a slide (it fills the screen; Clear Slide stops it), or press **Use as background** to play it as a silent motion loop under songs and scripture. Videos are decoded in the render process with hardware decoding where the system offers it. The video in Preview is opened ahead of time, so it starts at once when it goes live.
 
 CI (`.github/workflows/ci.yml`) builds and tests on Windows, macOS and Linux with Qt 6.8 LTS.
 

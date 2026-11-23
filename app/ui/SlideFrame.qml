@@ -10,6 +10,7 @@ Rectangle {
     property string text
     property var slideStyle: ({})
     property string footer
+    property url poster // a picture of the video or image shown
     property color background: Theme.slideBackground
     property color frameColor: Theme.border
     property int frameWidth: 2
@@ -18,12 +19,23 @@ Rectangle {
 
     implicitHeight: Math.round(width * 9 / 16)
     radius: 8
-    color: text !== "" ? background : "#000000"
+    readonly property bool hasPoster: poster.toString() !== ""
+    color: text !== "" && !hasPoster ? background : "#000000"
     border.color: frameColor
     border.width: frameWidth
     clip: true
 
     readonly property bool themed: slideStyle !== null && slideStyle !== undefined && slideStyle.size !== undefined
+
+    Image {
+        objectName: "poster"
+        anchors.fill: parent
+        anchors.margins: root.frameWidth
+        visible: root.hasPoster
+        source: root.poster
+        fillMode: Image.PreserveAspectFit
+        asynchronous: true
+    }
 
     SlideContent {
         anchors.fill: parent

@@ -29,6 +29,9 @@ public:
     // Returns the scene that was on air when attaching.
     Result<Scene> attach();
 
+    // Asks the renderer to open a video ahead of use (batch 9).
+    void preload(const QString &videoPath);
+
 signals:
     void sendFailed(const QString &error);
 
