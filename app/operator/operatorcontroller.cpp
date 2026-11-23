@@ -92,10 +92,25 @@ bool OperatorController::showSong(int row)
     return true;
 }
 
+bool OperatorController::showItem(ItemView item)
+{
+    if (item.slides.empty())
+        return false;
+    m_librarySong = std::move(item);
+    m_selectedSong = -1;
+    m_current = libraryItem;
+    showSelected();
+    return true;
+}
+
 bool OperatorController::addSongToPlan(int row)
 {
+    return addPresentationToPlan(m_songModel.get(row).value(QStringLiteral("presentationId")).toString());
+}
+
+bool OperatorController::addPresentationToPlan(const QString &id)
+{
     using namespace core::data;
-    const QString id = m_songModel.get(row).value(QStringLiteral("presentationId")).toString();
     if (!m_db || id.isEmpty())
         return false;
 
@@ -449,6 +464,7 @@ bool OperatorController::handleKey(int key, int modifiers)
         return false;
 
     switch (binding->action) {
+    case KeyAction::OpenScripture: emit scriptureRequested(); return true;
     // Safety controls work in both modes: they only ever take things away.
     case KeyAction::ClearBackground: m_show.clear(Layer::Background); return true;
     case KeyAction::ClearSlide: m_show.clear(Layer::Slide); return true;

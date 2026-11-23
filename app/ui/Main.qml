@@ -8,6 +8,8 @@ Window {
     id: window
 
     required property QtObject controller
+    // Scripture quick search; optional (the panel is left out without it).
+    property QtObject scripture: null
 
     width: 1440
     height: 900
@@ -23,9 +25,9 @@ Window {
         anchors.fill: parent
         focus: true
 
-        // Live shortcuts, unless the operator is typing in the search box.
+        // Live shortcuts, unless the operator is typing in a search box.
         Keys.onPressed: event => {
-            if (library.searchHasFocus)
+            if (library.searchHasFocus || (scripturePanel.item && scripturePanel.item.visible))
                 return;
             event.accepted = window.controller.handleKey(event.key, event.modifiers);
         }
@@ -87,6 +89,24 @@ Window {
                 controller: window.controller
                 onSearchDone: keyRoot.forceActiveFocus()
             }
+        }
+    }
+
+    Loader {
+        id: scripturePanel
+        anchors.fill: parent
+        active: window.scripture !== null
+        sourceComponent: ScripturePanel {
+            scripture: window.scripture
+            onClosed: keyRoot.forceActiveFocus()
+        }
+    }
+
+    Connections {
+        target: window.controller
+        function onScriptureRequested() {
+            if (scripturePanel.item)
+                scripturePanel.item.show()
         }
     }
 }

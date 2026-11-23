@@ -6,9 +6,11 @@ add_library(lumen_core STATIC
     include/lumen/core/result.h
     include/lumen/core/render/protocol.h
     include/lumen/core/show/scene.h
+    include/lumen/core/textfold.h
     src/buildinfo.cpp
     src/render/protocol.cpp
     src/show/scene.cpp
+    src/textfold.cpp
 )
 add_library(Lumen::Core ALIAS lumen_core)
 
@@ -66,6 +68,20 @@ add_library(lumen_songs STATIC
 add_library(Lumen::Songs ALIAS lumen_songs)
 target_link_libraries(lumen_songs
     PUBLIC lumen_data
+    PRIVATE lumen_warnings)
+
+# Scripture: USFM/USFX import, the Bible store and the reference parser.
+add_library(lumen_scripture STATIC
+    include/lumen/core/scripture/bible.h
+    include/lumen/core/scripture/reference.h
+    include/lumen/core/scripture/biblestore.h
+    src/scripture/bible.cpp
+    src/scripture/reference.cpp
+    src/scripture/biblestore.cpp
+)
+add_library(Lumen::Scripture ALIAS lumen_scripture)
+target_link_libraries(lumen_scripture
+    PUBLIC lumen_core Qt6::Sql
     PRIVATE lumen_warnings)
 
 # Migrations are numbered SQL files compiled in as resources.

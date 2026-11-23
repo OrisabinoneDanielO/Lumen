@@ -26,8 +26,12 @@ else()
 endif()
 
 add_subdirectory(core)
+add_subdirectory(tools)
 add_subdirectory(app)
 add_subdirectory(render)
+
+include(GNUInstallDirs)
+add_subdirectory(bibles)
 
 if(LUMEN_BUILD_TESTS)
     enable_testing()

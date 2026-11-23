@@ -25,16 +25,15 @@ KeyMap::KeyMap()
     };
     for (int n = 1; n <= 9; ++n)
         m_bindings.push_back({Qt::Key_0 + n, KeyAction::JumpToSection, {}, n});
+    m_bindings.push_back({Qt::Key_B, KeyAction::OpenScripture, {}, 0, Qt::ControlModifier});
 }
 
 std::optional<KeyBinding> KeyMap::lookup(int key, Qt::KeyboardModifiers modifiers) const
 {
-    // Number keys on the keypad count the same; Shift, Ctrl, Alt and Meta
-    // combinations are not live shortcuts.
-    if ((modifiers & ~Qt::KeypadModifier) != Qt::NoModifier)
-        return std::nullopt;
+    // Number keys on the keypad count the same as the main row.
+    const Qt::KeyboardModifiers pressed = modifiers & ~Qt::KeypadModifier;
     for (const KeyBinding &binding : m_bindings) {
-        if (binding.key == key)
+        if (binding.key == key && binding.modifiers == pressed)
             return binding;
     }
     return std::nullopt;

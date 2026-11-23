@@ -98,6 +98,12 @@ public:
     // Appends a song from the list to the plan (creating today's plan if
     // there is none).
     Q_INVOKABLE bool addSongToPlan(int row);
+    // Appends any stored presentation to the plan (creating today's plan).
+    bool addPresentationToPlan(const QString &presentationId);
+    // Shows an item that is not in the plan or song list (e.g. a scripture
+    // passage) in the slide grid, ready to send live.
+    bool showItem(ItemView item);
+    core::data::Database *database() const { return m_db; }
     // Imports song files and folders; returns the summary line.
     Q_INVOKABLE QString importSongs(const QList<QUrl> &urls);
 
@@ -123,6 +129,7 @@ public:
 
 signals:
     void stateChanged();
+    void scriptureRequested(); // Ctrl+B
 
 private:
     static constexpr int libraryItem = -2; // m_current when showing a library song
