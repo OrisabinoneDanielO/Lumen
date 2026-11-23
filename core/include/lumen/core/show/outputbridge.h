@@ -29,6 +29,11 @@ public:
     // Returns the scene that was on air when attaching.
     Result<Scene> attach();
 
+    // For secondary outputs (the stream, batch 15): sends the current scene
+    // and every change, without adopting what the renderer shows (the main
+    // output's renderer is the one that survives a UI crash).
+    void follow();
+
     // Asks the renderer to open a video ahead of use (batch 9).
     void preload(const QString &videoPath);
 

@@ -188,3 +188,12 @@ add_dependencies(tst_stage lumen-render)
 lumen_add_test(tst_props tst_props.cpp operatorharness.h rendercheck.h)
 target_link_libraries(tst_props PRIVATE lumen_render_lib lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
 target_compile_definitions(tst_props PRIVATE LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
+
+# Stream output with alpha, key and fill, NDI plugin (batch 15). Done when:
+# the stream output shows only Slide and Props on transparency.
+lumen_add_test(tst_stream tst_stream.cpp rendercheck.h)
+target_link_libraries(tst_stream PRIVATE lumen_render_lib Lumen::RenderLink Lumen::Show Lumen::Operator)
+target_compile_definitions(tst_stream PRIVATE
+    LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>"
+    LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
+add_dependencies(tst_stream lumen-render)

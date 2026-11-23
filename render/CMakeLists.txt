@@ -9,6 +9,10 @@ qt_add_library(lumen_render_lib STATIC
     screenchoice.cpp
     processwatch.h
     processwatch.cpp
+    keyfill.h
+    keyfill.cpp
+    ndisink.h
+    ndisink.cpp
     outputwindow.h
     outputwindow.cpp
     renderserver.h
@@ -26,6 +30,8 @@ qt_add_qml_module(lumen_render_lib
     QML_FILES
         Output.qml
         Stage.qml
+        LayerStack.qml
+        StreamScene.qml
 )
 # The stage display uses the operator UI's font (Inter, SIL OFL 1.1, see
 # app/ui/fonts/OFL.txt), as in design/mockups/Stage.html.

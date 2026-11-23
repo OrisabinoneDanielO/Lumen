@@ -147,3 +147,23 @@ A dark band with an orange accent bar at the bottom left, the name in bold above
 ### Message templates
 
 Templates are Message rows ("Parent of {number}, please come to the nursery"); the fields are the names in braces, worked out from the text, so adding a template needs no separate field list. A message with an empty field is not shown. Three come built in (nursery, car lights, welcome). Any message can run as a ticker, scrolling across the banner, instead of standing still.
+
+## Batch 15: stream output with alpha, key and fill, NDI
+
+### A render process of its own, drawn off screen
+
+The stream output is a third `lumen-render`, started with `--stream`. It draws only the Slide and Props layers (Background, Media, Messages and Masks are left out and decode nothing) on transparency, off screen, with Qt Quick's software renderer straight into a picture with an alpha channel. The stream carries text and pictures, never video, so software drawing is cheap, repaints only what changed, and leaves each frame in memory where key and fill and NDI need it (a GPU renderer would need a read-back from the graphics card every frame). Black takes the stream to full transparency; Logo does not apply to it.
+
+The app's bridge to the stream follows the show (`OutputBridge::follow`) but never adopts the stream's scene, so only the main output's renderer decides what is on air after a UI crash.
+
+### Key and fill
+
+For switchers without alpha input: the fill is the picture over black, the key its transparency as grey. They show in two windows, or fullscreen on two spare screens (after the audience output's and the stage's).
+
+### NDI: the user's runtime, loaded at run time; experimental
+
+Chosen with the user: no proprietary SDK ships with Lumen (it is GPL-3.0). The NDI plugin loads the NDI Runtime the user has installed and calls its exported C functions, declared in `render/ndisink.cpp`. It has not been tested with a real runtime (none was available), so it is behind the `experimental/ndi` setting, off by default, and the Stream popover says so. Without the runtime it only reports that it is missing (tested).
+
+### SDI (DeckLink): not yet
+
+Blackmagic's DeckLink API is a set of C++ COM interfaces whose declarations come only with the DeckLink SDK; there is nothing to compile against without it, and no card to test with. The stream output's frames are ready for a DeckLink sink when the SDK is available.

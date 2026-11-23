@@ -1,5 +1,7 @@
 #include "outputwindow.h"
 #include "renderserver.h"
+#include "keyfill.h"
+#include "ndisink.h"
 #include "processwatch.h"
 #include "screenchoice.h"
 
@@ -41,6 +43,23 @@ int main(int argc, char *argv[])
                                             QStringLiteral("Open a window instead of going fullscreen."));
     const QCommandLineOption stageOption(QStringLiteral("stage"),
                                          QStringLiteral("Be a stage display instead of the audience output."));
+    // The stream output (batch 15): Slide and Props on transparency, drawn
+    // off screen, sent as key and fill windows and/or NDI.
+    const QCommandLineOption streamOption(QStringLiteral("stream"),
+                                          QStringLiteral("Be the stream output (Slide and Props on transparency)."));
+    const QCommandLineOption sizeOption(QStringLiteral("size"), QStringLiteral("Stream picture size (default 1920x1080)."),
+                                        QStringLiteral("WxH"));
+    const QCommandLineOption fpsOption(QStringLiteral("fps"), QStringLiteral("Stream frames per second (default 30)."),
+                                       QStringLiteral("n"));
+    const QCommandLineOption keyFillOption(QStringLiteral("key-fill"),
+                                           QStringLiteral("Show the stream as key and fill (windows, or screens below)."));
+    const QCommandLineOption fillScreenOption(QStringLiteral("fill-screen"), QStringLiteral("Screen for the fill."),
+                                              QStringLiteral("index"));
+    const QCommandLineOption keyScreenOption(QStringLiteral("key-screen"), QStringLiteral("Screen for the key."),
+                                             QStringLiteral("index"));
+    const QCommandLineOption ndiOption(QStringLiteral("ndi"),
+                                       QStringLiteral("Send the stream over NDI as <name> (needs the NDI Runtime; experimental)."),
+                                       QStringLiteral("name"));
     const QCommandLineOption testModeOption(QStringLiteral("test-mode"),
                                             QStringLiteral("Allow the \"grab\" command (for automated tests)."));
     // For tests only: a renderer normally outlives a crashed UI (that is the
@@ -49,7 +68,8 @@ int main(int argc, char *argv[])
     const QCommandLineOption watchPidOption(QStringLiteral("watch-pid"),
                                             QStringLiteral("Exit when process <pid> has ended (for tests)."),
                                             QStringLiteral("pid"));
-    parser.addOptions({serverOption, screenOption, windowedOption, stageOption, testModeOption, watchPidOption});
+    parser.addOptions({serverOption, screenOption, windowedOption, stageOption, streamOption, sizeOption, fpsOption,
+                       keyFillOption, fillScreenOption, keyScreenOption, ndiOption, testModeOption, watchPidOption});
     parser.process(app);
 
     QTimer watchdog;
@@ -64,8 +84,15 @@ int main(int argc, char *argv[])
         watchdog.start(1000);
     }
 
-    lumen::render::OutputWindow output(parser.isSet(stageOption) ? lumen::render::OutputWindow::Kind::Stage
-                                                                  : lumen::render::OutputWindow::Kind::Audience);
+    using Kind = lumen::render::OutputWindow::Kind;
+    lumen::render::OutputWindow output(parser.isSet(streamOption) ? Kind::Stream
+                                       : parser.isSet(stageOption) ? Kind::Stage
+                                                                   : Kind::Audience);
+    if (parser.isSet(streamOption)) {
+        const QStringList size = parser.value(sizeOption).split(u'x');
+        output.setStreamFormat(size.size() == 2 ? QSize(size[0].toInt(), size[1].toInt()) : QSize(),
+                               parser.value(fpsOption).toInt());
+    }
     if (!output.create()) {
         qCritical("lumen-render: could not create the output window");
         return 1;
@@ -81,6 +108,55 @@ int main(int argc, char *argv[])
                      &QCoreApplication::quit);
 
     const QList<QScreen *> screens = QGuiApplication::screens();
+
+    // Stream outputs have no window of their own: their frames go to key
+    // and fill windows and/or NDI.
+    std::unique_ptr<lumen::render::PictureWindow> fill, key;
+    std::unique_ptr<lumen::render::NdiSink> ndi;
+    if (output.kind() == Kind::Stream) {
+        QStringList status;
+        if (parser.isSet(keyFillOption)) {
+            const auto open = [&](const QString &title, const QCommandLineOption &screenOption, int offset) {
+                auto window = std::make_unique<lumen::render::PictureWindow>();
+                window->setTitle(title);
+                bool ok = false;
+                const int index = parser.value(screenOption).toInt(&ok);
+                if (ok && index >= 0 && index < screens.size()) {
+                    window->setScreen(screens.at(index));
+                    window->setGeometry(screens.at(index)->geometry());
+                    window->showFullScreen();
+                } else {
+                    window->resize(640, 360);
+                    window->setPosition(40 + offset, 40);
+                    window->show();
+                }
+                return window;
+            };
+            fill = open(QStringLiteral("Lumen Fill"), fillScreenOption, 0);
+            key = open(QStringLiteral("Lumen Key"), keyScreenOption, 680);
+            status << QStringLiteral("key and fill");
+        }
+        if (parser.isSet(ndiOption)) {
+            ndi = std::make_unique<lumen::render::NdiSink>(parser.value(ndiOption), parser.value(fpsOption).toInt() > 0
+                                                                                        ? parser.value(fpsOption).toInt() : 30);
+            status << QStringLiteral("NDI: %1").arg(ndi->status());
+            if (!ndi->isSending())
+                qWarning("lumen-render: %s", qPrintable(ndi->status()));
+        }
+        output.setStreamStatus(status.isEmpty() ? QStringLiteral("no sinks") : status.join(QStringLiteral("; ")));
+        QObject::connect(&output, &lumen::render::OutputWindow::streamFrame, &app, [&](const QImage &frame) {
+            if (fill)
+                fill->setPicture(lumen::render::fillOf(frame));
+            if (key)
+                key->setPicture(lumen::render::keyOf(frame));
+            if (ndi)
+                ndi->frame(frame);
+        });
+        qInfo("lumen-render %s: stream output (%s) listening as %s", qPrintable(lumen::core::version()),
+              qPrintable(output.streamStatus()), qPrintable(server.serverName()));
+        return QGuiApplication::exec();
+    }
+
     std::optional<int> requested;
     if (parser.isSet(screenOption)) {
         bool ok = false;
