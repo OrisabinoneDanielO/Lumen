@@ -13,11 +13,15 @@ import QtMultimedia
 // Timers (batch 12): the time comes in as timerText, worked out by whoever
 // shows this (the render process from its own clock). On the Messages layer
 // a timer sits in the banner; elsewhere its label is above a large time.
+//
+// Props (batch 14): a lower third (name and title) at the bottom left and a
+// bug (a logo) in a corner, either or both. Messages with style "ticker"
+// scroll across the banner instead of standing still.
 Item {
     id: view
     objectName: "slideContent"
 
-    property string kind: "empty" // empty | colour | text | image | video | timer
+    property string kind: "empty" // empty | colour | text | image | video | timer | prop
     property color colour: "white"
     property string text
     property url image
@@ -30,6 +34,10 @@ Item {
     property real volume: 1.0
     property bool playVideo: true
     property string timerText
+    property var prop: ({})
+    readonly property var lowerThird: kind === "prop" && prop && prop.lowerThird ? prop.lowerThird : null
+    readonly property var bug: kind === "prop" && prop && prop.bug ? prop.bug : null
+    readonly property bool ticker: kind === "text" && isMessage && style !== null && style !== undefined && style.ticker === true
 
     readonly property bool themed: kind === "text" && style !== null && style !== undefined
                                    && style.size !== undefined
@@ -98,8 +106,34 @@ Item {
         color: "#B3000000"
     }
 
+    // A ticker: the message scrolls across the banner, again and again.
+    Item {
+        visible: view.ticker
+        width: view.width
+        height: Math.round(view.height * 0.12)
+        clip: true
+        Text {
+            id: tickerText
+            objectName: "tickerText"
+            anchors.verticalCenter: parent.verticalCenter
+            text: view.ticker ? view.text : ""
+            color: view.colour
+            font.family: "Noto Sans"
+            font.pixelSize: Math.max(12, Math.round(view.height * 0.05))
+            font.weight: Font.DemiBold
+            NumberAnimation on x {
+                running: view.ticker && tickerText.implicitWidth > 0
+                loops: Animation.Infinite
+                from: view.width
+                to: -tickerText.implicitWidth
+                // About a fifth of the screen width per second.
+                duration: Math.max(1000, Math.round((view.width + tickerText.implicitWidth) / Math.max(1, view.width * 0.2) * 1000))
+            }
+        }
+    }
+
     Text {
-        visible: !view.themed && view.kind === "text"
+        visible: !view.themed && view.kind === "text" && !view.ticker
         x: view.margin
         y: view.isMessage ? 0 : view.isProps ? Math.round(view.height * 0.75) : view.margin
         width: view.width - 2 * view.margin
@@ -117,6 +151,63 @@ Item {
         font.pixelSize: Math.max(12, Math.round(view.height * (view.isMessage ? 0.05 : view.isProps ? 0.06 : 0.07)))
         font.weight: Font.DemiBold
         lineHeight: 1.2
+    }
+
+    // ---- props -----------------------------------------------------------------
+
+    // Lower third: a dark band with an accent bar, the name above the title.
+    Rectangle {
+        id: lowerThirdBand
+        objectName: "lowerThird"
+        visible: view.lowerThird !== null
+        x: view.margin
+        y: Math.round(view.height * 0.74)
+        width: Math.min(view.width - 2 * view.margin, lowerThirdColumn.implicitWidth + Math.round(view.height * 0.08))
+        height: lowerThirdColumn.implicitHeight + Math.round(view.height * 0.04)
+        color: "#E6171A20"
+        Rectangle {
+            width: Math.max(2, Math.round(view.height * 0.008))
+            height: parent.height
+            color: "#F08A24"
+        }
+        Column {
+            id: lowerThirdColumn
+            x: Math.round(view.height * 0.04)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Math.round(view.height * 0.004)
+            Text {
+                objectName: "lowerThirdLine1"
+                text: view.lowerThird ? (view.lowerThird.line1 || "") : ""
+                color: "white"
+                font.family: "Noto Sans"
+                font.weight: Font.Bold
+                font.pixelSize: Math.max(10, Math.round(view.height * 0.05))
+            }
+            Text {
+                objectName: "lowerThirdLine2"
+                visible: text !== ""
+                text: view.lowerThird ? (view.lowerThird.line2 || "") : ""
+                color: "#F2C38B"
+                font.family: "Noto Sans"
+                font.pixelSize: Math.max(8, Math.round(view.height * 0.032))
+            }
+        }
+    }
+
+    // Bug: a logo in a corner.
+    Image {
+        objectName: "bug"
+        visible: view.bug !== null
+        readonly property real inset: Math.round(view.height * 0.04)
+        readonly property string corner: view.bug ? (view.bug.corner || "topRight") : "topRight"
+        height: Math.round(view.height * (view.bug && view.bug.size ? view.bug.size : 0.12))
+        width: height * Math.max(0.2, sourceSize.width > 0 ? sourceSize.width / Math.max(1, sourceSize.height) : 1)
+        x: corner.endsWith("Left") ? inset : view.width - width - inset
+        y: corner.startsWith("top") ? inset : view.height - height - inset
+        source: view.bug && view.bug.image ? view.bug.image : "" // a file:// URL
+        fillMode: Image.PreserveAspectFit
+        smooth: true
+        opacity: 0.9
     }
 
     // ---- timers ---------------------------------------------------------------

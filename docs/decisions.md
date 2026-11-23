@@ -131,3 +131,19 @@ Three built-in layouts: Default (the mockup), Lyrics (now and next, large, for s
 ### Messages to the stage
 
 A message sent from the Stage popover shows only on the stage, never on the audience output; the audience banner (Message in the toolbar) is separate.
+
+## Batch 14: props, lower thirds, messages with fields
+
+### One props item, two parts
+
+The Props layer holds one piece of content, so a prop is composed of two independent parts: a lower third (a name and a title) and a bug (a logo in a corner). The Props popover puts either up or takes it down without touching the other. Nothing else in the operator window writes to the Props layer, so props stay up across slides, items, Clear Slide, messages, Logo and Black; only Clear Props (F3), Clear All, taking them down, or deleting one removes them. What is up is read back from the scene, so the popover always agrees with the output.
+
+Props are stored in the library in a new `props` table (schema version 4) with their settings as JSON. `tst_database`'s list of tables and `tst_repositories`' create-read-update-delete checks were extended for it (no earlier check was loosened).
+
+### Lower third look
+
+A dark band with an orange accent bar at the bottom left, the name in bold above the title, in Noto Sans like the slides. Themes for lower thirds (the theme target exists since batch 2) come with the full editor (batch 16).
+
+### Message templates
+
+Templates are Message rows ("Parent of {number}, please come to the nursery"); the fields are the names in braces, worked out from the text, so adding a template needs no separate field list. A message with an empty field is not shown. Three come built in (nursery, car lights, welcome). Any message can run as a ticker, scrolling across the banner, instead of standing still.

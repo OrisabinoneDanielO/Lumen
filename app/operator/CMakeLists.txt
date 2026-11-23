@@ -33,6 +33,10 @@ add_library(lumen_operator STATIC
     timercontroller.cpp
     stagecontroller.h
     stagecontroller.cpp
+    propscontroller.h
+    propscontroller.cpp
+    messagetemplates.h
+    messagetemplates.cpp
 )
 add_library(Lumen::Operator ALIAS lumen_operator)
 target_include_directories(lumen_operator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

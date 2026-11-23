@@ -14,6 +14,8 @@
 #include "servicedata.h"
 #include "themecontroller.h"
 #include "themes.h"
+#include "messagetemplates.h"
+#include "propscontroller.h"
 #include "stagecontroller.h"
 #include "timercontroller.h"
 
@@ -43,6 +45,8 @@ public:
     ~OperatorHarness()
     {
         engine.reset();
+        templates.reset();
+        props.reset();
         stage.reset();
         timers.reset();
         themes.reset();
@@ -92,6 +96,10 @@ public:
         timers = std::make_unique<app::TimerController>(*controller, show);
         timers->attach(*m_db);
         stage = std::make_unique<app::StageController>(*controller, *timers);
+        props = std::make_unique<app::PropsController>(show);
+        props->attach(*m_db);
+        templates = std::make_unique<app::MessageTemplates>(*controller);
+        templates->attach(*m_db);
         media = std::make_unique<app::MediaLibrary>(*m_db, thumbnails.path());
         controller->attachMedia(*media);
         decks = std::make_unique<app::PresentationLibrary>(*m_db, slidePictures.path());
@@ -105,7 +113,9 @@ public:
              {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(scripture.get())},
              {QStringLiteral("themes"), QVariant::fromValue<QObject *>(themes.get())},
              {QStringLiteral("timerController"), QVariant::fromValue<QObject *>(timers.get())},
-             {QStringLiteral("stageController"), QVariant::fromValue<QObject *>(stage.get())}});
+             {QStringLiteral("stageController"), QVariant::fromValue<QObject *>(stage.get())},
+             {QStringLiteral("propsController"), QVariant::fromValue<QObject *>(props.get())},
+             {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(templates.get())}});
         engine->loadFromModule("Lumen.Ui", "Main");
         if (engine->rootObjects().isEmpty()) {
             *error = QStringLiteral("Main.qml did not load");
@@ -186,6 +196,8 @@ public:
     std::unique_ptr<app::ThemeController> themes;
     std::unique_ptr<app::TimerController> timers;
     std::unique_ptr<app::StageController> stage;
+    std::unique_ptr<app::PropsController> props;
+    std::unique_ptr<app::MessageTemplates> templates;
     std::unique_ptr<app::OperatorController> controller;
     std::unique_ptr<QQmlApplicationEngine> engine;
     QQuickWindow *window = nullptr;
