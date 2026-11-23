@@ -31,9 +31,15 @@ bool OutputWindow::create()
     if (!m_window)
         return false;
 
-    // frameSwapped comes from the render thread; only touch the atomic there.
-    connect(m_window, &QQuickWindow::frameSwapped, this, [this] { ++m_frames; },
-            Qt::DirectConnection);
+    // Both signals come from the render thread. During synchronisation the GUI
+    // thread is blocked, so reading the scene there is safe; the frame swapped
+    // afterwards is the one that shows that scene.
+    connect(m_window, &QQuickWindow::beforeSynchronizing, this,
+            [this] { m_syncedSequence = m_model.scene().sequence; }, Qt::DirectConnection);
+    connect(m_window, &QQuickWindow::frameSwapped, this, [this] {
+        m_presentedSequence = m_syncedSequence.load();
+        ++m_frames;
+    }, Qt::DirectConnection);
     m_tick.start();
     return true;
 }

@@ -15,7 +15,7 @@ target_link_libraries(tst_core PRIVATE Lumen::Core)
 target_compile_definitions(tst_core PRIVATE EXPECTED_VERSION="${PROJECT_VERSION}")
 
 lumen_add_test(tst_mainwindow tst_mainwindow.cpp)
-target_link_libraries(tst_mainwindow PRIVATE lumen_ui lumen_uiplugin Qt6::Quick)
+target_link_libraries(tst_mainwindow PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick)
 
 lumen_add_test(tst_database tst_database.cpp)
 target_link_libraries(tst_database PRIVATE Lumen::Data)
@@ -55,6 +55,19 @@ target_compile_definitions(tst_show_script PRIVATE
     LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>"
     LUMEN_SCRIPTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/scripts")
 add_dependencies(tst_show_script lumen-render)
+
+# Operator UI shell (batch 5).
+lumen_add_test(tst_operator tst_operator.cpp)
+target_link_libraries(tst_operator PRIVATE Lumen::Operator)
+
+lumen_add_test(tst_operator_window tst_operator_window.cpp operatorharness.h)
+target_link_libraries(tst_operator_window PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick)
+
+# Done when: clicking or pressing Space sends a slide live in under 50 ms.
+lumen_add_test(tst_send_live_latency tst_send_live_latency.cpp operatorharness.h)
+target_link_libraries(tst_send_live_latency PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick)
+target_compile_definitions(tst_send_live_latency PRIVATE LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>")
+add_dependencies(tst_send_live_latency lumen-render)
 
 # Done when (batch 3): killing the UI process leaves the last frame on screen.
 lumen_add_test(tst_render_survives_ui_kill tst_render_survives_ui_kill.cpp rendercheck.h)

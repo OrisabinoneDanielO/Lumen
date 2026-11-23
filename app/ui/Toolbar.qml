@@ -6,9 +6,7 @@ import QtQuick.Layouts
 Rectangle {
     id: root
 
-    property string planName
-    property string planDetail
-    property bool outputsConnected: false
+    required property QtObject controller
 
     implicitHeight: 58
     color: Theme.panel
@@ -18,6 +16,34 @@ Rectangle {
         width: parent.width
         height: 1
         color: Theme.border
+    }
+
+    component ModeButton: Rectangle {
+        id: modeButton
+        property string label
+        property string mode
+        readonly property bool active: root.controller.mode === mode
+
+        width: modeLabel.implicitWidth + 28
+        height: 30
+        radius: 6
+        color: active ? Theme.border : "transparent"
+        Accessible.role: Accessible.RadioButton
+        Accessible.name: label
+        Accessible.checked: active
+
+        LText {
+            id: modeLabel
+            anchors.centerIn: parent
+            text: modeButton.label
+            font.weight: modeButton.active ? Font.DemiBold : Font.Normal
+            color: modeButton.active ? Theme.text : Theme.textMuted
+        }
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.controller.mode = modeButton.mode
+        }
     }
 
     RowLayout {
@@ -39,8 +65,10 @@ Rectangle {
             }
         }
 
-        // Show / Edit mode switch (Show is the default mode).
+        // Show / Edit mode switch. Edit stays hidden until editing works
+        // (experimental/editor setting).
         Rectangle {
+            objectName: "modeSwitch"
             implicitWidth: modes.implicitWidth + 8
             implicitHeight: modes.implicitHeight + 8
             radius: 8
@@ -52,33 +80,16 @@ Rectangle {
                 anchors.centerIn: parent
                 spacing: 2
 
-                Rectangle {
-                    width: showLabel.implicitWidth + 28
-                    height: 30
-                    radius: 6
-                    color: Theme.border
-                    Accessible.role: Accessible.RadioButton
-                    Accessible.name: qsTr("Show mode")
-                    LText {
-                        id: showLabel
-                        anchors.centerIn: parent
-                        text: qsTr("Show")
-                        font.weight: Font.DemiBold
-                    }
+                ModeButton {
+                    objectName: "showMode"
+                    label: qsTr("Show")
+                    mode: "show"
                 }
-                Rectangle {
-                    width: editLabel.implicitWidth + 28
-                    height: 30
-                    radius: 6
-                    color: "transparent"
-                    Accessible.role: Accessible.RadioButton
-                    Accessible.name: qsTr("Edit mode")
-                    LText {
-                        id: editLabel
-                        anchors.centerIn: parent
-                        text: qsTr("Edit")
-                        color: Theme.textMuted
-                    }
+                ModeButton {
+                    objectName: "editMode"
+                    label: qsTr("Edit")
+                    mode: "edit"
+                    visible: root.controller.editAvailable
                 }
             }
         }
@@ -90,12 +101,12 @@ Rectangle {
 
             LText {
                 Layout.fillWidth: true
-                text: root.planName
+                text: root.controller.planName
                 font.weight: Font.DemiBold
             }
             LText {
                 Layout.fillWidth: true
-                text: root.planDetail
+                text: root.controller.planDetail
                 font.pixelSize: 12
                 color: Theme.textMuted
             }
@@ -103,39 +114,75 @@ Rectangle {
 
         Row {
             spacing: 6
-            LButton { text: qsTr("Clear BG"); hint: "F1" }
-            LButton { text: qsTr("Clear Slide"); hint: "F2" }
-            LButton { text: qsTr("Clear Props"); hint: "F3" }
-            LButton { text: qsTr("Clear Msg"); hint: "F4" }
-            LButton { text: qsTr("Clear All"); hint: "F5"; variant: "warn" }
-            LButton { text: qsTr("Logo"); hint: "F6" }
-            LButton { text: qsTr("Black"); hint: "F7"; variant: "black" }
+            LButton {
+                objectName: "clearBackground"
+                text: qsTr("Clear BG"); hint: "F1"
+                onClicked: root.controller.clearLayer("background")
+            }
+            LButton {
+                objectName: "clearSlide"
+                text: qsTr("Clear Slide"); hint: "F2"
+                onClicked: root.controller.clearLayer("slide")
+            }
+            LButton {
+                objectName: "clearProps"
+                text: qsTr("Clear Props"); hint: "F3"
+                onClicked: root.controller.clearLayer("props")
+            }
+            LButton {
+                objectName: "clearMessages"
+                text: qsTr("Clear Msg"); hint: "F4"
+                onClicked: root.controller.clearLayer("messages")
+            }
+            LButton {
+                objectName: "clearAll"
+                text: qsTr("Clear All"); hint: "F5"; variant: "warn"
+                onClicked: root.controller.clearAll()
+            }
+            LButton {
+                objectName: "logo"
+                text: qsTr("Logo"); hint: "F6"
+                variant: root.controller.logoOn ? "primary" : "default"
+                onClicked: root.controller.toggleLogo()
+            }
+            LButton {
+                objectName: "black"
+                text: qsTr("Black"); hint: "F7"
+                variant: root.controller.blackOn ? "primary" : "black"
+                onClicked: root.controller.toggleBlack()
+            }
         }
 
+        // Only the main output exists so far; Stage and Stream (NDI) arrive in
+        // batches 13 and 15, so their lights stay grey.
         Row {
             spacing: 12
             visible: root.width >= 1360
 
             Repeater {
-                model: [qsTr("Main"), qsTr("Stage"), qsTr("Stream (NDI)")]
+                model: [
+                    { name: qsTr("Main"), connected: root.controller.outputConnected },
+                    { name: qsTr("Stage"), connected: false },
+                    { name: qsTr("Stream (NDI)"), connected: false }
+                ]
 
                 delegate: Row {
                     id: output
-                    required property string modelData
+                    required property var modelData
                     spacing: 6
                     Accessible.role: Accessible.StaticText
-                    Accessible.name: modelData + (root.outputsConnected ? qsTr(" connected")
-                                                                        : qsTr(" not connected"))
+                    Accessible.name: modelData.name + (modelData.connected ? qsTr(" connected")
+                                                                           : qsTr(" not connected"))
 
                     Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 8
                         height: 8
                         radius: 4
-                        color: root.outputsConnected ? Theme.ok : Theme.unknown
+                        color: output.modelData.connected ? Theme.ok : Theme.unknown
                     }
                     LText {
-                        text: output.modelData
+                        text: output.modelData.name
                         font.pixelSize: 12
                         color: Theme.textMuted
                     }

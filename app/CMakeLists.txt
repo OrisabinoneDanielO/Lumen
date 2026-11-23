@@ -1,5 +1,7 @@
-# Operator UI: the Lumen.Ui QML module (ui/) and the lumen executable.
+# Operator UI: the Lumen.Ui QML module (ui/), its C++ glue (operator/) and
+# the lumen executable.
 add_subdirectory(ui)
+add_subdirectory(operator)
 
 qt_add_executable(lumen main.cpp)
 set_target_properties(lumen PROPERTIES
@@ -13,6 +15,7 @@ set_target_properties(lumen PROPERTIES
 target_link_libraries(lumen PRIVATE
     Lumen::Core
     Lumen::Show
+    Lumen::Operator
     lumen_ui
     lumen_uiplugin
     Qt6::Gui
