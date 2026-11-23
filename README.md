@@ -2,6 +2,8 @@
 
 Free, offline, cross-platform worship presentation software. Licensed under GPL-3.0 (see `LICENSE`).
 
+The operator UI bundles the [Inter](https://github.com/rsms/inter) typeface (v4.1, SIL Open Font License 1.1, see `app/ui/fonts/OFL.txt`).
+
 - Design doc: `docs/design-doc.md` (export it from claude.ai, see `docs/README.md`)
 - Diagrams: `docs/diagrams.md`
 - UI mockups: open `design/mockups/index.html` in a browser

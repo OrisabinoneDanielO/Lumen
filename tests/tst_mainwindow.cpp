@@ -1,4 +1,7 @@
 #include <QDir>
+#include <QFile>
+#include <QFontDatabase>
+#include <QFontInfo>
 #include <QQmlApplicationEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -139,6 +142,34 @@ private slots:
         QVERIFY(region("previewLive")->property("liveText").toString().startsWith("'Twas grace"));
         QCOMPARE(region("previewLive")->property("layers").toList().size(), 5);
         QCOMPARE(region("library")->property("songs").toList().size(), 4);
+    }
+
+    // Inter is compiled into the UI module (not taken from the system), loads,
+    // and is the font the window's text uses.
+    void interFontIsBundledAndUsed()
+    {
+        for (const char *weight : {"Regular", "Medium", "SemiBold", "Bold"}) {
+            const QString path = QStringLiteral(":/qt/qml/Lumen/Ui/fonts/Inter-%1.ttf")
+                                     .arg(QLatin1String(weight));
+            QVERIFY2(QFile::exists(path), qPrintable(path));
+            const int id = QFontDatabase::addApplicationFont(path);
+            QVERIFY2(id != -1, qPrintable(path));
+            QVERIFY(QFontDatabase::applicationFontFamilies(id).contains(QStringLiteral("Inter")));
+        }
+        QVERIFY(QFile::exists(QStringLiteral(":/qt/qml/Lumen/Ui/fonts/OFL.txt")));
+
+        load(false);
+        int textItems = 0;
+        const auto items = m_window->findChildren<QQuickItem *>();
+        for (QQuickItem *item : items) {
+            if (!item->inherits("QQuickText"))
+                continue;
+            ++textItems;
+            const QFont font = item->property("font").value<QFont>();
+            QCOMPARE(font.family(), QStringLiteral("Inter"));
+            QCOMPARE(QFontInfo(font).family(), QStringLiteral("Inter"));
+        }
+        QVERIFY(textItems > 10);
     }
 
     void screenshots_data() { addModes(); }

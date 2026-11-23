@@ -25,6 +25,14 @@ qt_add_qml_module(lumen_ui
         SlideFrame.qml
         PreviewLivePanel.qml
         LibraryPanel.qml
+    RESOURCES
+        # Inter 4.1 (SIL Open Font License 1.1, see fonts/OFL.txt), bundled so
+        # the operator UI looks the same on every machine.
+        fonts/Inter-Regular.ttf
+        fonts/Inter-Medium.ttf
+        fonts/Inter-SemiBold.ttf
+        fonts/Inter-Bold.ttf
+        fonts/OFL.txt
 )
 target_link_libraries(lumen_ui
     PUBLIC Qt6::Quick
