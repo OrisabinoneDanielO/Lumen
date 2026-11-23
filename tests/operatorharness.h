@@ -2,11 +2,14 @@
 
 // Loads the real operator window (Lumen.Ui Main.qml) with an OperatorController
 // over an in-memory library holding the mockup's sample service, or over a
-// library the test provides. The song library (search, import) and a media
-// library (thumbnails in a temporary folder) are attached.
+// library the test provides. The song library (search, import), a media
+// library (thumbnails in a temporary folder) and a presentation library
+// (slide pictures in a temporary folder; drawn by Lumen, without office
+// programs, so results do not depend on what is installed) are attached.
 
 #include "medialibrary.h"
 #include "operatorcontroller.h"
+#include "presentationlibrary.h"
 #include "scripturecontroller.h"
 #include "servicedata.h"
 #include "themecontroller.h"
@@ -41,6 +44,7 @@ public:
         themes.reset();
         scripture.reset();
         controller.reset();
+        decks.reset();
         media.reset();
         songs.reset();
         m_db.reset();
@@ -83,6 +87,10 @@ public:
         themes->attach(*m_db);
         media = std::make_unique<app::MediaLibrary>(*m_db, thumbnails.path());
         controller->attachMedia(*media);
+        decks = std::make_unique<app::PresentationLibrary>(*m_db, slidePictures.path());
+        app::DeckImporter::Options deckOptions;
+        deckOptions.office = app::DeckImporter::Office::Never;
+        controller->attachPresentations(*decks, deckOptions);
 
         engine = std::make_unique<QQmlApplicationEngine>();
         engine->setInitialProperties(
@@ -163,6 +171,8 @@ public:
     std::unique_ptr<core::songs::SongLibrary> songs;
     QTemporaryDir thumbnails;
     std::unique_ptr<app::MediaLibrary> media;
+    QTemporaryDir slidePictures;
+    std::unique_ptr<app::PresentationLibrary> decks;
     std::unique_ptr<app::ScriptureController> scripture;
     std::unique_ptr<app::ThemeController> themes;
     std::unique_ptr<app::OperatorController> controller;

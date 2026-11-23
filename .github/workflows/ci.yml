@@ -51,7 +51,7 @@ jobs:
           version: '6.8.3'
           arch: ${{ matrix.qt_arch }}
           cache: true
-          modules: 'qtmultimedia'
+          modules: 'qtmultimedia qtpdf'
 
       - name: Configure
         run: cmake --preset release

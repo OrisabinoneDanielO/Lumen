@@ -4,7 +4,8 @@ import QtQuick.Layouts
 
 // Bottom drawer: library tabs, search, import and the song table. Clicking a
 // song shows its slides; Add to plan appends it to the service plan. The
-// Media tab lists imported videos and pictures as cards.
+// Media tab lists imported videos and pictures as cards, and the
+// Presentations tab imported slide decks (PowerPoint, PDF).
 Rectangle {
     id: root
 
@@ -13,11 +14,69 @@ Rectangle {
     readonly property bool searchHasFocus: search.inputFocused
     signal searchDone()
     signal themesRequested()
-    // 0: Songs, 2: Media (Scripture and Themes open their own panels).
+    // 0: Songs, 2: Media, 3: Presentations (Scripture and Themes open their
+    // own panels).
     property int page: 0
 
     // Relative column widths: Title, Author, Copyright, Default key.
     readonly property var columnWeights: [2, 1.5, 1, 1]
+
+    // A card with a 16:9 picture, a corner badge and a title.
+    component Card: Rectangle {
+        id: card
+        property string title
+        property url thumbnail
+        property string badge
+        property bool selected: false
+        signal clicked()
+        width: 168
+        height: 124
+        radius: 8
+        color: Theme.raised
+        border.width: 2
+        border.color: selected ? Theme.next : Theme.border
+        Accessible.role: Accessible.Button
+        Accessible.name: title
+
+        Rectangle {
+            x: 2
+            y: 2
+            width: parent.width - 4
+            height: Math.round(width * 9 / 16)
+            radius: 6
+            color: "#000000"
+            Image {
+                anchors.fill: parent
+                source: card.thumbnail
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+            }
+            LText {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: 4
+                visible: card.badge !== ""
+                text: card.badge
+                font.pixelSize: 10
+                color: "#FFFFFF"
+                style: Text.Outline
+                styleColor: "#000000"
+            }
+        }
+        LText {
+            x: 8
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 8
+            width: parent.width - 16
+            text: card.title
+            font.pixelSize: 12
+        }
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: card.clicked()
+        }
+    }
 
     component TableRow: Rectangle {
         id: tableRow
@@ -87,9 +146,10 @@ Rectangle {
                     required property string modelData
                     required property int index
                     readonly property bool active: index === root.page
-                    // Songs and Media are listed here; Scripture and Themes
-                    // open their panels; Presentations arrive in batch 10.
-                    readonly property bool available: index !== 3 && (index !== 2 || root.controller.mediaAvailable)
+                    // Songs, Media and Presentations are listed here;
+                    // Scripture and Themes open their panels.
+                    readonly property bool available: (index !== 2 || root.controller.mediaAvailable)
+                                                      && (index !== 3 || root.controller.decksAvailable)
                     objectName: "libraryTab-" + index
                     opacity: available ? 1 : 0.45
 
@@ -117,7 +177,7 @@ Rectangle {
                         enabled: tab.available && !tab.active
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            if (tab.index === 0 || tab.index === 2)
+                            if (tab.index === 0 || tab.index === 2 || tab.index === 3)
                                 root.page = tab.index
                             else if (tab.index === 1)
                                 root.controller.scriptureRequested()
@@ -180,6 +240,38 @@ Rectangle {
                 radius: 6
                 text: qsTr("Import media…")
                 onClicked: mediaDialog.active = true
+            }
+            LText {
+                objectName: "deckSummary"
+                Layout.maximumWidth: 260
+                visible: text !== "" && root.page === 3
+                text: root.controller.deckSummary
+                font.pixelSize: 12
+                color: Theme.textMuted
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: root.controller.deckDetails !== ""
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: deckDetails.visible = !deckDetails.visible
+                }
+            }
+            LButton {
+                objectName: "deckToPlan"
+                visible: root.page === 3
+                implicitHeight: 32
+                radius: 6
+                text: qsTr("Add to plan")
+                opacity: root.controller.selectedDeck >= 0 ? 1.0 : 0.5
+                onClicked: root.controller.addDeckToPlan(root.controller.selectedDeck)
+            }
+            LButton {
+                objectName: "importDecks"
+                visible: root.page === 3
+                implicitHeight: 32
+                radius: 6
+                text: root.controller.decksBusy ? qsTr("Importing…") : qsTr("Import presentation…")
+                opacity: root.controller.decksBusy ? 0.5 : 1.0
+                onClicked: if (!root.controller.decksBusy) deckDialog.active = true
             }
             LButton {
                 objectName: "addToPlan"
@@ -282,66 +374,59 @@ Rectangle {
 
                 Repeater {
                     model: root.controller.media
-                    delegate: Rectangle {
-                        id: card
+                    delegate: Card {
                         required property int index
-                        required property string title
-                        required property string kind
+                        required title
+                        required thumbnail
                         required property string duration
-                        required property url thumbnail
                         required property bool loop
                         objectName: "mediaCard-" + index
-                        width: 168
-                        height: 124
-                        radius: 8
-                        color: Theme.raised
-                        border.width: 2
-                        border.color: index === root.controller.selectedMedia ? Theme.next : Theme.border
-                        Accessible.role: Accessible.Button
-                        Accessible.name: title
-
-                        Rectangle {
-                            x: 2
-                            y: 2
-                            width: parent.width - 4
-                            height: Math.round(width * 9 / 16)
-                            radius: 6
-                            color: "#000000"
-                            Image {
-                                anchors.fill: parent
-                                source: card.thumbnail
-                                fillMode: Image.PreserveAspectFit
-                                asynchronous: true
-                            }
-                            LText {
-                                anchors.right: parent.right
-                                anchors.bottom: parent.bottom
-                                anchors.margins: 4
-                                visible: card.duration !== ""
-                                text: card.loop ? qsTr("Loop · %1").arg(card.duration) : card.duration
-                                font.pixelSize: 10
-                                color: "#FFFFFF"
-                                style: Text.Outline
-                                styleColor: "#000000"
-                            }
-                        }
-                        LText {
-                            x: 8
-                            anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 8
-                            width: parent.width - 16
-                            text: card.title
-                            font.pixelSize: 12
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.controller.showMedia(card.index)
-                        }
+                        badge: duration === "" ? "" : loop ? qsTr("Loop · %1").arg(duration) : duration
+                        selected: index === root.controller.selectedMedia
+                        onClicked: root.controller.showMedia(index)
                     }
                 }
             }
         }
+
+        // Presentations: one card per deck, showing its first slide.
+        Flickable {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.topMargin: 10
+            visible: root.page === 3
+            clip: true
+            contentHeight: deckGrid.height
+            boundsBehavior: Flickable.StopAtBounds
+
+            Flow {
+                id: deckGrid
+                width: parent.width
+                spacing: 10
+
+                Repeater {
+                    model: root.controller.decks
+                    delegate: Card {
+                        required property int index
+                        required title
+                        required thumbnail
+                        required property int slides
+                        objectName: "deckCard-" + index
+                        badge: slides === 1 ? qsTr("1 slide") : qsTr("%1 slides").arg(slides)
+                        selected: index === root.controller.selectedDeck
+                        onClicked: root.controller.showDeck(index)
+                    }
+                }
+            }
+        }
+    }
+
+    LText {
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: 120
+        visible: root.page === 3 && root.controller.decks.count === 0
+        text: qsTr("No presentations yet. Import PowerPoint or PDF files to show them as slides.")
+        color: Theme.textMuted
     }
 
     LText {
@@ -390,6 +475,35 @@ Rectangle {
         }
     }
 
+    // Presentation import details, shown when the summary is clicked.
+    Rectangle {
+        id: deckDetails
+        objectName: "deckDetails"
+        visible: false
+        anchors.right: parent.right
+        anchors.rightMargin: 16
+        y: 44
+        width: Math.min(560, parent.width - 32)
+        height: Math.min(deckDetailsText.implicitHeight + 24, parent.height - 56)
+        radius: 8
+        color: Theme.raised
+        border.color: Theme.border
+        z: 10
+        LText {
+            id: deckDetailsText
+            anchors.fill: parent
+            anchors.margins: 12
+            text: root.controller.deckDetails
+            wrapMode: Text.WordWrap
+            elide: Text.ElideNone
+            font.pixelSize: 12
+        }
+        MouseArea {
+            anchors.fill: parent
+            onClicked: deckDetails.visible = false
+        }
+    }
+
     // Dialogs are created only when used.
     Loader {
         id: fileDialog
@@ -420,6 +534,21 @@ Rectangle {
                 mediaDialog.active = false
             }
             onRejected: mediaDialog.active = false
+        }
+    }
+    Loader {
+        id: deckDialog
+        active: false
+        sourceComponent: FileDialog {
+            title: qsTr("Import presentations")
+            fileMode: FileDialog.OpenFiles
+            nameFilters: [qsTr("Presentations (*.pptx *.ppsx *.ppt *.pps *.odp *.pdf)"), qsTr("All files (*)")]
+            Component.onCompleted: open()
+            onAccepted: {
+                root.controller.importPresentations(selectedFiles)
+                deckDialog.active = false
+            }
+            onRejected: deckDialog.active = false
         }
     }
     Loader {

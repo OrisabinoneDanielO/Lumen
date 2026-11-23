@@ -205,6 +205,15 @@ int main(int argc, char *argv[])
     app::MediaLibrary mediaLibrary(*library, thumbnailFolder);
     controller.attachMedia(mediaLibrary);
 
+    // Slide decks: one picture per slide, in a folder per deck.
+    QTemporaryDir previewSlides;
+    const QString slideFolder =
+        parser.isSet(designPreview)
+            ? previewSlides.path()
+            : QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).filePath(QStringLiteral("slides"));
+    app::PresentationLibrary presentationLibrary(*library, slideFolder);
+    controller.attachPresentations(presentationLibrary);
+
     std::unique_ptr<Output> output;
     if (parser.isSet(experimentalOutput) || settings.value(QLatin1String(experimentalOutputKey), false).toBool()) {
         output = startOutput(show, parser.value(renderServer), parser.value(renderExecutable),
