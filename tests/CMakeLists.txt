@@ -137,3 +137,10 @@ lumen_add_test(tst_media tst_media.cpp operatorharness.h)
 target_link_libraries(tst_media PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
 target_compile_definitions(tst_media PRIVATE LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
 set_tests_properties(tst_media PROPERTIES TIMEOUT 120)
+
+# Presentations (batch 10). Done when: sample decks import with the right
+# slide count and order.
+lumen_add_test(tst_presentations tst_presentations.cpp operatorharness.h)
+target_link_libraries(tst_presentations PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(tst_presentations PRIVATE LUMEN_DECKS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/decks")
+set_tests_properties(tst_presentations PROPERTIES TIMEOUT 300)

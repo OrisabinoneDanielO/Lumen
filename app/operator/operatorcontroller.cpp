@@ -6,6 +6,9 @@
 
 #include <QFileInfo>
 #include <QLocale>
+#include <QThread>
+
+#include <memory>
 
 namespace lumen::app {
 
@@ -174,6 +177,82 @@ bool OperatorController::useAsBackground(int row)
 bool OperatorController::addMediaToPlan(int row)
 {
     return addPresentationToPlan(m_mediaModel.get(row).value(QStringLiteral("presentationId")).toString());
+}
+
+void OperatorController::attachPresentations(PresentationLibrary &decks, DeckImporter::Options options)
+{
+    m_decks = &decks;
+    m_deckOptions = options;
+    refreshDecks();
+}
+
+void OperatorController::refreshDecks()
+{
+    if (!m_decks)
+        return;
+    auto rows = m_decks->list();
+    QList<QVariantMap> list;
+    if (rows.ok()) {
+        for (const DeckRow &row : rows.value()) {
+            list << QVariantMap{{"title", row.title},
+                                {"slides", row.slides},
+                                {"thumbnail", row.thumbnail.isEmpty() ? QUrl() : QUrl::fromLocalFile(row.thumbnail)},
+                                {"presentationId", row.presentationId},
+                                {"method", row.method}};
+        }
+    }
+    m_deckModel.setRows(list);
+    m_selectedDeck = -1;
+    emit stateChanged();
+}
+
+bool OperatorController::importPresentations(const QList<QUrl> &urls)
+{
+    if (!m_decks || m_decksBusy)
+        return false;
+    QStringList paths;
+    for (const QUrl &url : urls)
+        paths << (url.isLocalFile() ? url.toLocalFile() : url.toString());
+    m_decksBusy = true;
+    m_deckSummary = tr("Importing…");
+    emit stateChanged();
+
+    // Drawing runs on a worker thread; storing happens back here, on the
+    // database's thread.
+    auto rendered = std::make_shared<std::vector<PresentationLibrary::Rendered>>();
+    QThread *worker = QThread::create([rendered, paths, known = m_decks->knownHashes(),
+                                       folder = m_decks->slideFolder(), options = m_deckOptions] {
+        *rendered = PresentationLibrary::render(paths, known, folder, options);
+    });
+    connect(worker, &QThread::finished, this, [this, worker, rendered] {
+        worker->deleteLater();
+        const DeckImportReport report = m_decks->store(*rendered);
+        m_decksBusy = false;
+        m_deckSummary = report.summary();
+        m_deckDetails = report.messages.join(u'\n');
+        refreshDecks();
+        emit decksImported(m_deckSummary);
+    });
+    worker->start();
+    return true;
+}
+
+bool OperatorController::showDeck(int row)
+{
+    const QString id = m_deckModel.get(row).value(QStringLiteral("presentationId")).toString();
+    if (!m_db || id.isEmpty())
+        return false;
+    auto view = loadPresentationView(*m_db, id);
+    if (!view.ok() || !showItem(std::move(view).value()))
+        return false;
+    m_selectedDeck = row;
+    emit stateChanged();
+    return true;
+}
+
+bool OperatorController::addDeckToPlan(int row)
+{
+    return addPresentationToPlan(m_deckModel.get(row).value(QStringLiteral("presentationId")).toString());
 }
 
 QString OperatorController::previewVideo() const
