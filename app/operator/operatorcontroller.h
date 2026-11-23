@@ -3,6 +3,7 @@
 #include "keymap.h"
 #include "medialibrary.h"
 #include "presentationlibrary.h"
+#include "backups.h"
 #include "rowmodel.h"
 #include "servicedata.h"
 
@@ -40,6 +41,12 @@ class OperatorController : public QObject
     Q_PROPERTY(QString deckDetails READ deckDetails NOTIFY stateChanged)
     Q_PROPERTY(bool decksAvailable READ decksAvailable NOTIFY stateChanged)
     Q_PROPERTY(bool decksBusy READ decksBusy NOTIFY stateChanged)
+    // Plans, .lumen files and backups (batch 11).
+    Q_PROPERTY(QObject *savedPlans READ savedPlans CONSTANT)
+    Q_PROPERTY(QObject *backups READ backups CONSTANT)
+    Q_PROPERTY(QString planMessage READ planMessage NOTIFY stateChanged)
+    Q_PROPERTY(QString lastBackup READ lastBackup NOTIFY stateChanged)
+    Q_PROPERTY(bool backupsAvailable READ backupsAvailable NOTIFY stateChanged)
     // Pictures for the Preview and Live frames when they show media.
     Q_PROPERTY(QUrl previewPoster READ previewPoster NOTIFY stateChanged)
     Q_PROPERTY(QUrl livePoster READ livePoster NOTIFY stateChanged)
@@ -98,6 +105,12 @@ public:
     QString deckDetails() const { return m_deckDetails; }
     bool decksAvailable() const { return m_decks != nullptr; }
     bool decksBusy() const { return m_decksBusy; }
+    QObject *savedPlans() { return &m_savedPlansModel; }
+    QObject *backups() { return &m_backupModel; }
+    QString planMessage() const { return m_planMessage; }
+    QString lastBackup() const;
+    bool backupsAvailable() const { return m_backups != nullptr; }
+    QString planId() const { return m_plan ? m_plan->id : QString(); }
     QUrl previewPoster() const;
     QUrl livePoster() const;
 
@@ -114,6 +127,35 @@ public:
     Q_INVOKABLE bool importPresentations(const QList<QUrl> &urls);
     Q_INVOKABLE bool showDeck(int row); // in the slide grid, ready to send live
     Q_INVOKABLE bool addDeckToPlan(int row);
+    // Plans (batch 11). Each change is saved at once.
+    Q_INVOKABLE void refreshSavedPlans();
+    Q_INVOKABLE bool newPlan(const QString &name);
+    Q_INVOKABLE bool openPlan(int row);       // in savedPlans
+    bool openPlanById(const QString &planId);
+    Q_INVOKABLE bool duplicatePlan();         // the open plan, dated today
+    Q_INVOKABLE bool renamePlan(const QString &name);
+    Q_INVOKABLE bool deletePlan(int row);     // in savedPlans
+    Q_INVOKABLE bool addHeader(const QString &text); // after the selected item
+    Q_INVOKABLE bool removeItem(int index);
+    Q_INVOKABLE bool moveItem(int from, int to);
+    Q_INVOKABLE bool setItemNotes(int index, const QString &notes);
+    Q_INVOKABLE bool exportPlan(const QUrl &file);
+    Q_INVOKABLE bool importPlan(const QUrl &file);
+
+    // Backups: where they go, and where imported media is copied.
+    void attachBackups(Backups &backups, const QString &libraryPath, const QString &importFolder);
+    Q_INVOKABLE bool backUpNow();
+    void refreshBackups();
+    // Records the restore and asks the app to restart (restartRequested).
+    Q_INVOKABLE bool restoreBackup(int row);
+
+    // Which plan and item are open, saved every 30 seconds and on each
+    // change of plan (in "<library>.session.json"), so a restart after a
+    // crash reopens them.
+    void saveSession();
+    // Reopens the saved plan and item; false if there is none.
+    bool restoreSession();
+
     // The video Space would send next, if any (the renderer preloads it).
     QString previewVideo() const;
     QString planName() const;
@@ -192,6 +234,7 @@ signals:
     void scriptureRequested(); // Ctrl+B
     void previewVideoChanged(const QString &path);
     void decksImported(const QString &summary);
+    void restartRequested();
 
 private:
     static constexpr int libraryItem = -2; // m_current when showing a library song
@@ -235,6 +278,17 @@ private:
 
     void refreshMedia();
     void refreshDecks();
+    void reloadPlan(int select);
+    QList<QVariantMap> planRows() const;
+    bool planFailed(const core::Status &status, const QString &what);
+
+    QString m_planMessage;
+    Backups *m_backups = nullptr;
+    QString m_libraryPath;
+    QString m_importFolder;
+    QTimer m_sessionTimer;
+    RowModel m_savedPlansModel{{"planId", "name", "date", "items", "open"}};
+    RowModel m_backupModel{{"path", "made", "size"}};
 
     PresentationLibrary *m_decks = nullptr;
     DeckImporter::Options m_deckOptions;
@@ -251,7 +305,7 @@ private:
     // The operator chose a background (e.g. a motion loop); themes leave it.
     bool m_manualBackground = false;
 
-    RowModel m_planModel{{"kind", "title", "subtitle"}};
+    RowModel m_planModel{{"kind", "title", "subtitle", "notes", "header"}};
     RowModel m_mediaModel{{"title", "kind", "duration", "thumbnail", "presentationId", "path", "loop"}};
     RowModel m_deckModel{{"title", "slides", "thumbnail", "presentationId", "method"}};
     RowModel m_slideModel{{"group", "colour", "text", "thumbnail"}};

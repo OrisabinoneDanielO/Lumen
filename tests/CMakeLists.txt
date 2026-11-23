@@ -144,3 +144,12 @@ lumen_add_test(tst_presentations tst_presentations.cpp operatorharness.h)
 target_link_libraries(tst_presentations PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
 target_compile_definitions(tst_presentations PRIVATE LUMEN_DECKS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/decks")
 set_tests_properties(tst_presentations PROPERTIES TIMEOUT 300)
+
+# Service plans, .lumen files, autosave and backups (batch 11).
+# Done when: a plan survives a crash and restores from backup.
+lumen_add_test(tst_plans tst_plans.cpp operatorharness.h)
+target_link_libraries(tst_plans PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(tst_plans PRIVATE
+    LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media"
+    LUMEN_DECKS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/decks")
+set_tests_properties(tst_plans PROPERTIES TIMEOUT 180)

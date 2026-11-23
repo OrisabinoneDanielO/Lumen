@@ -39,6 +39,13 @@ public:
     // repositories that make their own all-or-nothing changes.
     Status inTransaction(const std::function<Status()> &work);
 
+    // Writes a complete copy of the library to `file` (which must not exist
+    // yet), while it stays open.
+    Status backupTo(const QString &file);
+
+    // False if SQLite finds the file damaged.
+    Result<bool> isIntact() const;
+
 private:
     Database(QString connectionName, QString path);
     Status configure();
