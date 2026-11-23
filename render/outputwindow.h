@@ -45,6 +45,9 @@ public:
     // Frames presented so far (counted after each swap).
     quint64 framesPresented() const { return m_frames.load(); }
 
+    // Sequence number of the scene shown in the most recently presented frame.
+    quint64 presentedSequence() const { return m_presentedSequence.load(); }
+
     QImage grab();
     QQuickWindow *window() const { return m_window; }
 
@@ -56,6 +59,8 @@ private:
     QQmlApplicationEngine m_engine;
     QQuickWindow *m_window = nullptr;
     std::atomic<quint64> m_frames{0};
+    std::atomic<quint64> m_syncedSequence{0};
+    std::atomic<quint64> m_presentedSequence{0};
     QTimer m_tick;
 };
 

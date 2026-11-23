@@ -5,9 +5,10 @@ Rectangle {
     id: root
 
     property int number
-    property string group
+    property string groupLabel
     property color groupColor: Theme.textMuted
-    property string text
+    property string slideText
+    signal clicked()
     property string status // "live", "next" or ""
 
     implicitHeight: header.height + slide.height + 4
@@ -40,7 +41,7 @@ Rectangle {
                 color: root.groupColor
             }
             LText {
-                text: root.group
+                text: root.groupLabel
                 font.pixelSize: 11
                 font.weight: Font.DemiBold
             }
@@ -77,7 +78,7 @@ Rectangle {
         LText {
             anchors.fill: parent
             anchors.margins: 10
-            text: root.text
+            text: root.slideText
             color: "#FFFFFF"
             font.pixelSize: 12
             lineHeight: 1.3
@@ -91,5 +92,6 @@ Rectangle {
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
+        onClicked: root.clicked()
     }
 }

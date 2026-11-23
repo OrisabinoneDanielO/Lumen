@@ -1,18 +1,13 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Centre region: the selected item's title, arrangement and slide cards.
+// Centre region in Show mode: the selected item's title, arrangement and
+// slide cards in play order. Clicking a card sends it live.
 Item {
     id: root
 
-    property string title
-    property string detail
-    // Each chip: { label, background, foreground }
-    property var arrangement: []
-    // Each slide: { group, color, text }
-    property var slides: []
-    property int liveIndex: -1
-    property int nextIndex: -1
+    required property QtObject controller
+    signal slideClicked(int index)
 
     Flickable {
         anchors.fill: parent
@@ -30,7 +25,7 @@ Item {
 
             RowLayout {
                 width: parent.width
-                visible: root.title !== ""
+                visible: root.controller.itemTitle !== ""
                 spacing: 12
 
                 ColumnLayout {
@@ -38,13 +33,14 @@ Item {
                     spacing: 4
                     LText {
                         Layout.fillWidth: true
-                        text: root.title
+                        text: root.controller.itemTitle
                         font.pixelSize: 22
                         font.bold: true
                     }
                     LText {
                         Layout.fillWidth: true
-                        text: root.detail
+                        visible: text !== ""
+                        text: root.controller.itemDetail
                         color: Theme.textMuted
                     }
                 }
@@ -52,6 +48,7 @@ Item {
                 Row {
                     Layout.alignment: Qt.AlignBottom
                     spacing: 6
+                    visible: root.controller.arrangement.length > 0
 
                     LText {
                         anchors.verticalCenter: parent.verticalCenter
@@ -61,7 +58,7 @@ Item {
                         color: Theme.textMuted
                     }
                     Repeater {
-                        model: root.arrangement
+                        model: root.controller.arrangement
                         delegate: Rectangle {
                             id: chip
                             required property var modelData
@@ -89,17 +86,25 @@ Item {
                 columns: Math.max(1, Math.floor((width + spacing) / (Theme.slideMinWidth + spacing)))
 
                 Repeater {
-                    model: root.slides
+                    model: root.controller.slides
                     delegate: SlideThumb {
-                        required property var modelData
                         required property int index
+                        required property string group
+                        required property color colour
+                        required property string text
+
+                        objectName: "slide-" + index
                         width: (grid.width - (grid.columns - 1) * grid.spacing) / grid.columns
                         number: index + 1
-                        group: modelData.group
-                        groupColor: modelData.color
-                        text: modelData.text
-                        status: index === root.liveIndex ? "live"
-                              : index === root.nextIndex ? "next" : ""
+                        groupLabel: group
+                        groupColor: colour
+                        slideText: text
+                        status: index === root.controller.liveSlide ? "live"
+                              : index === root.controller.previewSlide ? "next" : ""
+                        onClicked: {
+                            root.controller.activateSlide(index)
+                            root.slideClicked(index)
+                        }
                     }
                 }
             }
@@ -108,8 +113,9 @@ Item {
 
     LText {
         anchors.centerIn: parent
-        visible: root.slides.length === 0
-        text: qsTr("Select an item in the service plan to see its slides.")
+        visible: root.controller.slides.count === 0
+        text: root.controller.itemTitle === "" ? qsTr("Select an item in the service plan to see its slides.")
+                                                : qsTr("This item has no slides.")
         color: Theme.textMuted
     }
 }

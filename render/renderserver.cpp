@@ -142,6 +142,7 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
 
     if (command == QLatin1String("status")) {
         return okReply({{QStringLiteral("frames"), qint64(m_output.framesPresented())},
+                        {QStringLiteral("presentedSequence"), qint64(m_output.presentedSequence())},
                         {QStringLiteral("pid"), QCoreApplication::applicationPid()},
                         {QStringLiteral("server"), m_server.serverName()}});
     }

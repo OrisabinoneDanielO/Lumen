@@ -1,0 +1,80 @@
+#pragma once
+
+// Reads a service plan from the library database into what the operator
+// window shows: plan rows, each item's slides in arrangement order, and the
+// song list.
+
+#include "lumen/core/data/database.h"
+#include "lumen/core/result.h"
+
+#include <QColor>
+#include <QDate>
+#include <QString>
+
+#include <optional>
+#include <vector>
+
+namespace lumen::app {
+
+struct SlideView
+{
+    QString slideId;
+    QString group;  // "Verse 1", "Chorus", ...
+    QColor colour;  // the group's colour
+    QString text;   // text elements, top to bottom
+};
+
+struct ArrangementChip
+{
+    QString label; // "V1", "C", "Tag", ...
+    QColor background;
+    QColor foreground;
+};
+
+struct ItemView
+{
+    QString planItemId;
+    QString kind;     // "SONG", "BIBLE", "SLIDES", "MEDIA", "TIMER"; empty for a header
+    QString title;
+    QString subtitle; // under the title in the plan
+    QString detail;   // above the slide grid: author · copyright · theme
+    std::vector<SlideView> slides; // in play order (arrangement expanded)
+    std::vector<ArrangementChip> chips;
+};
+
+struct PlanView
+{
+    QString id;
+    QString name;
+    QDate date;
+    std::vector<ItemView> items;
+};
+
+struct SongRow
+{
+    QString title;
+    QString author;
+    QString copyright;
+    QString key;
+};
+
+// Colour for a group with none set: verses blue, choruses red, bridges
+// purple (design doc), others from the same family.
+QColor defaultGroupColour(const QString &label);
+
+// "Verse 1" -> "V1", "Chorus" -> "C", "Pre-chorus" -> "PC", "Tag" -> "Tag".
+QString groupAbbreviation(const QString &label);
+
+core::Result<PlanView> loadPlan(core::data::Database &db, const QString &planId);
+
+// The plan with the latest date, or nothing if there are no plans.
+core::Result<std::optional<PlanView>> loadLatestPlan(core::data::Database &db);
+
+core::Result<std::vector<SongRow>> loadSongs(core::data::Database &db);
+
+// Fills a database with the sample service from design/mockups/Main.html
+// (public-domain hymns; scripture from the World English Bible). Used only by
+// --design-preview, on an in-memory database.
+core::Status seedSampleService(core::data::Database &db);
+
+} // namespace lumen::app

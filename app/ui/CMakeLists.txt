@@ -2,7 +2,7 @@
 # window. Files sit at the module root so their implicit import sees the qmldir
 # (needed for the Theme singleton).
 
-set_source_files_properties(Theme.qml SampleData.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_library(lumen_ui STATIC)
 qt_add_qml_module(lumen_ui
@@ -12,7 +12,6 @@ qt_add_qml_module(lumen_ui
     QML_FILES
         Main.qml
         Theme.qml
-        SampleData.qml
         LText.qml
         SectionLabel.qml
         LButton.qml
@@ -25,6 +24,7 @@ qt_add_qml_module(lumen_ui
         SlideFrame.qml
         PreviewLivePanel.qml
         LibraryPanel.qml
+        EditorPanel.qml
     RESOURCES
         # Inter 4.1 (SIL Open Font License 1.1, see fonts/OFL.txt), bundled so
         # the operator UI looks the same on every machine.

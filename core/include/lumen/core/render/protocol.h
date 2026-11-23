@@ -10,7 +10,8 @@
 //       The whole on-air scene (lumen/core/show/scene.h). Snapshots with a
 //       sequence lower than the one on screen are refused as stale.
 //   {"v":2,"cmd":"getScene"}  -> {"v":2,"ok":true,"scene":{...}}
-//   {"v":2,"cmd":"status"}    -> {"v":2,"ok":true,"frames":123,"pid":4567}
+//   {"v":2,"cmd":"status"}    -> {"v":2,"ok":true,"frames":123,"pid":4567,
+//                                 "presentedSequence":12}  (scene in the last frame)
 //   {"v":2,"cmd":"quit"}      -> {"v":2,"ok":true}, then the renderer exits
 //   Only with --test-mode:
 //   {"v":2,"cmd":"grab","path":"/tmp/f.png"}

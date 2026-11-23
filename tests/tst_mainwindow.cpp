@@ -1,3 +1,8 @@
+#include "operatorcontroller.h"
+#include "servicedata.h"
+
+#include "lumen/core/data/database.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFontDatabase>
@@ -11,9 +16,14 @@
 
 Q_IMPORT_QML_PLUGIN(Lumen_UiPlugin)
 
+using namespace lumen;
+
 // Loads the real main window offscreen and checks the five regions from the
-// design (toolbar, service plan, slide grid, preview/live, library), in both
-// the default mode and the --design-preview mode.
+// design (toolbar, service plan, slide grid, preview/live, library), with an
+// empty library and with the mockup's sample service (--design-preview).
+//
+// Batch 5: the window now takes an OperatorController instead of reading the
+// QML SampleData singleton, so this test builds one; the checks are the same.
 //
 // Set LUMEN_SCREENSHOT_DIR to save a PNG of each mode for comparing with
 // design/mockups/Main.html.
@@ -24,8 +34,24 @@ class TestMainWindow : public QObject
 private:
     void load(bool designPreview)
     {
+        auto db = core::data::Database::open(core::data::Database::inMemory());
+        QVERIFY(db.ok());
+        m_db = std::move(db).value();
+        if (designPreview)
+            QVERIFY(app::seedSampleService(*m_db).ok());
+
+        m_show = std::make_unique<core::show::ShowController>();
+        m_controller = std::make_unique<app::OperatorController>(*m_show, false);
+        auto plan = app::loadLatestPlan(*m_db);
+        QVERIFY(plan.ok());
+        m_controller->setPlan(plan.value());
+        auto songs = app::loadSongs(*m_db);
+        QVERIFY(songs.ok());
+        m_controller->setSongs(songs.value());
+
         m_engine = std::make_unique<QQmlApplicationEngine>();
-        m_engine->setInitialProperties({{QStringLiteral("designPreview"), designPreview}});
+        m_engine->setInitialProperties(
+            {{QStringLiteral("controller"), QVariant::fromValue<QObject *>(m_controller.get())}});
         m_engine->loadFromModule("Lumen.Ui", "Main");
         QCOMPARE(m_engine->rootObjects().size(), 1);
         m_window = qobject_cast<QQuickWindow *>(m_engine->rootObjects().constFirst());
@@ -33,10 +59,26 @@ private:
         QVERIFY(QTest::qWaitForWindowExposed(m_window));
     }
 
+    // Searches the visual item tree, which also reaches Repeater delegates.
+    static QQuickItem *findItem(QQuickItem *item, const QString &name)
+    {
+        if (!item)
+            return nullptr;
+        if (item->objectName() == name)
+            return item;
+        for (QQuickItem *child : item->childItems()) {
+            if (QQuickItem *found = findItem(child, name))
+                return found;
+        }
+        return nullptr;
+    }
+
     QQuickItem *region(const char *name) const
     {
-        return m_window->findChild<QQuickItem *>(QLatin1String(name));
+        return findItem(m_window->contentItem(), QLatin1String(name));
     }
+
+    static int count(QObject *model) { return model->property("count").toInt(); }
 
     static void addModes()
     {
@@ -44,6 +86,12 @@ private:
         QTest::newRow("default") << false;
         QTest::newRow("design preview") << true;
     }
+
+    std::unique_ptr<core::data::Database> m_db;
+    std::unique_ptr<core::show::ShowController> m_show;
+    std::unique_ptr<app::OperatorController> m_controller;
+    std::unique_ptr<QQmlApplicationEngine> m_engine;
+    QQuickWindow *m_window = nullptr;
 
 private slots:
     void init()
@@ -56,6 +104,9 @@ private slots:
     {
         m_engine.reset();
         m_window = nullptr;
+        m_controller.reset();
+        m_show.reset();
+        m_db.reset();
     }
 
     void windowHasTitle_data() { addModes(); }
@@ -122,26 +173,46 @@ private slots:
     void defaultModeShowsEmptyStates()
     {
         load(false);
-        QCOMPARE(region("servicePlan")->property("items").toList().size(), 0);
-        QCOMPARE(region("slideGrid")->property("slides").toList().size(), 0);
-        QCOMPARE(region("library")->property("songs").toList().size(), 0);
-        QCOMPARE(region("previewLive")->property("liveText").toString(), QString());
-        QCOMPARE(region("toolbar")->property("outputsConnected").toBool(), false);
+        QCOMPARE(count(m_controller->plan()), 0);
+        QCOMPARE(count(m_controller->slides()), 0);
+        QCOMPARE(count(m_controller->songs()), 0);
+        QCOMPARE(m_controller->liveText(), QString());
+        QCOMPARE(m_controller->planName(), QStringLiteral("No service plan"));
+        QVERIFY(!m_controller->outputConnected());
     }
 
     // --design-preview reproduces the mockup's content.
     void designPreviewShowsMockupContent()
     {
         load(true);
-        QCOMPARE(region("servicePlan")->property("items").toList().size(), 9);
-        QCOMPARE(region("servicePlan")->property("currentIndex").toInt(), 2);
-        QCOMPARE(region("slideGrid")->property("title").toString(), QStringLiteral("Amazing Grace"));
-        QCOMPARE(region("slideGrid")->property("slides").toList().size(), 9);
-        QCOMPARE(region("slideGrid")->property("liveIndex").toInt(), 2);
-        QCOMPARE(region("slideGrid")->property("nextIndex").toInt(), 3);
-        QVERIFY(region("previewLive")->property("liveText").toString().startsWith("'Twas grace"));
-        QCOMPARE(region("previewLive")->property("layers").toList().size(), 5);
-        QCOMPARE(region("library")->property("songs").toList().size(), 4);
+        QCOMPARE(m_controller->planName(), QStringLiteral("Sunday Service"));
+        QCOMPARE(count(m_controller->plan()), 9);
+        m_controller->selectItem(2);
+        QCOMPARE(m_controller->itemTitle(), QStringLiteral("Amazing Grace"));
+        QCOMPARE(m_controller->itemDetail(), QStringLiteral("John Newton · Public domain · Theme: Lyrics, centred"));
+        QCOMPARE(count(m_controller->slides()), 9);
+        QCOMPARE(m_controller->arrangement().size(), 5);
+        QVERIFY(m_controller->goLive(2));
+        QCOMPARE(m_controller->liveSlide(), 2);
+        QCOMPARE(m_controller->previewSlide(), 3);
+        QVERIFY(m_controller->liveText().startsWith(QLatin1String("'Twas grace")));
+        QCOMPARE(m_controller->liveLabel(), QStringLiteral("Verse 2 · slide 3"));
+        QCOMPARE(m_controller->layers().size(), 5);
+        QCOMPARE(count(m_controller->songs()), 4);
+        // The cards in the window show the same states.
+        QTRY_VERIFY(region("slide-2"));
+        QCOMPARE(region("slide-2")->property("status").toString(), QStringLiteral("live"));
+        QCOMPARE(region("slide-3")->property("status").toString(), QStringLiteral("next"));
+    }
+
+    void editModeIsHiddenUnlessEnabled()
+    {
+        load(true);
+        auto *editButton = region("editMode");
+        QVERIFY(editButton);
+        QVERIFY(!editButton->isVisible());
+        m_controller->setMode(QStringLiteral("edit"));
+        QCOMPARE(m_controller->mode(), QStringLiteral("show"));
     }
 
     // Inter is compiled into the UI module (not taken from the system), loads,
@@ -180,17 +251,18 @@ private slots:
             QSKIP("LUMEN_SCREENSHOT_DIR not set");
         QFETCH(bool, designPreview);
         load(designPreview);
-        QTest::qWait(100);
+        if (designPreview) {
+            // The mockup's moment: Amazing Grace, verse 2 live.
+            m_controller->selectItem(2);
+            m_controller->goLive(2);
+        }
+        QTest::qWait(150);
         const QImage image = m_window->grabWindow();
         QVERIFY(!image.isNull());
         const QString file = QDir(dir).filePath(designPreview ? QStringLiteral("main-preview.png")
                                                               : QStringLiteral("main-default.png"));
         QVERIFY(image.save(file));
     }
-
-private:
-    std::unique_ptr<QQmlApplicationEngine> m_engine;
-    QQuickWindow *m_window = nullptr;
 };
 
 QTEST_MAIN(TestMainWindow)
