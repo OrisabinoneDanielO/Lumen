@@ -56,10 +56,23 @@ target_link_libraries(lumen_show
     PUBLIC lumen_core lumen_renderlink
     PRIVATE lumen_warnings)
 
+# Song library: plain-text and OpenLyrics import, auto-split, search.
+add_library(lumen_songs STATIC
+    include/lumen/core/songs/songimport.h
+    include/lumen/core/songs/songlibrary.h
+    src/songs/songimport.cpp
+    src/songs/songlibrary.cpp
+)
+add_library(Lumen::Songs ALIAS lumen_songs)
+target_link_libraries(lumen_songs
+    PUBLIC lumen_data
+    PRIVATE lumen_warnings)
+
 # Migrations are numbered SQL files compiled in as resources.
 qt_add_resources(lumen_data "lumen_migrations"
     PREFIX "/lumen/migrations"
     BASE src/data/migrations
     FILES
         src/data/migrations/0001_initial.sql
+        src/data/migrations/0002_song_search.sql
 )

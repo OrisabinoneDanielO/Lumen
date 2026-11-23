@@ -16,6 +16,7 @@ target_link_libraries(lumen PRIVATE
     Lumen::Core
     Lumen::Show
     Lumen::Operator
+    Lumen::Songs
     lumen_ui
     lumen_uiplugin
     Qt6::Gui

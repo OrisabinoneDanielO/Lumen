@@ -30,15 +30,16 @@ QString kindLabel(const Presentation &presentation, bool hasTimer)
 
 // Group ids in play order: the plan item's arrangement, else the default
 // arrangement, else every group in position order.
-Result<QStringList> playOrder(Database &db, const PlanItem &item, const std::vector<Group> &groups)
+Result<QStringList> playOrder(Database &db, const QString &presentationId,
+                              const QString &arrangementId, const std::vector<Group> &groups)
 {
     Repository<Arrangement> arrangements(db);
-    if (!item.arrangementId.isEmpty()) {
-        auto chosen = arrangements.get(item.arrangementId);
+    if (!arrangementId.isEmpty()) {
+        auto chosen = arrangements.get(arrangementId);
         if (chosen.ok())
             return chosen.value().groupIds;
     }
-    auto all = arrangements.listChildren(item.presentationId);
+    auto all = arrangements.listChildren(presentationId);
     if (!all.ok())
         return all.error();
     const auto &list = all.value();
@@ -57,14 +58,26 @@ Result<QStringList> playOrder(Database &db, const PlanItem &item, const std::vec
 
 Result<ItemView> loadItem(Database &db, const PlanItem &item)
 {
-    ItemView view;
-    view.planItemId = item.id;
     if (item.presentationId.isEmpty()) {
-        view.title = item.headerText;
-        return view;
+        ItemView header;
+        header.planItemId = item.id;
+        header.title = item.headerText;
+        return header;
     }
+    auto view = loadPresentationView(db, item.presentationId, item.arrangementId);
+    if (view.ok())
+        view.value().planItemId = item.id;
+    return view;
+}
 
-    auto presentation = Repository<Presentation>(db).get(item.presentationId);
+} // namespace
+
+Result<ItemView> loadPresentationView(Database &db, const QString &presentationId,
+                                      const QString &arrangementId)
+{
+    ItemView view;
+    view.presentationId = presentationId;
+    auto presentation = Repository<Presentation>(db).get(presentationId);
     if (!presentation.ok())
         return presentation.error();
     const Presentation &p = presentation.value();
@@ -89,7 +102,7 @@ Result<ItemView> loadItem(Database &db, const PlanItem &item)
     auto groups = Repository<Group>(db).listChildren(p.id);
     if (!groups.ok())
         return groups.error();
-    auto order = playOrder(db, item, groups.value());
+    auto order = playOrder(db, p.id, arrangementId, groups.value());
     if (!order.ok())
         return order.error();
 
@@ -126,8 +139,6 @@ Result<ItemView> loadItem(Database &db, const PlanItem &item)
     view.kind = kindLabel(p, hasTimer);
     return view;
 }
-
-} // namespace
 
 QColor defaultGroupColour(const QString &label)
 {
@@ -207,7 +218,7 @@ Result<std::vector<SongRow>> loadSongs(Database &db)
             continue;
         rows.push_back({p.title, p.metadata.value(QStringLiteral("author")).toString(),
                         p.metadata.value(QStringLiteral("copyright")).toString(),
-                        p.metadata.value(QStringLiteral("key")).toString()});
+                        p.metadata.value(QStringLiteral("key")).toString(), p.id});
     }
     return rows;
 }

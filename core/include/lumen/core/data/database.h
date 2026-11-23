@@ -5,6 +5,7 @@
 #include <QSqlDatabase>
 #include <QString>
 
+#include <functional>
 #include <memory>
 
 namespace lumen::core::data {
@@ -33,6 +34,10 @@ public:
 
     // The Qt connection, for repositories and tests.
     QSqlDatabase connection() const;
+
+    // Runs work all-or-nothing. Calls nest (savepoints), so work may use
+    // repositories that make their own all-or-nothing changes.
+    Status inTransaction(const std::function<Status()> &work);
 
 private:
     Database(QString connectionName, QString path);

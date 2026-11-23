@@ -1,7 +1,9 @@
 import QtQuick
+import QtQuick.Dialogs
 import QtQuick.Layouts
 
-// Bottom drawer: library tabs, search and the song table.
+// Bottom drawer: library tabs, search, import and the song table. Clicking a
+// song shows its slides; Add to plan appends it to the service plan.
 Rectangle {
     id: root
 
@@ -9,7 +11,6 @@ Rectangle {
     required property QtObject controller
     readonly property bool searchHasFocus: search.inputFocused
     signal searchDone()
-    property int selectedIndex: -1
 
     // Relative column widths: Title, Author, Copyright, Default key.
     readonly property var columnWeights: [2, 1.5, 1, 1]
@@ -19,6 +20,7 @@ Rectangle {
         property var cells: []
         property bool header: false
         property bool selected: false
+        signal clicked()
 
         width: parent ? parent.width : 0
         height: header ? 34 : 30
@@ -43,6 +45,12 @@ Rectangle {
                     color: tableRow.header ? Theme.textMuted : Theme.text
                 }
             }
+        }
+        MouseArea {
+            anchors.fill: parent
+            enabled: !tableRow.header
+            cursorShape: Qt.PointingHandCursor
+            onClicked: tableRow.clicked()
         }
     }
 
@@ -102,7 +110,48 @@ Rectangle {
                 Layout.fillWidth: true
             }
 
+            // Last import's result; click for the details.
             LText {
+                objectName: "importSummary"
+                Layout.maximumWidth: 260
+                visible: text !== ""
+                text: root.controller.importSummary
+                font.pixelSize: 12
+                color: Theme.textMuted
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: root.controller.importDetails !== ""
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: details.visible = !details.visible
+                }
+            }
+            LButton {
+                objectName: "addToPlan"
+                visible: root.controller.libraryAvailable
+                implicitHeight: 32
+                radius: 6
+                text: qsTr("Add to plan")
+                opacity: root.controller.selectedSong >= 0 ? 1.0 : 0.5
+                onClicked: root.controller.addSongToPlan(root.controller.selectedSong)
+            }
+            LButton {
+                objectName: "importSongs"
+                visible: root.controller.libraryAvailable
+                implicitHeight: 32
+                radius: 6
+                text: qsTr("Import songs…")
+                onClicked: fileDialog.active = true
+            }
+            LButton {
+                objectName: "importFolder"
+                visible: root.controller.libraryAvailable
+                implicitHeight: 32
+                radius: 6
+                text: qsTr("Import folder…")
+                onClicked: folderDialog.active = true
+            }
+            LText {
+                Layout.leftMargin: 8
                 text: qsTr("Search")
                 font.pixelSize: 12
                 color: Theme.textMuted
@@ -111,15 +160,11 @@ Rectangle {
                 id: search
                 objectName: "librarySearch"
                 onEscaped: root.searchDone()
+                onTextChanged: root.controller.searchSongs(text)
                 Layout.preferredWidth: 240
                 placeholder: qsTr("Title, lyrics or author")
             }
-            LButton {
-                Layout.leftMargin: 4
-                implicitHeight: 32
-                radius: 6
-                text: qsTr("Import from SongSelect")
-            }
+            // Import from SongSelect arrives with batch 17 (CCLI agreement).
         }
 
         Rectangle {
@@ -151,8 +196,10 @@ Rectangle {
                         required property string author
                         required property string copyright
                         required property string key
+                        objectName: "songRow-" + index
                         cells: [title, author, copyright, key]
-                        selected: index === root.selectedIndex
+                        selected: index === root.controller.selectedSong
+                        onClicked: root.controller.showSong(index)
                     }
                 }
             }
@@ -163,7 +210,67 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         y: 120
         visible: root.controller.songs.count === 0
-        text: qsTr("No songs yet. Import songs to build your library.")
+        text: search.text !== "" ? qsTr("No songs match \"%1\".").arg(search.text)
+                                 : qsTr("No songs yet. Import songs to build your library.")
         color: Theme.textMuted
+    }
+
+    // Import details, shown when the summary is clicked.
+    Rectangle {
+        id: details
+        objectName: "importDetails"
+        visible: false
+        anchors.right: parent.right
+        anchors.rightMargin: 16
+        y: 44
+        width: Math.min(560, parent.width - 32)
+        height: Math.min(detailsText.implicitHeight + 24, parent.height - 56)
+        radius: 8
+        color: Theme.raised
+        border.color: Theme.border
+        z: 10
+        LText {
+            id: detailsText
+            anchors.fill: parent
+            anchors.margins: 12
+            text: root.controller.importDetails
+            wrapMode: Text.WordWrap
+            elide: Text.ElideNone
+            font.pixelSize: 12
+        }
+        MouseArea {
+            anchors.fill: parent
+            onClicked: details.visible = false
+        }
+    }
+
+    // Dialogs are created only when used.
+    Loader {
+        id: fileDialog
+        active: false
+        sourceComponent: FileDialog {
+            title: qsTr("Import songs")
+            fileMode: FileDialog.OpenFiles
+            nameFilters: [qsTr("Song files (*.txt *.xml)"), qsTr("All files (*)")]
+            Component.onCompleted: open()
+            onAccepted: {
+                root.controller.importSongs(selectedFiles)
+                fileDialog.active = false
+            }
+            onRejected: fileDialog.active = false
+        }
+    }
+    Loader {
+        id: folderDialog
+        active: false
+        sourceComponent: FolderDialog {
+            title: qsTr("Import every song in a folder")
+            Component.onCompleted: open()
+            onAccepted: {
+                root.controller.importSongs([selectedFolder])
+                folderDialog.active = false
+            }
+            onRejected: folderDialog.active = false
+        }
     }
 }

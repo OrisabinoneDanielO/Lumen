@@ -3,6 +3,7 @@
 #include "servicedata.h"
 
 #include "lumen/core/data/repository.h"
+#include "lumen/core/songs/songlibrary.h"
 
 #include <QSignalSpy>
 #include <QTest>
@@ -402,6 +403,46 @@ private slots:
         QCOMPARE(m_op->previewSlide(), -1);
         QVERIFY(!m_op->next());
         QCOMPARE(m_show->scene().sequence, quint64(0));
+    }
+
+    // Regression (batch 6): browsing to another library song while one is
+    // live must not mix up the two songs' slides (it used to crash).
+    void browsingLibrarySongsWhileOneIsLive()
+    {
+        songs::SongLibrary library(*m_fixture->db);
+        auto shortSong = songs::parseTextSong(QStringLiteral("Title: Short\n\nOnly line\n"), {});
+        QVERIFY(library.add(shortSong.value()).ok());
+        QVERIFY(library.indexMissing().ok());
+        m_op->attachLibrary(*m_fixture->db, library);
+
+        auto rowOf = [this](const QString &title) {
+            auto *songsModel = static_cast<app::RowModel *>(m_op->songs());
+            for (int i = 0; i < songsModel->count(); ++i) {
+                if (songsModel->get(i).value("title").toString() == title)
+                    return i;
+            }
+            return -1;
+        };
+        QVERIFY(m_op->showSong(rowOf("Test Song")));
+        QVERIFY(m_op->goLive(11)); // the last slide of 12
+        QCOMPARE(m_op->liveLabel(), QStringLiteral("Ending · slide 12"));
+
+        QVERIFY(m_op->showSong(rowOf("Short"))); // one slide only
+        QCOMPARE(m_op->liveLabel(), QStringLiteral("Ending · slide 12")); // still what is on air
+        QCOMPARE(m_op->liveSlide(), -1);  // not a slide of this song
+        QCOMPARE(m_op->previewSlide(), 0);
+        QCOMPARE(m_op->layers().size(), 5); // reading the panel used to crash
+        QVERIFY(!m_op->previous());
+
+        QVERIFY(m_op->showSong(rowOf("Test Song")));
+        QCOMPARE(m_op->liveSlide(), 11); // back on the live song
+        QVERIFY(m_op->previous());
+        QCOMPARE(onAir(), QStringLiteral("c-b"));
+
+        QVERIFY(m_op->showSong(rowOf("Short")));
+        QVERIFY(m_op->next());
+        QCOMPARE(onAir(), QStringLiteral("Only line"));
+        QCOMPARE(m_op->liveLabel(), QStringLiteral("Verse 1 · slide 1"));
     }
 
     void planDetail()

@@ -6,6 +6,7 @@
 #include "lumen/core/render/renderlink.h"
 #include "lumen/core/show/outputbridge.h"
 #include "lumen/core/show/showcontroller.h"
+#include "lumen/core/songs/songlibrary.h"
 
 #include <QCommandLineParser>
 #include <QDir>
@@ -26,6 +27,7 @@ namespace {
 
 constexpr auto experimentalOutputKey = "experimental/output";
 constexpr auto experimentalEditorKey = "experimental/editor";
+constexpr auto linesPerSlideKey = "songs/linesPerSlide"; // auto-split limit, 2 by default
 
 // The link to the render process and the bridge that feeds it the scene.
 struct Output
@@ -140,8 +142,10 @@ int main(int argc, char *argv[])
         controller.setPlan(plan.value());
     else
         qWarning("Plan not loaded: %s", qPrintable(plan.error().message));
-    if (auto songs = app::loadSongs(*library); songs.ok())
-        controller.setSongs(songs.value());
+    songs::SongLibrary songLibrary(*library, settings.value(QLatin1String(linesPerSlideKey), 2).toInt());
+    if (auto indexed = songLibrary.indexMissing(); !indexed.ok())
+        qWarning("Song search index not updated: %s", qPrintable(indexed.error().message));
+    controller.attachLibrary(*library, songLibrary);
 
     std::unique_ptr<Output> output;
     if (parser.isSet(experimentalOutput) || settings.value(QLatin1String(experimentalOutputKey), false).toBool()) {

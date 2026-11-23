@@ -1,0 +1,311 @@
+[
+  {
+    "title": "Amazing Grace",
+    "author": "John Newton",
+    "copyright": "Public domain",
+    "key": "G",
+    "sections": [
+      "Verse 1",
+      "Verse 2",
+      "Verse 3"
+    ],
+    "order": [
+      "Verse 1",
+      "Verse 2",
+      "Verse 3"
+    ],
+    "slides": 6,
+    "firstSlide": "Amazing grace! How sweet the sound\nThat saved a wretch like me!",
+    "file": "01_amazing_grace.txt"
+  },
+  {
+    "title": "Holy, Holy, Holy",
+    "author": "Reginald Heber",
+    "sections": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "slides": 4,
+    "firstSlide": "Holy, holy, holy! Lord God Almighty!\nEarly in the morning our song shall rise to Thee;",
+    "file": "02_holy_holy_holy.txt"
+  },
+  {
+    "title": "It Is Well with My Soul",
+    "author": "Horatio Spafford",
+    "sections": [
+      "Verse 1",
+      "Chorus",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Chorus",
+      "Verse 2",
+      "Chorus"
+    ],
+    "slides": 6,
+    "firstSlide": "When peace like a river attendeth my way,\nWhen sorrows like sea billows roll;",
+    "file": "03_it_is_well.txt"
+  },
+  {
+    "title": "Abide with Me",
+    "author": "",
+    "copyright": "Public domain",
+    "sections": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "slides": 4,
+    "firstSlide": "Abide with me; fast falls the eventide;\nThe darkness deepens; Lord, with me abide;",
+    "file": "04_abide_with_me.txt"
+  },
+  {
+    "title": "Rock of Ages",
+    "author": "Augustus Toplady",
+    "sections": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "slides": 6,
+    "firstSlide": "Rock of Ages, cleft for me,\nLet me hide myself in Thee;",
+    "file": "05_rock_of_ages.txt"
+  },
+  {
+    "title": "Come, Thou Fount of Every Blessing",
+    "author": "Robert Robinson",
+    "sections": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "slides": 6,
+    "firstSlide": "Come, Thou Fount of every blessing,\nTune my heart to sing Thy grace;",
+    "file": "06_come_thou_fount.txt"
+  },
+  {
+    "title": "A Mighty Fortress Is Our God",
+    "author": "Martin Luther, Frederick H. Hedge",
+    "copyright": "Public domain",
+    "sections": [
+      "Verse 1"
+    ],
+    "order": [
+      "Verse 1"
+    ],
+    "slides": 2,
+    "firstSlide": "A mighty fortress is our God,\nA bulwark never failing;",
+    "file": "07_a_mighty_fortress.xml"
+  },
+  {
+    "title": "Crown Him with Many Crowns",
+    "author": "Matthew Bridges, Godfrey Thring",
+    "sections": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Verse 2",
+      "Verse 1"
+    ],
+    "slides": 6,
+    "firstSlide": "Crown Him with many crowns,\nThe Lamb upon His throne;",
+    "file": "08_crown_him.xml"
+  },
+  {
+    "title": "Joyful, Joyful, We Adore Thee",
+    "author": "Henry van Dyke",
+    "key": "G",
+    "tempo": "96 bpm",
+    "sections": [
+      "Verse 1"
+    ],
+    "order": [
+      "Verse 1"
+    ],
+    "slides": 2,
+    "firstChords": "G C | D",
+    "firstSlide": "Joyful, joyful, we adore Thee,\nGod of glory, Lord of love;",
+    "file": "09_joyful_joyful.xml"
+  },
+  {
+    "title": "All Hail the Power of Jesus' Name",
+    "author": "Edward Perronet",
+    "sections": [
+      "Verse 1"
+    ],
+    "order": [
+      "Verse 1"
+    ],
+    "slides": 3,
+    "firstSlide": "All hail the power of Jesus' name!\nLet angels prostrate fall;",
+    "file": "10_all_hail.xml"
+  },
+  {
+    "title": "Blessed Assurance",
+    "author": "Fanny Crosby",
+    "sections": [
+      "Verse 1",
+      "Chorus",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Chorus",
+      "Verse 2",
+      "Chorus"
+    ],
+    "slides": 8,
+    "firstSlide": "Blessed assurance, Jesus is mine!\nO what a foretaste of glory divine!",
+    "file": "11_blessed_assurance.txt"
+  },
+  {
+    "title": "What a Friend We Have in Jesus",
+    "author": "Joseph M. Scriven",
+    "sections": [
+      "Verse 1"
+    ],
+    "order": [
+      "Verse 1"
+    ],
+    "slides": 2,
+    "firstSlide": "What a friend we have in Jesus,\nAll our sins and griefs to bear!",
+    "file": "12_what_a_friend.txt"
+  },
+  {
+    "title": "O God, Our Help in Ages Past",
+    "author": "Isaac Watts",
+    "copyright": "Public domain — 1719",
+    "sections": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "slides": 4,
+    "firstSlide": "O God, our help in ages past,\nOur hope for years to come,",
+    "file": "13_o_god_our_help.txt"
+  },
+  {
+    "title": "Praise to the Lord, the Almighty",
+    "author": "Joachim Neander, Catherine Winkworth",
+    "sections": [
+      "Verse 1"
+    ],
+    "order": [
+      "Verse 1"
+    ],
+    "slides": 3,
+    "firstSlide": "Praise to the Lord, the Almighty, the King of creation!\nO my soul, praise Him, for He is thy health and salvation!",
+    "file": "14_praise_to_the_lord.xml"
+  },
+  {
+    "title": "Nearer, My God, to Thee",
+    "author": "Sarah Flower Adams",
+    "sections": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "slides": 8,
+    "firstSlide": "Nearer, my God, to Thee,\nNearer to Thee!",
+    "file": "15_nearer_my_god.txt"
+  },
+  {
+    "title": "Jesus Loves Me",
+    "author": "Anna B. Warner",
+    "sections": [
+      "Verse 1",
+      "Chorus",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Chorus",
+      "Verse 2",
+      "Chorus"
+    ],
+    "slides": 8,
+    "firstSlide": "Jesus loves me! This I know,\nFor the Bible tells me so;",
+    "file": "16_jesus_loves_me.txt"
+  },
+  {
+    "title": "Doxology",
+    "author": "",
+    "sections": [
+      "Verse 1"
+    ],
+    "order": [
+      "Verse 1"
+    ],
+    "slides": 2,
+    "firstSlide": "Praise God, from whom all blessings flow;\nPraise Him, all creatures here below;",
+    "file": "17_doxology.txt"
+  },
+  {
+    "title": "Fairest Lord Jesus",
+    "author": "Anonymous",
+    "sections": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "slides": 6,
+    "firstSlide": "Fairest Lord Jesus,\nRuler of all nature,",
+    "file": "18_fairest_lord_jesus.xml"
+  },
+  {
+    "title": "When I Survey the Wondrous Cross",
+    "author": "Isaac Watts",
+    "sections": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "order": [
+      "Verse 1",
+      "Verse 2"
+    ],
+    "slides": 5,
+    "firstSlide": "When I survey the wondrous cross\nOn which the Prince of glory died,",
+    "file": "19_when_i_survey.txt"
+  },
+  {
+    "title": "Be Still, My Soul",
+    "author": "Katharina von Schlegel, tr. Jane Borthwick",
+    "key": "F",
+    "sections": [
+      "Verse 1",
+      "Ending"
+    ],
+    "order": [
+      "Verse 1",
+      "Ending"
+    ],
+    "slides": 3,
+    "firstSlide": "Be still, my soul: the Lord is on thy side;\nBear patiently the cross of grief or pain;",
+    "file": "20_be_still_my_soul.txt"
+  }
+]

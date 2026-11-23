@@ -61,11 +61,11 @@ lumen_add_test(tst_operator tst_operator.cpp)
 target_link_libraries(tst_operator PRIVATE Lumen::Operator)
 
 lumen_add_test(tst_operator_window tst_operator_window.cpp operatorharness.h)
-target_link_libraries(tst_operator_window PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick)
+target_link_libraries(tst_operator_window PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
 
 # Done when: clicking or pressing Space sends a slide live in under 50 ms.
 lumen_add_test(tst_send_live_latency tst_send_live_latency.cpp operatorharness.h)
-target_link_libraries(tst_send_live_latency PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick)
+target_link_libraries(tst_send_live_latency PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
 target_compile_definitions(tst_send_live_latency PRIVATE LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>")
 add_dependencies(tst_send_live_latency lumen-render)
 
@@ -76,3 +76,12 @@ target_compile_definitions(tst_render_survives_ui_kill PRIVATE
     LUMEN_APP_PATH="$<TARGET_FILE:lumen>"
     LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>")
 add_dependencies(tst_render_survives_ui_kill lumen lumen-render)
+
+# Song library (batch 6).
+lumen_add_test(tst_song_import tst_song_import.cpp)
+target_link_libraries(tst_song_import PRIVATE Lumen::Songs)
+
+# Done when: 20 sample songs import and display correctly.
+lumen_add_test(tst_song_samples tst_song_samples.cpp operatorharness.h)
+target_link_libraries(tst_song_samples PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Lumen::Songs Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(tst_song_samples PRIVATE LUMEN_SONGS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/songs")

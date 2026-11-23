@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.9">
+  <properties>
+    <titles>
+      <title>Fairest Lord Jesus</title>
+      <title lang="de">Schönster Herr Jesu</title>
+    </titles>
+    <authors><author>Anonymous</author></authors>
+    <comments><comment>German, 17th century; English translation 1873</comment></comments>
+  </properties>
+  <lyrics>
+    <verse name="v1">
+      <lines><comment>Quietly</comment>Fairest Lord Jesus,<br/>Ruler of all nature,<br/>O Thou of God and man the Son,<br/>Thee will I cherish,<br/>Thee will I honour,<br/>Thou, my soul's glory, joy, and crown.</lines>
+    </verse>
+    <verse name="v2">
+      <lines>Fair are the meadows,<br/>Fairer still the woodlands,<br/>Robed in the blooming garb of spring;<br/>Jesus is fairer,<br/>Jesus is purer,<br/>Who makes the woeful heart to sing.</lines>
+    </verse>
+  </lyrics>
+</song>
