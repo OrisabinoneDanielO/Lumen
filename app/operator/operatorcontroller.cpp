@@ -1,11 +1,18 @@
 #include "operatorcontroller.h"
 
+#include "lumenfile.h"
+#include "planstore.h"
+
 #include "themes.h"
 
 #include "lumen/core/data/repository.h"
 
+#include <QDir>
 #include <QFileInfo>
 #include <QLocale>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QSaveFile>
 #include <QThread>
 
 #include <memory>
@@ -30,17 +37,29 @@ OperatorController::OperatorController(ShowController &show, bool editAvailable,
     m_verseTimeout.setSingleShot(true);
     m_verseTimeout.setInterval(1500);
     connect(&m_verseTimeout, &QTimer::timeout, this, [this] { m_versePending = false; });
+
+    // Autosave: the open plan and item every 30 seconds (plan contents are
+    // saved as they change).
+    m_sessionTimer.setInterval(30000);
+    connect(&m_sessionTimer, &QTimer::timeout, this, &OperatorController::saveSession);
+    m_sessionTimer.start();
+}
+
+QList<QVariantMap> OperatorController::planRows() const
+{
+    QList<QVariantMap> rows;
+    if (m_plan) {
+        for (const ItemView &item : m_plan->items)
+            rows << QVariantMap{{"kind", item.kind}, {"title", item.title}, {"subtitle", item.subtitle},
+                                {"notes", item.notes}, {"header", item.presentationId.isEmpty()}};
+    }
+    return rows;
 }
 
 void OperatorController::setPlan(std::optional<PlanView> plan)
 {
     m_plan = std::move(plan);
-    QList<QVariantMap> rows;
-    if (m_plan) {
-        for (const ItemView &item : m_plan->items)
-            rows << QVariantMap{{"kind", item.kind}, {"title", item.title}, {"subtitle", item.subtitle}};
-    }
-    m_planModel.setRows(rows);
+    m_planModel.setRows(planRows());
     m_positionItem = m_positionSlide = -1;
     m_onAir = false;
     m_current = -1;
@@ -66,6 +85,7 @@ void OperatorController::attachLibrary(core::data::Database &db, core::songs::So
     m_db = &db;
     m_songs = &songs;
     searchSongs(m_search);
+    refreshSavedPlans();
 }
 
 void OperatorController::searchSongs(const QString &query)
@@ -363,10 +383,8 @@ bool OperatorController::addPresentationToPlan(const QString &id)
     view.value().planItemId = added.id;
     m_plan->items.push_back(std::move(view).value());
 
-    QList<QVariantMap> rows;
-    for (const ItemView &item : m_plan->items)
-        rows << QVariantMap{{"kind", item.kind}, {"title", item.title}, {"subtitle", item.subtitle}};
-    m_planModel.setRows(rows);
+    m_planModel.setRows(planRows());
+    refreshSavedPlans();
     if (m_current == -1)
         selectItem(0);
     emit stateChanged();
@@ -792,6 +810,305 @@ bool OperatorController::handleKey(int key, int modifiers)
         return true;
     default: return false;
     }
+}
+
+} // namespace lumen::app
+
+namespace lumen::app {
+
+// ---- Plans (batch 11) ----
+
+bool OperatorController::planFailed(const core::Status &status, const QString &what)
+{
+    if (status.ok())
+        return false;
+    m_planMessage = QStringLiteral("%1: %2").arg(what, status.error().message);
+    emit stateChanged();
+    return true;
+}
+
+void OperatorController::refreshSavedPlans()
+{
+    QList<QVariantMap> rows;
+    if (m_db) {
+        if (auto all = plans::list(*m_db); all.ok()) {
+            for (const plans::PlanSummary &plan : all.value()) {
+                rows << QVariantMap{{"planId", plan.id},
+                                    {"name", plan.name},
+                                    {"date", plan.date.isValid() ? QLocale().toString(plan.date, QLocale::ShortFormat) : QString()},
+                                    {"items", plan.items},
+                                    {"open", m_plan && m_plan->id == plan.id}};
+            }
+        }
+    }
+    m_savedPlansModel.setRows(rows);
+}
+
+// Reloads the open plan from the library after a change, keeping track of
+// the item on screen (by its plan item id) and selecting `select`.
+void OperatorController::reloadPlan(int select)
+{
+    if (!m_db || !m_plan)
+        return;
+    auto loaded = loadPlan(*m_db, m_plan->id);
+    if (!loaded.ok()) {
+        planFailed(loaded.error(), tr("The plan could not be loaded"));
+        return;
+    }
+    m_plan = std::move(loaded).value();
+    m_planModel.setRows(planRows());
+    if (m_positionKey.startsWith(QLatin1String("plan:"))) {
+        m_positionItem = -1;
+        for (int i = 0; i < int(m_plan->items.size()); ++i) {
+            if (keyOf(m_plan->items[size_t(i)]) == m_positionKey)
+                m_positionItem = i;
+        }
+    }
+    m_current = -1;
+    selectItem(std::clamp(select, 0, std::max(0, int(m_plan->items.size()) - 1)));
+    refreshSavedPlans();
+    emit stateChanged();
+}
+
+bool OperatorController::openPlanById(const QString &planId)
+{
+    if (!m_db)
+        return false;
+    auto loaded = loadPlan(*m_db, planId);
+    if (!loaded.ok())
+        return !planFailed(loaded.error(), tr("The plan could not be opened"));
+    // What is on screen stays there; the new plan starts with nothing live.
+    setPlan(std::move(loaded).value());
+    m_planMessage.clear();
+    refreshSavedPlans();
+    saveSession();
+    emit stateChanged();
+    return true;
+}
+
+bool OperatorController::newPlan(const QString &name)
+{
+    if (!m_db)
+        return false;
+    auto created = plans::create(*m_db, name.trimmed().isEmpty() ? tr("Sunday Service") : name, QDate::currentDate());
+    if (!created.ok())
+        return !planFailed(created.error(), tr("The plan could not be created"));
+    return openPlanById(created.value().id);
+}
+
+bool OperatorController::openPlan(int row)
+{
+    return openPlanById(m_savedPlansModel.get(row).value(QStringLiteral("planId")).toString());
+}
+
+bool OperatorController::duplicatePlan()
+{
+    if (!m_db || !m_plan)
+        return false;
+    auto copy = plans::duplicate(*m_db, m_plan->id, tr("%1 (copy)").arg(m_plan->name), QDate::currentDate());
+    if (!copy.ok())
+        return !planFailed(copy.error(), tr("The plan could not be duplicated"));
+    return openPlanById(copy.value().id);
+}
+
+bool OperatorController::renamePlan(const QString &name)
+{
+    if (!m_db || !m_plan)
+        return false;
+    if (planFailed(plans::rename(*m_db, m_plan->id, name, m_plan->date), tr("The plan could not be renamed")))
+        return false;
+    reloadPlan(m_current);
+    return true;
+}
+
+bool OperatorController::deletePlan(int row)
+{
+    const QString id = m_savedPlansModel.get(row).value(QStringLiteral("planId")).toString();
+    if (!m_db || id.isEmpty())
+        return false;
+    if (planFailed(plans::remove(*m_db, id), tr("The plan could not be deleted")))
+        return false;
+    if (m_plan && m_plan->id == id) {
+        auto latest = loadLatestPlan(*m_db);
+        setPlan(latest.ok() ? latest.value() : std::nullopt);
+        saveSession();
+    }
+    refreshSavedPlans();
+    emit stateChanged();
+    return true;
+}
+
+bool OperatorController::addHeader(const QString &text)
+{
+    if (!m_db)
+        return false;
+    if (!m_plan && !newPlan(QString()))
+        return false;
+    const int at = m_current >= 0 ? m_current + 1 : int(m_plan->items.size());
+    auto header = plans::addHeader(*m_db, m_plan->id, at, text);
+    if (!header.ok())
+        return !planFailed(header.error(), tr("The header could not be added"));
+    reloadPlan(at);
+    return true;
+}
+
+bool OperatorController::removeItem(int index)
+{
+    if (!m_db || !m_plan)
+        return false;
+    if (planFailed(plans::removeItem(*m_db, m_plan->id, index), tr("The item could not be removed")))
+        return false;
+    reloadPlan(m_current > index ? m_current - 1 : m_current);
+    return true;
+}
+
+bool OperatorController::moveItem(int from, int to)
+{
+    if (!m_db || !m_plan || from == to)
+        return false;
+    if (planFailed(plans::moveItem(*m_db, m_plan->id, from, to), tr("The item could not be moved")))
+        return false;
+    // The selection follows the item it was on.
+    int select = m_current;
+    if (m_current == from)
+        select = to;
+    else if (from < m_current && to >= m_current)
+        --select;
+    else if (from > m_current && to <= m_current)
+        ++select;
+    reloadPlan(select);
+    return true;
+}
+
+bool OperatorController::setItemNotes(int index, const QString &notes)
+{
+    if (!m_db || !m_plan)
+        return false;
+    if (planFailed(plans::setNotes(*m_db, m_plan->id, index, notes), tr("The notes could not be saved")))
+        return false;
+    reloadPlan(m_current);
+    return true;
+}
+
+bool OperatorController::exportPlan(const QUrl &file)
+{
+    if (!m_db || !m_plan)
+        return false;
+    QString path = file.isLocalFile() ? file.toLocalFile() : file.toString();
+    if (!path.endsWith(QLatin1String(".lumen"), Qt::CaseInsensitive))
+        path += QStringLiteral(".lumen");
+    if (planFailed(lumenfile::exportPlan(*m_db, m_plan->id, path), tr("Export failed")))
+        return false;
+    m_planMessage = tr("Exported to %1").arg(QFileInfo(path).fileName());
+    emit stateChanged();
+    return true;
+}
+
+bool OperatorController::importPlan(const QUrl &file)
+{
+    if (!m_db)
+        return false;
+    const QString path = file.isLocalFile() ? file.toLocalFile() : file.toString();
+    const QString folder = m_importFolder.isEmpty() ? QFileInfo(path).absolutePath() : m_importFolder;
+    auto report = lumenfile::importFile(*m_db, path, folder);
+    if (!report.ok())
+        return !planFailed(report.error(), tr("Import failed"));
+    openPlanById(report.value().planId);
+    m_planMessage = report.value().summary();
+    if (!report.value().messages.isEmpty())
+        m_planMessage += QStringLiteral(". ") + report.value().messages.join(QStringLiteral(". "));
+    refreshMedia();
+    refreshDecks();
+    emit stateChanged();
+    return true;
+}
+
+// ---- Backups and session ----
+
+void OperatorController::attachBackups(Backups &backups, const QString &libraryPath, const QString &importFolder)
+{
+    m_backups = &backups;
+    m_libraryPath = libraryPath;
+    m_importFolder = importFolder;
+    refreshBackups();
+}
+
+void OperatorController::refreshBackups()
+{
+    QList<QVariantMap> rows;
+    if (m_backups) {
+        for (const Backups::Entry &entry : m_backups->list()) {
+            rows << QVariantMap{{"path", entry.path},
+                                {"made", QLocale().toString(entry.made.toLocalTime(), QLocale::ShortFormat)},
+                                {"size", QLocale().formattedDataSize(entry.bytes)}};
+        }
+    }
+    m_backupModel.setRows(rows);
+    emit stateChanged();
+}
+
+QString OperatorController::lastBackup() const
+{
+    if (m_backupModel.rowCount() == 0)
+        return tr("No backups yet");
+    return tr("Last backup %1").arg(m_backupModel.get(0).value(QStringLiteral("made")).toString());
+}
+
+bool OperatorController::backUpNow()
+{
+    if (!m_backups)
+        return false;
+    auto made = m_backups->backUpNow();
+    if (!made.ok())
+        return !planFailed(made.error(), tr("Backup failed"));
+    m_planMessage = tr("Backed up to %1").arg(QDir::toNativeSeparators(made.value().path));
+    refreshBackups();
+    return true;
+}
+
+bool OperatorController::restoreBackup(int row)
+{
+    const QString path = m_backupModel.get(row).value(QStringLiteral("path")).toString();
+    if (!m_backups || path.isEmpty() || m_libraryPath.isEmpty())
+        return false;
+    if (planFailed(Backups::scheduleRestore(m_libraryPath, path), tr("Restore failed")))
+        return false;
+    m_planMessage = tr("Restarting to restore the backup…");
+    emit stateChanged();
+    emit restartRequested();
+    return true;
+}
+
+void OperatorController::saveSession()
+{
+    if (m_libraryPath.isEmpty())
+        return;
+    // Beside the library, written whole or not at all.
+    QSaveFile file(m_libraryPath + QStringLiteral(".session.json"));
+    if (!file.open(QIODevice::WriteOnly))
+        return;
+    file.write(QJsonDocument(QJsonObject{{"planId", m_plan ? m_plan->id : QString()}, {"item", m_current}}).toJson());
+    file.commit();
+}
+
+bool OperatorController::restoreSession()
+{
+    if (!m_db || m_libraryPath.isEmpty())
+        return false;
+    QFile file(m_libraryPath + QStringLiteral(".session.json"));
+    if (!file.open(QIODevice::ReadOnly))
+        return false;
+    const QJsonObject session = QJsonDocument::fromJson(file.readAll()).object();
+    const QString planId = session.value(QStringLiteral("planId")).toString();
+    if (planId.isEmpty())
+        return false;
+    auto loaded = loadPlan(*m_db, planId);
+    if (!loaded.ok())
+        return false;
+    setPlan(std::move(loaded).value());
+    selectItem(session.value(QStringLiteral("item")).toInt());
+    refreshSavedPlans();
+    return true;
 }
 
 } // namespace lumen::app

@@ -1,6 +1,7 @@
 #include "lumen/core/render/renderlink.h"
 #include "lumen/core/show/scene.h"
 
+#include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QTest>
 #include <QThread>
@@ -56,7 +57,8 @@ private slots:
         RenderLink::Options options;
         options.serverName = QStringLiteral("lumen-start-") + QUuid::createUuid().toString(QUuid::Id128).left(12);
         options.executable = QStringLiteral(LUMEN_RENDER_PATH);
-        options.arguments = {QStringLiteral("--windowed"), QStringLiteral("--test-mode")};
+        options.arguments = {QStringLiteral("--windowed"), QStringLiteral("--test-mode"),
+                             QStringLiteral("--watch-pid=%1").arg(QCoreApplication::applicationPid())};
         m_link = std::make_unique<RenderLink>(options);
         auto started = m_link->start();
         QVERIFY2(started.ok(), started.ok() ? "" : qPrintable(started.error().message));

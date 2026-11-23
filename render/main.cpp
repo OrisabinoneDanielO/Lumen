@@ -1,6 +1,9 @@
 #include "outputwindow.h"
 #include "renderserver.h"
+#include "processwatch.h"
 #include "screenchoice.h"
+
+#include <QTimer>
 
 #include "lumen/core/buildinfo.h"
 #include "lumen/core/render/protocol.h"
@@ -38,8 +41,26 @@ int main(int argc, char *argv[])
                                             QStringLiteral("Open a window instead of going fullscreen."));
     const QCommandLineOption testModeOption(QStringLiteral("test-mode"),
                                             QStringLiteral("Allow the \"grab\" command (for automated tests)."));
-    parser.addOptions({serverOption, screenOption, windowedOption, testModeOption});
+    // For tests only: a renderer normally outlives a crashed UI (that is the
+    // point of a separate process), but one started by a test that crashed
+    // or timed out should not keep playing in the background.
+    const QCommandLineOption watchPidOption(QStringLiteral("watch-pid"),
+                                            QStringLiteral("Exit when process <pid> has ended (for tests)."),
+                                            QStringLiteral("pid"));
+    parser.addOptions({serverOption, screenOption, windowedOption, testModeOption, watchPidOption});
     parser.process(app);
+
+    QTimer watchdog;
+    if (parser.isSet(watchPidOption)) {
+        const qint64 pid = parser.value(watchPidOption).toLongLong();
+        QObject::connect(&watchdog, &QTimer::timeout, &app, [pid] {
+            if (!lumen::render::processRunning(pid)) {
+                qInfo("lumen-render: process %lld ended; exiting", pid);
+                QCoreApplication::quit();
+            }
+        });
+        watchdog.start(1000);
+    }
 
     lumen::render::OutputWindow output;
     if (!output.create()) {

@@ -7,6 +7,8 @@ add_subdirectory(slides)
 qt_add_library(lumen_render_lib STATIC
     screenchoice.h
     screenchoice.cpp
+    processwatch.h
+    processwatch.cpp
     outputwindow.h
     outputwindow.cpp
     renderserver.h

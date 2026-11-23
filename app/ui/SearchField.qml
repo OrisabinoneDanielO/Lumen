@@ -1,13 +1,19 @@
 import QtQuick
 
-// Single-line search box with placeholder text. Escape leaves it.
+// Single-line search box with placeholder text. Escape leaves it; Return
+// accepts it.
 Rectangle {
     id: root
 
     property alias text: input.text
     property string placeholder
+    // Tests find the text input by this name.
+    property string inputName: "searchInput"
     readonly property bool inputFocused: input.activeFocus
     signal escaped()
+    signal accepted()
+
+    function focusInput() { input.forceActiveFocus() }
 
     implicitWidth: 240
     implicitHeight: 32
@@ -20,7 +26,7 @@ Rectangle {
 
     TextInput {
         id: input
-        objectName: "searchInput"
+        objectName: root.inputName
         anchors.fill: parent
         anchors.leftMargin: 10
         anchors.rightMargin: 10
@@ -30,6 +36,8 @@ Rectangle {
         font.family: Theme.fontFamily
         font.pixelSize: 13
         clip: true
+        Keys.onReturnPressed: root.accepted()
+        Keys.onEnterPressed: root.accepted()
         Keys.onEscapePressed: {
             input.focus = false
             root.escaped()

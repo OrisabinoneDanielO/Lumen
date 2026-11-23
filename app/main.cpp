@@ -21,6 +21,9 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTemporaryDir>
+#include <QProcess>
+#include <QTimer>
+#include <QFile>
 #include <QtQml/qqmlextensionplugin.h>
 
 #include <memory>
@@ -36,6 +39,7 @@ namespace {
 constexpr auto experimentalOutputKey = "experimental/output";
 constexpr auto experimentalEditorKey = "experimental/editor";
 constexpr auto linesPerSlideKey = "songs/linesPerSlide"; // auto-split limit, 2 by default
+constexpr auto backupFolderKey = "backups/folder"; // default: "backups" beside the library
 
 // The link to the render process and the bridge that feeds it the scene.
 struct Output
@@ -88,7 +92,25 @@ std::unique_ptr<data::Database> openLibrary(bool designPreview)
     if (!designPreview) {
         const QString folder = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
         QDir().mkpath(folder);
-        auto db = data::Database::open(QDir(folder).filePath(QStringLiteral("library.db")));
+        const QString path = QDir(folder).filePath(QStringLiteral("library.db"));
+        // A restore chosen before the last restart replaces the library now,
+        // before it is opened (batch 11).
+        if (auto restored = app::Backups::applyPendingRestore(path); !restored.ok())
+            qWarning("Backup not restored: %s", qPrintable(restored.error().message));
+        else if (restored.value())
+            qInfo("Library restored from a backup");
+        auto db = data::Database::open(path);
+        // A damaged library: keep it aside and start empty rather than fail
+        // during a service; the backups are still there to restore.
+        if (db.ok()) {
+            if (auto intact = db.value()->isIntact(); intact.ok() && !intact.value()) {
+                qWarning("The library is damaged; it was kept as library-damaged.db. Restore a backup from the plan menu.");
+                db.value().reset();
+                QFile::remove(QDir(folder).filePath(QStringLiteral("library-damaged.db")));
+                QFile::rename(path, QDir(folder).filePath(QStringLiteral("library-damaged.db")));
+                db = data::Database::open(path);
+            }
+        }
         if (db.ok())
             return std::move(db).value();
         qWarning("Library not opened: %s", qPrintable(db.error().message));
@@ -163,14 +185,44 @@ int main(int argc, char *argv[])
         qWarning("Default themes not set up: %s", qPrintable(themed.error().message));
 
     app::OperatorController controller(show, settings.value(QLatin1String(experimentalEditorKey), false).toBool());
-    if (auto plan = app::loadLatestPlan(*library); plan.ok())
-        controller.setPlan(plan.value());
-    else
-        qWarning("Plan not loaded: %s", qPrintable(plan.error().message));
     songs::SongLibrary songLibrary(*library, settings.value(QLatin1String(linesPerSlideKey), 2).toInt());
     if (auto indexed = songLibrary.indexMissing(); !indexed.ok())
         qWarning("Song search index not updated: %s", qPrintable(indexed.error().message));
     controller.attachLibrary(*library, songLibrary);
+
+    // Backups (daily, the newest 14) and the session saved every 30 s. The
+    // design preview's library is temporary, so it has neither.
+    const QString dataFolder = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    std::unique_ptr<app::Backups> backups;
+    QTimer backupTimer;
+    if (!parser.isSet(designPreview) && library->path() != data::Database::inMemory()) {
+        backups = std::make_unique<app::Backups>(
+            *library, settings.value(QLatin1String(backupFolderKey), QDir(dataFolder).filePath(QStringLiteral("backups"))).toString());
+        controller.attachBackups(*backups, library->path(), QDir(dataFolder).filePath(QStringLiteral("imported")));
+        const auto backUpIfDue = [&backups, &controller] {
+            if (auto made = backups->backUpIfDue(); !made.ok())
+                qWarning("Scheduled backup failed: %s", qPrintable(made.error().message));
+            else if (made.value())
+                controller.refreshBackups();
+        };
+        backUpIfDue();
+        backupTimer.setInterval(3600 * 1000); // checks hourly; backs up daily
+        QObject::connect(&backupTimer, &QTimer::timeout, &app, backUpIfDue);
+        backupTimer.start();
+    }
+    if (!controller.restoreSession()) {
+        if (auto plan = app::loadLatestPlan(*library); plan.ok())
+            controller.setPlan(plan.value());
+        else
+            qWarning("Plan not loaded: %s", qPrintable(plan.error().message));
+        controller.refreshSavedPlans();
+    }
+    // Restoring a backup restarts the app, which puts the backup in place.
+    QObject::connect(&controller, &app::OperatorController::restartRequested, &app, [&app, &controller] {
+        controller.saveSession();
+        QProcess::startDetached(QCoreApplication::applicationFilePath(), QCoreApplication::arguments().mid(1));
+        app.quit();
+    });
 
     // Scripture: the bundled Bibles (read-only) and any the user adds.
     std::unique_ptr<scripture::BibleStore> bundledBibleStore;

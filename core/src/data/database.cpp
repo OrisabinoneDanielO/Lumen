@@ -4,6 +4,9 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QSqlError>
+#include <QSqlQuery>
 #include <QRegularExpression>
 #include <QUuid>
 
@@ -153,8 +156,10 @@ Result<std::unique_ptr<Database>> Database::open(const QString &path)
 Status Database::configure()
 {
     const QSqlDatabase db = connection();
-    // Neither pragma can run inside a transaction, so set both before migrating.
-    for (const char *statement : {"PRAGMA foreign_keys = ON", "PRAGMA journal_mode = WAL"}) {
+    // These pragmas cannot run inside a transaction, so set them before
+    // migrating. synchronous = FULL: a change is on disk when its transaction
+    // ends, even if the power fails just after (batch 11).
+    for (const char *statement : {"PRAGMA foreign_keys = ON", "PRAGMA journal_mode = WAL", "PRAGMA synchronous = FULL"}) {
         if (auto result = pragma(db, QLatin1String(statement)); !result.ok())
             return result.error();
     }
@@ -164,6 +169,29 @@ Status Database::configure()
                      QStringLiteral("This SQLite build cannot enforce foreign keys")};
     }
     return success();
+}
+
+Status Database::backupTo(const QString &file)
+{
+    if (QFileInfo::exists(file))
+        return Error{Error::Code::Invalid, QStringLiteral("%1 already exists").arg(file)};
+    QSqlQuery query(connection());
+    // VACUUM INTO writes a consistent, compacted copy while the library stays
+    // open and in use.
+    if (!query.prepare(QStringLiteral("VACUUM INTO ?")))
+        return Error{Error::Code::Database, query.lastError().text()};
+    query.addBindValue(file);
+    if (!query.exec())
+        return Error{Error::Code::Database, QStringLiteral("Backup failed: %1").arg(query.lastError().text())};
+    return success();
+}
+
+Result<bool> Database::isIntact() const
+{
+    auto result = pragma(connection(), QStringLiteral("PRAGMA quick_check"));
+    if (!result.ok())
+        return result.error();
+    return result.value().toString() == QLatin1String("ok");
 }
 
 Status Database::migrate()
