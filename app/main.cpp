@@ -3,10 +3,12 @@
 #include "servicedata.h"
 #include "themecontroller.h"
 #include "themes.h"
+#include "stagecontroller.h"
 #include "timercontroller.h"
 
 #include "lumen/core/buildinfo.h"
 #include "lumen/core/data/database.h"
+#include "lumen/core/render/protocol.h"
 #include "lumen/core/render/renderlink.h"
 #include "lumen/core/scripture/biblestore.h"
 #include "lumen/core/show/outputbridge.h"
@@ -19,6 +21,7 @@
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QScreen>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTemporaryDir>
@@ -38,6 +41,8 @@ using namespace lumen::core;
 namespace {
 
 constexpr auto outputEnabledKey = "output/enabled"; // on by default since batch 12
+constexpr auto stageEnabledKey = "stage/enabled";   // off by default (needs a screen)
+constexpr auto stageLayoutKey = "stage/layout";
 constexpr auto experimentalEditorKey = "experimental/editor";
 constexpr auto linesPerSlideKey = "songs/linesPerSlide"; // auto-split limit, 2 by default
 constexpr auto backupFolderKey = "backups/folder"; // default: "backups" beside the library
@@ -48,6 +53,31 @@ struct Output
     std::unique_ptr<render::RenderLink> link;
     std::unique_ptr<show::OutputBridge> bridge;
 };
+
+// The stage display's renderer (batch 13): on a screen that is neither the
+// operator's (the primary) nor the audience output's (the first other one),
+// else in a window. Returns its link, or null if it could not start.
+std::unique_ptr<render::RenderLink> startStage(const QString &executable, const QString &audienceServer)
+{
+    const QList<QScreen *> screens = QGuiApplication::screens();
+    QScreen *primary = QGuiApplication::primaryScreen();
+    QList<int> others;
+    for (int i = 0; i < screens.size(); ++i) {
+        if (screens.at(i) != primary)
+            others << i;
+    }
+    render::RenderLink::Options options;
+    options.serverName = (audienceServer.isEmpty() ? render::defaultServerName() : audienceServer) + QStringLiteral("-stage");
+    options.executable = executable;
+    options.arguments = {QStringLiteral("--stage"),
+                         others.size() >= 2 ? QStringLiteral("--screen=%1").arg(others.at(1)) : QStringLiteral("--windowed")};
+    auto link = std::make_unique<render::RenderLink>(options);
+    if (auto started = link->start(); !started.ok()) {
+        qWarning("Stage display not started: %s", qPrintable(started.error().message));
+        return nullptr;
+    }
+    return link;
+}
 
 // Starts the render process (or reconnects to one still showing after a UI
 // crash) and feeds it the scene.
@@ -310,8 +340,47 @@ int main(int argc, char *argv[])
         if (!parser.isSet(designPreview))
             QSettings().setValue(QLatin1String(outputEnabledKey), on);
     });
-    // A normal quit closes the output; a crash leaves it showing the last frame.
-    QObject::connect(&app, &QCoreApplication::aboutToQuit, [&output] {
+
+    // The stage display (batch 13): off by default; the Stage popover turns
+    // it on and picks its layout.
+    app::StageController stageController(controller, timerController);
+    stageController.setLayout(settings.value(QLatin1String(stageLayoutKey), 0).toInt());
+    QObject::connect(&stageController, &app::StageController::changed, &app, [&stageController, &parser, &designPreview] {
+        if (!parser.isSet(designPreview))
+            QSettings().setValue(QLatin1String(stageLayoutKey), stageController.layout());
+    });
+    std::unique_ptr<render::RenderLink> stage;
+    const auto turnStageOn = [&] {
+        if (stage)
+            return;
+        stage = startStage(parser.value(renderExecutable), parser.value(renderServer));
+        if (stage) {
+            render::RenderLink *link = stage.get();
+            stageController.setSender([link](const QJsonObject &state) {
+                (void)link->send({{QStringLiteral("cmd"), QStringLiteral("stage")}, {QStringLiteral("stage"), state}});
+            });
+        }
+        stageController.setConnected(stage != nullptr);
+    };
+    if (!parser.isSet(designPreview) && settings.value(QLatin1String(stageEnabledKey), false).toBool())
+        turnStageOn();
+    QObject::connect(&stageController, &app::StageController::toggleRequested, &app, [&](bool on) {
+        if (on) {
+            turnStageOn();
+        } else if (stage) {
+            stageController.setConnected(false);
+            stageController.setSender({});
+            (void)stage->quit();
+            stage.reset();
+        }
+        if (!parser.isSet(designPreview))
+            QSettings().setValue(QLatin1String(stageEnabledKey), on);
+    });
+
+    // A normal quit closes the outputs; a crash leaves them showing.
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, [&output, &stage] {
+        if (stage)
+            (void)stage->quit();
         if (output)
             (void)output->link->quit();
     });
@@ -323,7 +392,8 @@ int main(int argc, char *argv[])
     engine.setInitialProperties({{QStringLiteral("controller"), QVariant::fromValue<QObject *>(&controller)},
                                  {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(&scriptureController)},
                                  {QStringLiteral("themes"), QVariant::fromValue<QObject *>(&themeController)},
-                                 {QStringLiteral("timerController"), QVariant::fromValue<QObject *>(&timerController)}});
+                                 {QStringLiteral("timerController"), QVariant::fromValue<QObject *>(&timerController)},
+                                 {QStringLiteral("stageController"), QVariant::fromValue<QObject *>(&stageController)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     if (parser.isSet(quitAfter))

@@ -175,3 +175,10 @@ if(UNIX AND NOT APPLE)
     add_test(NAME offline_check COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/offline_check.sh $<TARGET_FILE:lumen>)
     set_tests_properties(offline_check PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60)
 endif()
+
+# Stage display (batch 13). Done when: current, next, clock and message show
+# on a second screen.
+lumen_add_test(tst_stage tst_stage.cpp operatorharness.h rendercheck.h)
+target_link_libraries(tst_stage PRIVATE lumen_render_lib lumen_ui lumen_uiplugin Lumen::Operator Lumen::RenderLink Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(tst_stage PRIVATE LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>")
+add_dependencies(tst_stage lumen-render)

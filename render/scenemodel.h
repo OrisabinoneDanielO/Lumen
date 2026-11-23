@@ -3,6 +3,7 @@
 #include "lumen/core/show/scene.h"
 
 #include <QColor>
+#include <QJsonObject>
 #include <QList>
 #include <QObject>
 #include <QUrl>
@@ -127,6 +128,8 @@ class SceneModel : public QObject
     // Wall-clock time for timers (ms since 1970 UTC), from this process's own
     // clock; changes every 100 ms.
     Q_PROPERTY(qint64 wallMs READ wallMs NOTIFY wallChanged)
+    // The stage display's state (stage windows, batch 13).
+    Q_PROPERTY(QVariantMap stage READ stage NOTIFY stageChanged)
 
 public:
     explicit SceneModel(QObject *parent = nullptr);
@@ -148,10 +151,20 @@ public:
     void setWallClock(qint64 wallMs, qint64 nowMs);
     Q_INVOKABLE QString timerText(const QVariantMap &timer, qint64 wallMs) const;
 
+    QVariantMap stage() const { return m_stage.toVariantMap(); }
+    void setStage(const QJsonObject &stage)
+    {
+        if (stage == m_stage)
+            return;
+        m_stage = stage;
+        emit stageChanged();
+    }
+
 signals:
     void levelsChanged();
     void preloadsChanged();
     void wallChanged();
+    void stageChanged();
 
 private:
     Scene m_scene;
@@ -162,6 +175,7 @@ private:
     QList<QUrl> m_preloads;
     qint64 m_wallBaseMs = -1; // wall clock minus render clock
     qint64 m_wallShownMs = 0;
+    QJsonObject m_stage;
 };
 
 } // namespace lumen::render

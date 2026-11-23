@@ -1,6 +1,7 @@
 #include "outputwindow.h"
 
 #include <QCursor>
+#include <QFontDatabase>
 #include <QGuiApplication>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -17,7 +18,7 @@ Q_IMPORT_QML_PLUGIN(Lumen_SlidesPlugin)
 
 namespace lumen::render {
 
-OutputWindow::OutputWindow(QObject *parent) : QObject(parent)
+OutputWindow::OutputWindow(Kind kind, QObject *parent) : QObject(parent), m_kind(kind)
 {
     m_since.start();
     m_tickClock.start();
@@ -34,8 +35,12 @@ OutputWindow::~OutputWindow() = default;
 bool OutputWindow::create()
 {
     core::show::registerOutputFonts();
+    if (m_kind == Kind::Stage) {
+        for (const char *file : {"Inter-Regular", "Inter-Medium", "Inter-SemiBold", "Inter-Bold"})
+            QFontDatabase::addApplicationFont(QStringLiteral(":/lumen/stage/fonts/%1.ttf").arg(QLatin1String(file)));
+    }
     m_engine.setInitialProperties({{QStringLiteral("scene"), QVariant::fromValue<QObject *>(&m_model)}});
-    m_engine.loadFromModule("Lumen.Render", "Output");
+    m_engine.loadFromModule("Lumen.Render", m_kind == Kind::Stage ? "Stage" : "Output");
     if (m_engine.rootObjects().isEmpty())
         return false;
     m_window = qobject_cast<QQuickWindow *>(m_engine.rootObjects().constFirst());
@@ -210,6 +215,33 @@ bool OutputWindow::advanceClock(qint64 ms)
     if (m_window)
         m_window->update();
     return true;
+}
+
+namespace {
+
+void collectTexts(QQuickItem *item, const QString &prefix, QVariantMap &out)
+{
+    if (!item || !item->isVisible())
+        return;
+    if (item->objectName().startsWith(prefix))
+        out.insert(item->objectName(), item->property("text"));
+    for (QQuickItem *child : item->childItems())
+        collectTexts(child, prefix, out);
+}
+
+} // namespace
+
+QVariantMap OutputWindow::visibleTexts(const QString &prefix) const
+{
+    QVariantMap texts;
+    if (m_window)
+        collectTexts(m_window->contentItem(), prefix, texts);
+    return texts;
+}
+
+QString OutputWindow::screenName() const
+{
+    return m_window && m_window->screen() ? m_window->screen()->name() : QString();
 }
 
 QImage OutputWindow::grab()

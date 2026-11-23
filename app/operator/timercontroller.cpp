@@ -171,6 +171,7 @@ bool TimerController::show(int row)
         return false;
     m_show.setContent(Layer::Messages, Content::timerContent(specFor(id), m_timers[size_t(row)].name));
     refresh();
+    emit statesChanged();
     return true;
 }
 
@@ -179,6 +180,7 @@ void TimerController::hide()
     if (m_show.scene().layer(Layer::Messages).content.kind == Content::Kind::Timer)
         m_show.setContent(Layer::Messages, Content::empty());
     refresh();
+    emit statesChanged();
 }
 
 bool TimerController::add(const QString &name, const QString &mode, const QString &value)
@@ -207,6 +209,7 @@ bool TimerController::add(const QString &name, const QString &mode, const QStrin
     if (!Repository<Timer>(*m_db).create(timer).ok())
         return false;
     load();
+    emit statesChanged();
     return true;
 }
 
@@ -223,10 +226,27 @@ bool TimerController::remove(int row)
     }
     m_states.remove(id);
     load();
+    emit statesChanged();
     return true;
 }
 
 // A timer on screen (banner or countdown slide) changes there at once.
+std::optional<QJsonObject> TimerController::stageTimer() const
+{
+    const Content &banner = m_show.scene().layer(Layer::Messages).content;
+    const QString shown = banner.kind == Content::Kind::Timer ? banner.timer.value("id").toString() : QString();
+    const Timer *pick = nullptr;
+    for (const Timer &t : m_timers)
+        pick = !pick && t.id == shown ? &t : pick;
+    for (const Timer &t : m_timers)
+        pick = !pick && t.mode != TimerMode::CountdownToTime && m_states.value(t.id).running ? &t : pick;
+    for (const Timer &t : m_timers)
+        pick = !pick && t.mode == TimerMode::CountdownToTime ? &t : pick;
+    if (!pick)
+        return std::nullopt;
+    return QJsonObject{{"label", pick->name}, {"spec", specFor(pick->id)}};
+}
+
 void TimerController::updateOnScreen(const QString &id)
 {
     for (Layer layer : {Layer::Messages, Layer::Slide}) {
@@ -235,6 +255,7 @@ void TimerController::updateOnScreen(const QString &id)
             m_show.setContent(layer, Content::timerContent(specFor(id), content.text));
     }
     refresh();
+    emit statesChanged();
 }
 
 void TimerController::refresh()
