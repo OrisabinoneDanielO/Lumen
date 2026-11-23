@@ -3,16 +3,23 @@
 // Messages between the operator UI and the render process (lumen-render).
 //
 // Each message is one line of compact JSON over a local socket that only the
-// same user can open. Every request gets exactly one reply line.
+// same user can open. Every request gets exactly one reply line, in order. A
+// request may carry an "id", which its reply echoes.
 //
-//   {"v":1,"cmd":"show","colour":"#14213D","text":"..."}  -> {"v":1,"ok":true}
-//   {"v":1,"cmd":"status"}  -> {"v":1,"ok":true,"frames":123,"pid":4567}
-//   {"v":1,"cmd":"grab","path":"/tmp/f.png"}  (only with --test-mode)
-//   {"v":1,"cmd":"quit"}    -> {"v":1,"ok":true}, then the renderer exits
+//   {"v":2,"cmd":"scene","scene":{...}}  -> {"v":2,"ok":true}
+//       The whole on-air scene (lumen/core/show/scene.h). Snapshots with a
+//       sequence lower than the one on screen are refused as stale.
+//   {"v":2,"cmd":"getScene"}  -> {"v":2,"ok":true,"scene":{...}}
+//   {"v":2,"cmd":"status"}    -> {"v":2,"ok":true,"frames":123,"pid":4567}
+//   {"v":2,"cmd":"quit"}      -> {"v":2,"ok":true}, then the renderer exits
+//   Only with --test-mode:
+//   {"v":2,"cmd":"grab","path":"/tmp/f.png"}
+//   {"v":2,"cmd":"clock","mode":"manual"|"real"}
+//   {"v":2,"cmd":"clock","advanceMs":250}   (manual clock only)
 //
-// Failures reply {"v":1,"ok":false,"error":"..."}. If the UI disconnects
+// Failures reply {"v":2,"ok":false,"error":"..."}. If the UI disconnects
 // without "quit" (for example it crashed), the renderer keeps showing the
-// last frame. Batch 4 replaces this with the show controller protocol.
+// last frame and finishes any fade in progress.
 
 #include <QByteArray>
 #include <QJsonObject>
@@ -22,7 +29,7 @@
 
 namespace lumen::core::render {
 
-inline constexpr int protocolVersion = 1;
+inline constexpr int protocolVersion = 2;
 
 // Longest line either side accepts, to bound memory use.
 inline constexpr qsizetype maxLineBytes = 1024 * 1024;

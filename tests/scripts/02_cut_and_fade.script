@@ -1,0 +1,27 @@
+# Cut is immediate; fade crossfades over its duration on the renderer's clock.
+set background colour #14213D
+expect colour #14213D at 0.5 0.5
+set background colour #E0A020
+expect colour #E0A020 at 0.5 0.5
+
+transition background fade 1000
+set background colour #14213D
+expect colour #E0A020 at 0.5 0.5
+advance 500
+expect mix #E0A020 #14213D 0.5 at 0.5 0.5
+advance 500
+expect colour #14213D at 0.5 0.5
+
+# The slide layer has its own transition.
+transition slide fade 400
+set slide text "Chorus"
+expect no visible in middle
+advance 400
+expect text in middle
+clear slide
+advance 200
+expect no text in middle
+expect visible in middle
+advance 200
+expect no visible in middle
+expect colour #14213D at 0.5 0.5

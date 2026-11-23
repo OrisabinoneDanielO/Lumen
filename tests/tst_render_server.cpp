@@ -5,6 +5,7 @@
 #include "lumen/core/render/protocol.h"
 
 #include <QGuiApplication>
+#include <QJsonArray>
 #include <QLocalSocket>
 #include <QQuickWindow>
 #include <QSignalSpy>
@@ -13,6 +14,7 @@
 #include <QUuid>
 
 using namespace lumen::core::render;
+using namespace lumen::core::show;
 using namespace lumen::render;
 using namespace lumen::test;
 
@@ -28,6 +30,22 @@ QJsonObject request(const char *command, QJsonObject fields = {})
 bool ok(const QJsonObject &reply)
 {
     return reply.value(QStringLiteral("ok")).toBool();
+}
+
+Scene colourAndText(const QColor &background, const QString &text, quint64 sequence)
+{
+    Scene scene;
+    scene.sequence = sequence;
+    scene.layer(Layer::Background).content = Content::fill(background);
+    if (!text.isEmpty())
+        scene.layer(Layer::Slide).content = Content::textContent(text);
+    return scene;
+}
+
+// The batch 4 replacement for batch 3's "show" command.
+QJsonObject sceneRequest(const QColor &background, const QString &text, quint64 sequence)
+{
+    return request("scene", {{"scene", toJson(colourAndText(background, text, sequence))}});
 }
 
 QString uniqueName()
@@ -56,19 +74,62 @@ private slots:
 
     void cleanup() { m_output.reset(); }
 
-    void showChangesTheFrame()
+    void sceneChangesTheFrame()
     {
         RenderServer server(*m_output, false);
-        QVERIFY(ok(server.handle(request("show", {{"colour", "#14213D"}, {"text", "Hello"}}))));
+        QVERIFY(ok(server.handle(sceneRequest(QColor(0x14, 0x21, 0x3D), "Hello", 1))));
         QTRY_VERIFY(backgroundIs(m_output->grab(), QColor(0x14, 0x21, 0x3D)));
     }
 
-    void showRejectsBadColour()
+    void sceneRejectsMalformed()
     {
         RenderServer server(*m_output, false);
-        const QJsonObject reply = server.handle(request("show", {{"colour", "not a colour"}}));
-        QVERIFY(!ok(reply));
-        QVERIFY(reply.value(QStringLiteral("error")).toString().contains(QLatin1String("colour")));
+        QVERIFY(!ok(server.handle(request("scene"))));
+        QJsonObject badColour = toJson(colourAndText(Qt::red, "x", 1));
+        QJsonArray layers = badColour.value("layers").toArray();
+        layers[0] = QJsonObject{{"content", QJsonObject{{"kind", "colour"}, {"colour", "not a colour"}}}};
+        badColour.insert("layers", layers);
+        QVERIFY(!ok(server.handle(request("scene", {{"scene", badColour}}))));
+        QJsonObject fewLayers = toJson(colourAndText(Qt::red, "x", 1));
+        fewLayers.insert("layers", QJsonArray{});
+        QVERIFY(!ok(server.handle(request("scene", {{"scene", fewLayers}}))));
+    }
+
+    // A snapshot older than what is on air must not win (batch 4).
+    void staleSceneIsRefused()
+    {
+        RenderServer server(*m_output, false);
+        QVERIFY(ok(server.handle(sceneRequest(Qt::blue, "", 5))));
+        const QJsonObject stale = server.handle(sceneRequest(Qt::red, "", 4));
+        QVERIFY(!ok(stale));
+        QVERIFY(stale.value("error").toString().contains(QLatin1String("Stale")));
+        QVERIFY(ok(server.handle(sceneRequest(Qt::blue, "", 5)))); // re-sending is fine
+        QTRY_VERIFY(backgroundIs(m_output->grab(), Qt::blue));
+    }
+
+    void getSceneReturnsWhatIsOnAir()
+    {
+        RenderServer server(*m_output, false);
+        const Scene sent = colourAndText(QColor(0x20, 0x30, 0x40), "On air", 7);
+        QVERIFY(ok(server.handle(request("scene", {{"scene", toJson(sent)}}))));
+        const QJsonObject reply = server.handle(request("getScene"));
+        QVERIFY(ok(reply));
+        const auto onAir = sceneFromJson(reply.value("scene").toObject());
+        QVERIFY(onAir);
+        QVERIFY(*onAir == sent);
+    }
+
+    void clockNeedsTestMode()
+    {
+        RenderServer normal(*m_output, false);
+        QVERIFY(!ok(normal.handle(request("clock", {{"mode", "manual"}}))));
+
+        RenderServer testing(*m_output, true);
+        QVERIFY(!ok(testing.handle(request("clock", {{"advanceMs", 10}})))); // not manual yet
+        QVERIFY(ok(testing.handle(request("clock", {{"mode", "manual"}}))));
+        QVERIFY(ok(testing.handle(request("clock", {{"advanceMs", 10}}))));
+        QVERIFY(ok(testing.handle(request("clock", {{"mode", "real"}}))));
+        QVERIFY(!ok(testing.handle(request("clock"))));
     }
 
     void statusReportsFramesAndPid()
@@ -119,8 +180,9 @@ private slots:
         QVERIFY(client.waitForConnected(2000));
 
         // Two requests in one write, plus a line that is not JSON.
-        client.write(encode({{"cmd", "show"}, {"colour", "#203040"}, {"text", ""}})
-                     + encode({{"cmd", "status"}}) + "garbage\n");
+        QJsonObject scene = sceneRequest(QColor(0x20, 0x30, 0x40), "", 1);
+        scene.insert("id", "first");
+        client.write(encode(scene) + encode({{"cmd", "status"}}) + "garbage\n");
         QByteArray received;
         QTRY_VERIFY((received += client.readAll()).count('\n') >= 3);
         const QList<QByteArray> lines = received.trimmed().split('\n');
@@ -132,6 +194,8 @@ private slots:
             replies << *reply;
         }
         QVERIFY(ok(replies[0]));
+        QCOMPARE(replies[0].value("id").toString(), QStringLiteral("first")); // ids are echoed
+        QVERIFY(!replies[1].contains("id"));
         QVERIFY2(replies[1].value(QStringLiteral("frames")).isDouble(), lines[1].constData());
         QVERIFY(!ok(replies[2]));
         QTRY_VERIFY(backgroundIs(m_output->grab(), QColor(0x20, 0x30, 0x40)));
@@ -149,7 +213,7 @@ private slots:
             QLocalSocket client;
             client.connectToServer(name);
             QVERIFY(client.waitForConnected(2000));
-            client.write(encode({{"cmd", "show"}, {"colour", "#14213D"}, {"text", "Still here"}}));
+            client.write(encode(sceneRequest(QColor(0x14, 0x21, 0x3D), "Still here", 1)));
             QTRY_VERIFY(client.canReadLine());
             client.abort(); // like a crash: no "quit"
         }
