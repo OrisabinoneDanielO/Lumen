@@ -30,6 +30,10 @@ struct SlideView
     QString mediaKind; // "video", "image" or empty
     QString mediaPath;
     QString thumbnail;
+    // A countdown slide (batch 12): shows a timer under its text. timerName
+    // picks the timer; empty means the first countdown to a time of day.
+    bool hasTimer = false;
+    QString timerName;
 };
 
 struct ArrangementChip

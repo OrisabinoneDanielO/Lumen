@@ -136,10 +136,16 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
                 return slideElements.error();
             QStringList lines;
             SlideView media;
+            bool slideTimer = false;
+            QString timerName;
             for (const Element &element : slideElements.value()) {
                 if (element.type == ElementType::Text && !element.content.isEmpty())
                     lines << element.content;
                 hasTimer = hasTimer || element.type == ElementType::Timer;
+                if (element.type == ElementType::Timer) {
+                    slideTimer = true;
+                    timerName = element.content;
+                }
                 if ((element.type == ElementType::Video || element.type == ElementType::Image)
                     && !element.mediaAssetId.isEmpty() && media.mediaKind.isEmpty()) {
                     if (auto asset = Repository<MediaAsset>(db).get(element.mediaAssetId); asset.ok()) {
@@ -150,7 +156,7 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
                 }
             }
             view.slides.push_back({slide.id, group->label, colour, lines.join(u'\n'), {}, 0,
-                                   media.mediaKind, media.mediaPath, media.thumbnail});
+                                   media.mediaKind, media.mediaPath, media.thumbnail, slideTimer, timerName});
         }
     }
     view.kind = kindLabel(p, hasTimer);

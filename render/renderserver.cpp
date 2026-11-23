@@ -145,7 +145,11 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
                 return errorReply(QStringLiteral("The clock is not manual"));
             return okReply();
         }
-        return errorReply(QStringLiteral("\"clock\" needs \"mode\" or \"advanceMs\""));
+        if (request.contains(QStringLiteral("wallMs"))) {
+            m_output.setWallClock(request.value(QStringLiteral("wallMs")).toInteger());
+            return okReply();
+        }
+        return errorReply(QStringLiteral("\"clock\" needs \"mode\", \"advanceMs\" or \"wallMs\""));
     }
 
     if (command == QLatin1String("status")) {

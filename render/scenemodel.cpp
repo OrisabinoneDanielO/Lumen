@@ -1,5 +1,8 @@
 #include "scenemodel.h"
 
+#include <QDateTime>
+#include <QJsonObject>
+
 #include <algorithm>
 
 namespace lumen::render {
@@ -23,6 +26,7 @@ QString ContentModel::kind() const
     case Content::Kind::Text: return QStringLiteral("text");
     case Content::Kind::Image: return QStringLiteral("image");
     case Content::Kind::Video: return QStringLiteral("video");
+    case Content::Kind::Timer: return QStringLiteral("timer");
     case Content::Kind::Empty: break;
     }
     return QStringLiteral("empty");
@@ -156,8 +160,26 @@ void SceneModel::preload(const QString &path)
     emit preloadsChanged();
 }
 
+void SceneModel::setWallClock(qint64 wallMs, qint64 nowMs)
+{
+    m_wallBaseMs = wallMs - nowMs;
+    update(nowMs);
+}
+
+QString SceneModel::timerText(const QVariantMap &timer, qint64 wallMs) const
+{
+    return core::show::timerText(QJsonObject::fromVariantMap(timer), wallMs);
+}
+
 void SceneModel::update(qint64 nowMs)
 {
+    if (m_wallBaseMs < 0)
+        m_wallBaseMs = QDateTime::currentMSecsSinceEpoch() - nowMs;
+    const qint64 wall = (m_wallBaseMs + nowMs) / 100 * 100;
+    if (wall != m_wallShownMs) {
+        m_wallShownMs = wall;
+        emit wallChanged();
+    }
     for (auto &layer : m_layers)
         layer->update(nowMs);
     const bool logoMoved = m_logoFader.update(nowMs);

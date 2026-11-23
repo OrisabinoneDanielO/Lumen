@@ -153,3 +153,7 @@ target_compile_definitions(tst_plans PRIVATE
     LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media"
     LUMEN_DECKS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/decks")
 set_tests_properties(tst_plans PROPERTIES TIMEOUT 180)
+
+# Timers and basic messages (batch 12).
+lumen_add_test(tst_timers tst_timers.cpp operatorharness.h rendercheck.h)
+target_link_libraries(tst_timers PRIVATE lumen_render_lib lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)

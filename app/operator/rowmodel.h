@@ -15,6 +15,10 @@ public:
     explicit RowModel(QStringList roles, QObject *parent = nullptr);
 
     void setRows(QList<QVariantMap> rows);
+    // Like setRows, but when the number of rows is the same only the changed
+    // rows are updated, so views keep their delegates (for values that tick,
+    // such as timers).
+    void updateRows(const QList<QVariantMap> &rows);
     int count() const { return int(m_rows.size()); }
     Q_INVOKABLE QVariantMap get(int row) const;
 

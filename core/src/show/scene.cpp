@@ -2,6 +2,8 @@
 
 #include <QJsonArray>
 
+#include <algorithm>
+
 namespace lumen::core::show {
 
 namespace {
@@ -16,6 +18,7 @@ QString kindName(Content::Kind kind)
     case Content::Kind::Text: return QStringLiteral("text");
     case Content::Kind::Image: return QStringLiteral("image");
     case Content::Kind::Video: return QStringLiteral("video");
+    case Content::Kind::Timer: return QStringLiteral("timer");
     case Content::Kind::Empty: break;
     }
     return QStringLiteral("empty");
@@ -33,6 +36,8 @@ std::optional<Content::Kind> kindFromName(const QString &name)
         return Content::Kind::Image;
     if (name == QLatin1String("video"))
         return Content::Kind::Video;
+    if (name == QLatin1String("timer"))
+        return Content::Kind::Timer;
     return std::nullopt;
 }
 
@@ -50,6 +55,13 @@ QJsonObject contentJson(const Content &content)
     }
     if (content.kind == Content::Kind::Image)
         json.insert(QStringLiteral("image"), content.imagePath);
+    if (content.kind == Content::Kind::Timer) {
+        json.insert(QStringLiteral("timer"), content.timer);
+        if (!content.text.isEmpty())
+            json.insert(QStringLiteral("text"), content.text);
+        if (!content.style.isEmpty())
+            json.insert(QStringLiteral("style"), content.style);
+    }
     if (content.kind == Content::Kind::Video) {
         json.insert(QStringLiteral("video"), content.videoPath);
         json.insert(QStringLiteral("loop"), content.loop);
@@ -80,6 +92,15 @@ std::optional<Content> contentFrom(const QJsonValue &value)
     }
     if (*kind == Content::Kind::Image)
         content.imagePath = json.value(QStringLiteral("image")).toString();
+    if (*kind == Content::Kind::Timer) {
+        content.colour = Qt::white;
+        content.timer = json.value(QStringLiteral("timer")).toObject();
+        content.text = json.value(QStringLiteral("text")).toString();
+        content.style = json.value(QStringLiteral("style")).toObject();
+        const QString mode = content.timer.value(QStringLiteral("mode")).toString();
+        if (mode != QLatin1String("countdown") && mode != QLatin1String("countdownToTime") && mode != QLatin1String("elapsed"))
+            return std::nullopt;
+    }
     if (*kind == Content::Kind::Video) {
         content.videoPath = json.value(QStringLiteral("video")).toString();
         content.loop = json.value(QStringLiteral("loop")).toBool();
@@ -177,6 +198,28 @@ std::optional<Scene> sceneFromJson(const QJsonObject &json)
         scene.overrideTransition = *transition;
     }
     return scene;
+}
+
+qint64 timerValueMs(const QJsonObject &timer, qint64 nowMs)
+{
+    if (timer.contains(QStringLiteral("pausedMs")))
+        return timer.value(QStringLiteral("pausedMs")).toInteger();
+    if (timer.value(QStringLiteral("mode")).toString() == QLatin1String("elapsed"))
+        return nowMs - timer.value(QStringLiteral("startedAtMs")).toInteger(nowMs);
+    return timer.value(QStringLiteral("endsAtMs")).toInteger(nowMs) - nowMs;
+}
+
+QString timerText(const QJsonObject &timer, qint64 nowMs)
+{
+    const bool countdown = timer.value(QStringLiteral("mode")).toString() != QLatin1String("elapsed");
+    qint64 ms = std::max<qint64>(0, timerValueMs(timer, nowMs));
+    // Counting down, a second shows until it has fully passed (10.3 s left
+    // shows 0:11); counting up, once it has (10.3 s shows 0:10).
+    const qint64 seconds = countdown ? (ms + 999) / 1000 : ms / 1000;
+    const qint64 h = seconds / 3600, m = (seconds / 60) % 60, s = seconds % 60;
+    if (h > 0)
+        return QStringLiteral("%1:%2:%3").arg(h).arg(m, 2, 10, QLatin1Char('0')).arg(s, 2, 10, QLatin1Char('0'));
+    return QStringLiteral("%1:%2").arg(m).arg(s, 2, 10, QLatin1Char('0'));
 }
 
 } // namespace lumen::core::show

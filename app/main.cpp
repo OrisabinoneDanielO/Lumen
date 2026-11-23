@@ -3,6 +3,7 @@
 #include "servicedata.h"
 #include "themecontroller.h"
 #include "themes.h"
+#include "timercontroller.h"
 
 #include "lumen/core/buildinfo.h"
 #include "lumen/core/data/database.h"
@@ -36,7 +37,7 @@ using namespace lumen::core;
 
 namespace {
 
-constexpr auto experimentalOutputKey = "experimental/output";
+constexpr auto outputEnabledKey = "output/enabled"; // on by default since batch 12
 constexpr auto experimentalEditorKey = "experimental/editor";
 constexpr auto linesPerSlideKey = "songs/linesPerSlide"; // auto-split limit, 2 by default
 constexpr auto backupFolderKey = "backups/folder"; // default: "backups" beside the library
@@ -48,8 +49,8 @@ struct Output
     std::unique_ptr<show::OutputBridge> bridge;
 };
 
-// The render process has no themes yet, so it only starts when the
-// experimental output setting or flag is on. Off by default.
+// Starts the render process (or reconnects to one still showing after a UI
+// crash) and feeds it the scene.
 std::unique_ptr<Output> startOutput(show::ShowController &controller, const QString &serverName,
                                     const QString &executable, const QStringList &renderOptions)
 {
@@ -160,9 +161,14 @@ int main(int argc, char *argv[])
     const QCommandLineOption designPreview(
         QStringLiteral("design-preview"),
         QStringLiteral("Show the mockup's sample service (a temporary library, not yours)."));
-    const QCommandLineOption experimentalOutput(
-        QStringLiteral("experimental-output"),
-        QStringLiteral("Start the render process (unfinished; also the experimental/output setting)."));
+    // The output starts with the app (setting output/enabled, on by
+    // default; the design preview leaves it off unless --output is given).
+    // --experimental-output is the name it had before batch 12.
+    const QCommandLineOption outputOption(
+        QStringList{QStringLiteral("output"), QStringLiteral("experimental-output")},
+        QStringLiteral("Start the audience output (the default, except with --design-preview)."));
+    const QCommandLineOption noOutputOption(QStringLiteral("no-output"),
+                                            QStringLiteral("Do not start the audience output."));
     const QCommandLineOption renderServer(QStringLiteral("render-server"),
                                           QStringLiteral("Local socket name of the renderer."),
                                           QStringLiteral("name"));
@@ -172,7 +178,7 @@ int main(int argc, char *argv[])
     const QCommandLineOption renderOption(QStringLiteral("render-option"),
                                           QStringLiteral("Extra argument for lumen-render (repeatable)."),
                                           QStringLiteral("argument"));
-    parser.addOptions({designPreview, experimentalOutput, renderServer, renderExecutable, renderOption});
+    parser.addOptions({designPreview, outputOption, noOutputOption, renderServer, renderExecutable, renderOption});
     parser.process(app);
 
     const QSettings settings;
@@ -245,6 +251,8 @@ int main(int argc, char *argv[])
     app::ScriptureController scriptureController(controller);
     scriptureController.setStores(bundledBibleStore.get(), userBibleStore.get());
     app::ThemeController themeController(controller);
+    app::TimerController timerController(controller, show);
+    timerController.attach(*library);
     themeController.attach(*library);
 
     // Media: thumbnails go beside the library (a temporary folder for the
@@ -267,7 +275,9 @@ int main(int argc, char *argv[])
     controller.attachPresentations(presentationLibrary);
 
     std::unique_ptr<Output> output;
-    if (parser.isSet(experimentalOutput) || settings.value(QLatin1String(experimentalOutputKey), false).toBool()) {
+    const auto turnOutputOn = [&] {
+        if (output)
+            return;
         output = startOutput(show, parser.value(renderServer), parser.value(renderExecutable),
                              parser.values(renderOption));
         controller.setOutputConnected(output != nullptr);
@@ -277,7 +287,25 @@ int main(int argc, char *argv[])
             QObject::connect(&controller, &app::OperatorController::previewVideoChanged, output->bridge.get(),
                              &show::OutputBridge::preload);
         }
-    }
+    };
+    const bool outputWanted = parser.isSet(noOutputOption) ? false
+                              : parser.isSet(outputOption)  ? true
+                              : !parser.isSet(designPreview) && settings.value(QLatin1String(outputEnabledKey), true).toBool();
+    if (outputWanted)
+        turnOutputOn();
+    // The Main light in the toolbar turns the output off and on (and is
+    // remembered for the next start).
+    QObject::connect(&controller, &app::OperatorController::outputToggleRequested, &app, [&](bool on) {
+        if (on) {
+            turnOutputOn();
+        } else if (output) {
+            (void)output->link->quit();
+            output.reset();
+            controller.setOutputConnected(false);
+        }
+        if (!parser.isSet(designPreview))
+            QSettings().setValue(QLatin1String(outputEnabledKey), on);
+    });
     // A normal quit closes the output; a crash leaves it showing the last frame.
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&output] {
         if (output)
@@ -290,7 +318,8 @@ int main(int argc, char *argv[])
         [] { QCoreApplication::exit(EXIT_FAILURE); }, Qt::QueuedConnection);
     engine.setInitialProperties({{QStringLiteral("controller"), QVariant::fromValue<QObject *>(&controller)},
                                  {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(&scriptureController)},
-                                 {QStringLiteral("themes"), QVariant::fromValue<QObject *>(&themeController)}});
+                                 {QStringLiteral("themes"), QVariant::fromValue<QObject *>(&themeController)},
+                                 {QStringLiteral("timerController"), QVariant::fromValue<QObject *>(&timerController)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     return QGuiApplication::exec();
