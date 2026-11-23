@@ -6,9 +6,11 @@
 
 #include "lumen/core/data/database.h"
 #include "lumen/core/result.h"
+#include "lumen/core/show/textstyle.h"
 
 #include <QColor>
 #include <QDate>
+#include <QJsonObject>
 #include <QString>
 
 #include <optional>
@@ -22,6 +24,8 @@ struct SlideView
     QString group;  // "Verse 1", "Chorus", ...
     QColor colour;  // the group's colour
     QString text;   // text elements, top to bottom
+    QString footer; // e.g. "Amazing Grace · John Newton · Public domain"
+    int fontSize = 0; // fitted pixel size (1080p) when the item has a theme
 };
 
 struct ArrangementChip
@@ -41,7 +45,13 @@ struct ItemView
     QString detail;   // above the slide grid: author · copyright · theme
     std::vector<SlideView> slides; // in play order (arrangement expanded)
     std::vector<ArrangementChip> chips;
+    std::optional<core::show::TextStyle> style; // from the item's theme
+    QJsonObject background;                     // from the item's theme
 };
+
+// Gives an item a theme's style and background, and fits each slide's text
+// (batch 8). Slides keep their own footers.
+void applyTheme(ItemView &item, const core::show::TextStyle &style, const QJsonObject &background);
 
 struct PlanView
 {

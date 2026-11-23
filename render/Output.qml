@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Window
+import Lumen.Slides
 
 // The audience output: six layers (bottom to top: Background, Media, Slide,
 // Props, Messages, Masks) and the Logo and Black overrides above them. Qt
@@ -27,16 +28,28 @@ Window {
 
             // Outgoing content: stays fully up under an opaque fill fading in
             // (an exact crossfade), otherwise fades out.
-            ContentView {
+            SlideContent {
+                readonly property QtObject content: layer.modelData.previous
                 anchors.fill: parent
-                content: layer.modelData.previous
+                kind: content.kind
+                colour: content.colour
+                text: content.text
+                image: content.image
+                style: content.style
+                footer: content.footer
                 layerName: layer.modelData.name
                 opacity: layer.modelData.current.opaque ? 1.0 : 1.0 - layer.modelData.progress
                 visible: opacity > 0 && layer.modelData.progress < 1.0
             }
-            ContentView {
+            SlideContent {
+                readonly property QtObject content: layer.modelData.current
                 anchors.fill: parent
-                content: layer.modelData.current
+                kind: content.kind
+                colour: content.colour
+                text: content.text
+                image: content.image
+                style: content.style
+                footer: content.footer
                 layerName: layer.modelData.name
                 opacity: layer.modelData.progress
             }
@@ -51,9 +64,15 @@ Window {
         opacity: output.scene.logoLevel
         visible: opacity > 0
 
-        ContentView {
+        SlideContent {
+            readonly property QtObject content: output.scene.logo
             anchors.fill: parent
-            content: output.scene.logo
+            kind: content.kind
+            colour: content.colour
+            text: content.text
+            image: content.image
+            style: content.style
+            footer: content.footer
             layerName: "logo"
         }
     }

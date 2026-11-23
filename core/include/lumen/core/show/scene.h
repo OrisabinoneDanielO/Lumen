@@ -36,7 +36,9 @@ struct Transition
 };
 
 // What one layer shows. Batch 4 supports a colour fill, text and a still
-// image; video arrives in batch 9.
+// image; video arrives in batch 9. Text may carry a theme style (batch 8,
+// see textstyle.h) and a footer such as "Romans 8:28 (WEB)"; without a
+// style the layer's default placement is used.
 struct Content
 {
     enum class Kind { Empty, Colour, Text, Image };
@@ -45,14 +47,20 @@ struct Content
     QColor colour;     // fill for Colour, text colour for Text
     QString text;      // Text
     QString imagePath; // Image: a local file
+    QJsonObject style; // Text: TextStyle JSON plus "size" (fitted pixel size)
+    QString footer;    // Text: reference, copyright, ...
 
     static Content empty() { return {}; }
-    static Content fill(const QColor &colour) { return {Kind::Colour, colour, {}, {}}; }
+    static Content fill(const QColor &colour) { return {Kind::Colour, colour, {}, {}, {}, {}}; }
     static Content textContent(const QString &text, const QColor &colour = Qt::white)
     {
-        return {Kind::Text, colour, text, {}};
+        return {Kind::Text, colour, text, {}, {}, {}};
     }
-    static Content image(const QString &path) { return {Kind::Image, {}, {}, path}; }
+    static Content styledText(const QString &text, const QJsonObject &style, const QString &footer = {})
+    {
+        return {Kind::Text, Qt::white, text, {}, style, footer};
+    }
+    static Content image(const QString &path) { return {Kind::Image, {}, {}, path, {}, {}}; }
 
     bool isEmpty() const { return kind == Kind::Empty; }
     bool operator==(const Content &) const = default;

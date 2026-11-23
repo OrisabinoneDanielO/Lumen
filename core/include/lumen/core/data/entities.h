@@ -112,6 +112,7 @@ struct Theme
     ThemeTarget appliesTo = ThemeTarget::Any;
     QJsonObject background{};
     QRectF safeArea{}; // fractions of the output, e.g. (0.05, 0.05, 0.9, 0.9)
+    bool isDefault = false; // the default for appliesTo (at most one each)
 
     bool operator==(const Theme &) const = default;
 };

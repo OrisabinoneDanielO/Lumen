@@ -56,8 +56,10 @@ public:
     QString previewReference() const;
     QString addSummary() const { return m_addSummary; }
 
-    // The passage as slides: one or two verses each, with the reference.
-    ItemView item() const;
+    // The passage as slides: one or two verses each, themed, with the
+    // reference and copyright in the footer. Verses too long for one slide
+    // even at the theme's smallest size are split across slides.
+    const ItemView &item() const { return m_item; }
 
     Q_INVOKABLE void lookup(const QString &text);
     Q_INVOKABLE void selectTranslation(int index) { setTranslation(index); }
@@ -80,6 +82,7 @@ private:
 
     void reload();
     void refresh();
+    void rebuild();
 
     OperatorController &m_op;
     core::scripture::BibleStore *m_bundled = nullptr;
@@ -92,6 +95,7 @@ private:
     QString m_error;
     int m_versesPerSlide = 1;
     std::optional<core::scripture::Passage> m_passage;
+    ItemView m_item;
     QString m_addSummary;
 };
 

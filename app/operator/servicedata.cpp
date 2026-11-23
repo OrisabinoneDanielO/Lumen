@@ -1,6 +1,10 @@
 #include "servicedata.h"
 
+#include "themes.h"
+
 #include "lumen/core/data/repository.h"
+
+#include <QRegularExpression>
 
 #include <algorithm>
 
@@ -133,11 +137,46 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
                     lines << element.content;
                 hasTimer = hasTimer || element.type == ElementType::Timer;
             }
-            view.slides.push_back({slide.id, group->label, colour, lines.join(u'\n')});
+            view.slides.push_back({slide.id, group->label, colour, lines.join(u'\n'), {}, 0});
         }
     }
     view.kind = kindLabel(p, hasTimer);
+
+    // Footers: songs credit the song; scripture names the passage and the
+    // translation's copyright line.
+    if (p.kind == PresentationKind::Song) {
+        QStringList credit{p.title};
+        for (const char *field : {"author", "copyright"}) {
+            const QString value = meta.value(QLatin1String(field)).toString();
+            if (!value.isEmpty())
+                credit << value;
+        }
+        for (SlideView &slide : view.slides)
+            slide.footer = credit.join(QStringLiteral(" · "));
+    } else if (p.kind == PresentationKind::Scripture) {
+        static const QRegularExpression part(QStringLiteral(R"(\s*\(\d+/\d+\)$)"));
+        const QString abbreviation = meta.value(QStringLiteral("abbreviation")).toString();
+        const QString copyright = meta.value(QStringLiteral("copyright")).toString();
+        for (SlideView &slide : view.slides) {
+            QString reference = slide.group;
+            reference.remove(part);
+            slide.footer = abbreviation.isEmpty() ? reference : QStringLiteral("%1 (%2)").arg(reference, abbreviation);
+            if (!copyright.isEmpty())
+                slide.footer += QStringLiteral(" · ") + copyright;
+        }
+    }
+
+    if (const auto theme = themeFor(db, p))
+        applyTheme(view, theme->style, theme->background);
     return view;
+}
+
+void applyTheme(ItemView &item, const core::show::TextStyle &style, const QJsonObject &background)
+{
+    item.style = style;
+    item.background = background;
+    for (SlideView &slide : item.slides)
+        slide.fontSize = core::show::fitText(slide.text, style, !slide.footer.isEmpty()).pixelSize;
 }
 
 QColor defaultGroupColour(const QString &label)

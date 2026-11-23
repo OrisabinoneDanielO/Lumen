@@ -1,6 +1,8 @@
 #include "operatorcontroller.h"
 #include "scripturecontroller.h"
 #include "servicedata.h"
+#include "themecontroller.h"
+#include "themes.h"
 
 #include "lumen/core/buildinfo.h"
 #include "lumen/core/data/database.h"
@@ -8,6 +10,7 @@
 #include "lumen/core/scripture/biblestore.h"
 #include "lumen/core/show/outputbridge.h"
 #include "lumen/core/show/showcontroller.h"
+#include "lumen/core/show/textstyle.h"
 #include "lumen/core/songs/songlibrary.h"
 
 #include <QCommandLineParser>
@@ -22,6 +25,7 @@
 #include <memory>
 
 Q_IMPORT_QML_PLUGIN(Lumen_UiPlugin)
+Q_IMPORT_QML_PLUGIN(Lumen_SlidesPlugin)
 
 using namespace lumen;
 using namespace lumen::core;
@@ -122,6 +126,7 @@ int main(int argc, char *argv[])
     QGuiApplication::setApplicationDisplayName(appName());
     QGuiApplication::setOrganizationName(organisationName());
     QGuiApplication::setApplicationVersion(version());
+    show::registerOutputFonts(); // to fit text exactly as the output draws it
 
     QCommandLineParser parser;
     parser.setApplicationDescription(appName());
@@ -153,6 +158,9 @@ int main(int argc, char *argv[])
     if (!library)
         return EXIT_FAILURE;
 
+    if (auto themed = app::ensureDefaultThemes(*library); !themed.ok())
+        qWarning("Default themes not set up: %s", qPrintable(themed.error().message));
+
     app::OperatorController controller(show, settings.value(QLatin1String(experimentalEditorKey), false).toBool());
     if (auto plan = app::loadLatestPlan(*library); plan.ok())
         controller.setPlan(plan.value());
@@ -183,6 +191,8 @@ int main(int argc, char *argv[])
     }
     app::ScriptureController scriptureController(controller);
     scriptureController.setStores(bundledBibleStore.get(), userBibleStore.get());
+    app::ThemeController themeController(controller);
+    themeController.attach(*library);
 
     std::unique_ptr<Output> output;
     if (parser.isSet(experimentalOutput) || settings.value(QLatin1String(experimentalOutputKey), false).toBool()) {
@@ -201,7 +211,8 @@ int main(int argc, char *argv[])
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         [] { QCoreApplication::exit(EXIT_FAILURE); }, Qt::QueuedConnection);
     engine.setInitialProperties({{QStringLiteral("controller"), QVariant::fromValue<QObject *>(&controller)},
-                                 {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(&scriptureController)}});
+                                 {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(&scriptureController)},
+                                 {QStringLiteral("themes"), QVariant::fromValue<QObject *>(&themeController)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     return QGuiApplication::exec();
