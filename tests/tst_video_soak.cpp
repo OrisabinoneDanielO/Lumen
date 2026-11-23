@@ -48,7 +48,9 @@ private slots:
         options.executable = QStringLiteral(LUMEN_RENDER_PATH);
         const QString screen = qEnvironmentVariable("LUMEN_SOAK_SCREEN");
         options.arguments = {screen.isEmpty() ? QStringLiteral("--windowed") : QStringLiteral("--screen=") + screen,
-                             QStringLiteral("--test-mode")};
+                             QStringLiteral("--test-mode"),
+                             // If this test crashes or times out, the renderer stops too.
+                             QStringLiteral("--watch-pid=%1").arg(QCoreApplication::applicationPid())};
         RenderLink link(options);
         auto started = link.start();
         QVERIFY2(started.ok(), started.ok() ? "" : qPrintable(started.error().message));
@@ -85,6 +87,13 @@ private slots:
                                  QStringLiteral("How precious did that grace appear\nThe hour I first believed.")};
         QElapsedTimer clock;
         clock.start();
+        // The elapsed timer stops while the computer sleeps; the wall clock
+        // does not. A difference means the run was interrupted by sleep and
+        // proves nothing (run with sleep blocked, e.g. systemd-inhibit).
+        const QDateTime wallStart = QDateTime::currentDateTimeUtc();
+        const auto slept = [&] {
+            return wallStart.msecsTo(QDateTime::currentDateTimeUtc()) - clock.elapsed() > 5000;
+        };
         const QJsonObject atStart = status();
         int slide = 0;
         qint64 nextSlide = 10000;
@@ -95,6 +104,7 @@ private slots:
         while (clock.elapsed() < qint64(seconds) * 1000) {
             QThread::msleep(1000);
             latest = status();
+            QVERIFY2(!slept(), "the computer went to sleep during the run; it does not count");
             QVERIFY2(!latest.isEmpty(), "the renderer stopped answering");
             if (clock.elapsed() >= nextSlide) {
                 send(lyrics[slide++ % lyrics.size()]);

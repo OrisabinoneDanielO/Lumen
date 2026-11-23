@@ -1,5 +1,6 @@
 #include "outputwindow.h"
 #include "rendercheck.h"
+#include "processwatch.h"
 #include "renderserver.h"
 
 #include "lumen/core/render/protocol.h"
@@ -146,6 +147,14 @@ private slots:
         for (const char *key : {"tickMaxGapMs", "tickStalls", "swapMaxGapMs", "swapStalls"})
             QVERIFY2(timing.contains(QLatin1String(key)), key);
         QVERIFY(timing.value(QStringLiteral("tickMaxGapMs")).toDouble() > 0);
+    }
+
+    // --watch-pid: the renderer can tell whether a process is still there.
+    void processWatch()
+    {
+        QVERIFY(processRunning(QCoreApplication::applicationPid()));
+        QVERIFY(!processRunning(0));
+        QVERIFY(!processRunning(0x3FFFFFFF)); // above any real pid
     }
 
     // Writing files on request is for tests only.

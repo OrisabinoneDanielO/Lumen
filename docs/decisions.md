@@ -59,3 +59,23 @@ The order comes from the slide list in `ppt/presentation.xml`, not from the slid
 ### Sample decks
 
 `tests/data/decks/make_decks.py` writes the sample decks with the Python standard library. Each slide has its own background colour and the slide files are named out of order, so the tests check the order from pixels, both through LibreOffice and through Lumen's own drawing.
+
+## Batch 11: plans, .lumen files, autosave and backups
+
+### Saving
+
+Every change to a plan or the library is written to SQLite inside a transaction as it is made; there is no unsaved state to lose. The library now uses `synchronous = FULL`, so a change is on disk when its transaction ends even if the power fails straight after (church buildings lose power). The "autosave every 30 seconds" requirement covers what is not data: which plan and item are open. That is saved to `library.db.session.json` every 30 seconds and whenever a plan is opened, and reopened on the next start, so a restart after a crash comes back where the operator was.
+
+### Backups
+
+A backup is a complete copy of the library database (SQLite `VACUUM INTO`, which works while the library is open). One is made at start-up and then checked hourly; a new one is made once a day has passed since the last. The newest 14 are kept, in `backups` beside the library by default (setting `backups/folder`; a second drive or USB stick is safer). Media files are not copied: they stay where they are, and the `.lumen` export bundles them when they need to travel.
+
+Restoring cannot swap the database under a running app, so it restarts: the choice is recorded beside the library, and on start-up (before the library is opened) the backup is checked and copied into place. The replaced library is kept as `library-before-restore-<time>.db`, so a restore can itself be undone. If the library fails SQLite's check at start-up it is set aside as `library-damaged.db` and Lumen starts with an empty one, so a service can still run, and the backups are there to restore.
+
+### .lumen files
+
+A zip archive with `lumen.json` (the plan and its presentations) and the media files; the format is in `docs/lumen-file.md`. Importing always adds a new plan and reuses presentations and media the library already has, so importing a weekly plan from the worship leader does not pile up duplicate songs. Themes are referred to by name. Large videos are read into memory while exporting (Qt's zip writer works that way); fine for typical files, to revisit if multi-gigabyte videos become common.
+
+### Plan menu
+
+The mockups show no plan controls, so the "+ Add" button in the Service Plan header became a **Plan** menu: New, Open, Rename, Duplicate, Add header, Export, Import, Back up now and Restore. Right-clicking an item moves it, edits its notes or removes it. Notes show under the item in the plan.
