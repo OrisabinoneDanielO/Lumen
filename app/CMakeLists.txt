@@ -12,6 +12,7 @@ set_target_properties(lumen PROPERTIES
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION})
 target_link_libraries(lumen PRIVATE
     Lumen::Core
+    Lumen::RenderLink
     lumen_ui
     lumen_uiplugin
     Qt6::Gui
