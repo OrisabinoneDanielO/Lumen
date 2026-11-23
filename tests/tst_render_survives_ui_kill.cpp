@@ -1,6 +1,7 @@
 #include "rendercheck.h"
 
 #include "lumen/core/render/renderlink.h"
+#include "lumen/core/show/scene.h"
 
 #include <QProcess>
 #include <QTemporaryDir>
@@ -108,14 +109,38 @@ private slots:
         QCOMPARE(after.size(), before.size());
         QVERIFY2(after == before, "the picture changed after the UI was killed");
 
-        // A restarted UI can reconnect to the same renderer.
-        RenderLink restarted(linkOptions());
-        QVERIFY(restarted.connectToRunning(2000).ok());
-        QVERIFY(restarted.show(Qt::black, QString()).ok());
+        // A restarted UI reconnects to the same renderer and adopts what is
+        // on air instead of blanking it or putting up its test frame (batch 4).
+        QProcess restartedUi;
+        restartedUi.setProgram(ui.program());
+        restartedUi.setArguments(ui.arguments());
+        restartedUi.setProcessChannelMode(QProcess::ForwardedChannels);
+        restartedUi.start();
+        QVERIFY(restartedUi.waitForStarted(10000));
+        QTest::qWait(1500);
+        QCOMPARE(restartedUi.state(), QProcess::Running);
+        auto afterRestart = probe.request({{"cmd", "status"}});
+        QVERIFY(afterRestart.ok());
+        QCOMPARE(afterRestart.value().value(QStringLiteral("pid")).toInteger(), renderPid);
+        QVERIFY2(grab(probe) == before, "a restarted UI changed the picture");
+        restartedUi.kill();
+        QVERIFY(restartedUi.waitForFinished(10000));
+
+        // Another client can still drive the renderer (batch 4: scene messages).
+        auto onAir = probe.request({{"cmd", "getScene"}});
+        QVERIFY(onAir.ok());
+        auto scene = lumen::core::show::sceneFromJson(onAir.value().value("scene").toObject());
+        QVERIFY(scene);
+        QVERIFY(scene->sequence > 0);
+        scene->sequence += 1;
+        scene->black = true;
+        scene->overrideTransition = lumen::core::show::Transition::cut();
+        QVERIFY(probe.request({{"cmd", "scene"}, {"scene", lumen::core::show::toJson(*scene)}}).ok());
         QTRY_VERIFY(backgroundIs(grab(probe), Qt::black));
+        QCOMPARE(textPixels(grab(probe)), 0);
 
         // A normal quit ends the renderer.
-        QVERIFY(restarted.quit().ok());
+        QVERIFY(probe.quit().ok());
         RenderLink gone(linkOptions());
         QTRY_VERIFY_WITH_TIMEOUT(!gone.connectToRunning(100).ok(), 5000);
     }

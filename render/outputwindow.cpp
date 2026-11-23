@@ -12,20 +12,18 @@ namespace lumen::render {
 
 OutputWindow::OutputWindow(QObject *parent) : QObject(parent)
 {
-    // Ask for a new frame every display refresh. With vsync the swap paces
-    // this to the screen; without it (headless tests) the timer does.
+    // Advance transitions and ask for a new frame every display refresh. With
+    // vsync the swap paces this to the screen; without it the timer does.
     m_tick.setTimerType(Qt::PreciseTimer);
     m_tick.setInterval(16);
-    connect(&m_tick, &QTimer::timeout, this, [this] {
-        if (m_window)
-            m_window->update();
-    });
+    connect(&m_tick, &QTimer::timeout, this, &OutputWindow::tick);
 }
 
 OutputWindow::~OutputWindow() = default;
 
 bool OutputWindow::create()
 {
+    m_engine.setInitialProperties({{QStringLiteral("scene"), QVariant::fromValue<QObject *>(&m_model)}});
     m_engine.loadFromModule("Lumen.Render", "Output");
     if (m_engine.rootObjects().isEmpty())
         return false;
@@ -38,6 +36,13 @@ bool OutputWindow::create()
             Qt::DirectConnection);
     m_tick.start();
     return true;
+}
+
+void OutputWindow::tick()
+{
+    m_model.update(m_clock.now());
+    if (m_window)
+        m_window->update();
 }
 
 void OutputWindow::place(QScreen *screen, bool fullscreen, QSize windowedSize)
@@ -66,12 +71,27 @@ void OutputWindow::place(QScreen *screen, bool fullscreen, QSize windowedSize)
     }
 }
 
-void OutputWindow::setContent(const QColor &background, const QString &text)
+void OutputWindow::setScene(const core::show::Scene &scene)
 {
-    if (!m_window)
-        return;
-    m_window->setProperty("background", background);
-    m_window->setProperty("text", text);
+    m_model.apply(scene, m_clock.now());
+    if (m_window)
+        m_window->update();
+}
+
+void OutputWindow::setManualClock(bool manual)
+{
+    m_clock.setManual(manual);
+}
+
+bool OutputWindow::advanceClock(qint64 ms)
+{
+    if (!m_clock.isManual())
+        return false;
+    m_clock.advance(ms);
+    m_model.update(m_clock.now());
+    if (m_window)
+        m_window->update();
+    return true;
 }
 
 QImage OutputWindow::grab()

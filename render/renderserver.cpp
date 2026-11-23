@@ -3,6 +3,7 @@
 #include "outputwindow.h"
 
 #include "lumen/core/render/protocol.h"
+#include "lumen/core/show/scene.h"
 
 #include <QCoreApplication>
 #include <QLocalSocket>
@@ -80,8 +81,10 @@ void RenderServer::onReadyRead(QLocalSocket *socket)
             continue;
 
         const auto request = decode(line);
-        const QJsonObject reply = request ? handle(*request)
-                                          : errorReply(QStringLiteral("Request is not a JSON object"));
+        QJsonObject reply = request ? handle(*request)
+                                    : errorReply(QStringLiteral("Request is not a JSON object"));
+        if (request && request->contains(QStringLiteral("id")))
+            reply.insert(QStringLiteral("id"), request->value(QStringLiteral("id")));
         socket->write(encode(reply));
         socket->flush();
 
@@ -105,12 +108,36 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
 
     const QString command = request.value(QStringLiteral("cmd")).toString();
 
-    if (command == QLatin1String("show")) {
-        const QColor colour = QColor::fromString(request.value(QStringLiteral("colour")).toString());
-        if (!colour.isValid())
-            return errorReply(QStringLiteral("\"colour\" must be a colour such as #14213D"));
-        m_output.setContent(colour, request.value(QStringLiteral("text")).toString());
+    if (command == QLatin1String("scene")) {
+        const auto scene = core::show::sceneFromJson(request.value(QStringLiteral("scene")).toObject());
+        if (!scene)
+            return errorReply(QStringLiteral("\"scene\" is missing or malformed"));
+        if (scene->sequence < m_output.scene().sequence) {
+            return errorReply(QStringLiteral("Stale scene %1: %2 is already on air")
+                                  .arg(scene->sequence)
+                                  .arg(m_output.scene().sequence));
+        }
+        m_output.setScene(*scene);
         return okReply();
+    }
+
+    if (command == QLatin1String("getScene"))
+        return okReply({{QStringLiteral("scene"), core::show::toJson(m_output.scene())}});
+
+    if (command == QLatin1String("clock")) {
+        if (!m_testMode)
+            return errorReply(QStringLiteral("\"clock\" is only available with --test-mode"));
+        const QString mode = request.value(QStringLiteral("mode")).toString();
+        if (mode == QLatin1String("manual") || mode == QLatin1String("real")) {
+            m_output.setManualClock(mode == QLatin1String("manual"));
+            return okReply();
+        }
+        if (request.contains(QStringLiteral("advanceMs"))) {
+            if (!m_output.advanceClock(request.value(QStringLiteral("advanceMs")).toInteger()))
+                return errorReply(QStringLiteral("The clock is not manual"));
+            return okReply();
+        }
+        return errorReply(QStringLiteral("\"clock\" needs \"mode\" or \"advanceMs\""));
     }
 
     if (command == QLatin1String("status")) {

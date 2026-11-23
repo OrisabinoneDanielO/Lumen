@@ -1,0 +1,30 @@
+# Black and Logo sit above every layer; turning them off reveals the layers.
+set background colour #14213D
+set slide text "Verse 1"
+transition overrides fade 500
+black on
+advance 250
+expect mix #14213D #000000 0.5 at 0.01 0.5
+advance 250
+expect black
+
+# The operator prepares the next slide under Black.
+set slide text "Verse 2"
+expect black
+black off
+advance 500
+expect colour #14213D at 0.01 0.5
+expect text in middle
+
+# Logo is the logo on black; Black still wins over it.
+transition overrides cut
+logo text "Grace Church"
+logo on
+expect colour #000000 at 0.01 0.5
+expect text in middle
+black on
+expect black
+black off
+expect text in middle
+logo off
+expect colour #14213D at 0.01 0.5

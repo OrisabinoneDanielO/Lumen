@@ -41,7 +41,22 @@ target_link_libraries(tst_render_scene PRIVATE lumen_render_lib)
 lumen_add_test(tst_render_server tst_render_server.cpp rendercheck.h)
 target_link_libraries(tst_render_server PRIVATE lumen_render_lib)
 
-# Done when: killing the UI process leaves the last frame on screen.
+# Show controller and layers (batch 4).
+lumen_add_test(tst_show_controller tst_show_controller.cpp)
+target_link_libraries(tst_show_controller PRIVATE Lumen::Show)
+
+lumen_add_test(tst_render_layers tst_render_layers.cpp rendercheck.h)
+target_link_libraries(tst_render_layers PRIVATE lumen_render_lib)
+
+# Done when: scripted commands produce the expected frames.
+lumen_add_test(tst_show_script tst_show_script.cpp rendercheck.h)
+target_link_libraries(tst_show_script PRIVATE Lumen::Show Qt6::Gui)
+target_compile_definitions(tst_show_script PRIVATE
+    LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>"
+    LUMEN_SCRIPTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/scripts")
+add_dependencies(tst_show_script lumen-render)
+
+# Done when (batch 3): killing the UI process leaves the last frame on screen.
 lumen_add_test(tst_render_survives_ui_kill tst_render_survives_ui_kill.cpp rendercheck.h)
 target_link_libraries(tst_render_survives_ui_kill PRIVATE Lumen::RenderLink Qt6::Gui)
 target_compile_definitions(tst_render_survives_ui_kill PRIVATE
