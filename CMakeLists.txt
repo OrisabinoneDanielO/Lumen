@@ -14,7 +14,11 @@ option(LUMEN_BUILD_TESTS "Build the unit and integration tests" ON)
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick Sql Network Multimedia Pdf Xml)
 # Qt's zip reader (for .pptx files) is private API (see docs/decisions.md).
 set(QT_NO_PRIVATE_MODULE_WARNING ON)
-find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)
+# Since Qt 6.9 private modules are packages of their own; before, the
+# Qt6::GuiPrivate target came with Gui.
+if(Qt6_VERSION VERSION_GREATER_EQUAL 6.9)
+    find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)
+endif()
 qt_standard_project_setup(REQUIRES 6.5)
 
 # Every executable in one folder, so lumen finds lumen-render beside it.

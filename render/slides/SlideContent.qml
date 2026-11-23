@@ -9,11 +9,15 @@ import QtMultimedia
 // outline and shadow; Text.Fit shrinks it further only if it would overflow.
 // Unthemed text keeps the per-layer placement from batch 4: Props as a lower
 // third, Messages as a top banner, everything else centred.
+//
+// Timers (batch 12): the time comes in as timerText, worked out by whoever
+// shows this (the render process from its own clock). On the Messages layer
+// a timer sits in the banner; elsewhere its label is above a large time.
 Item {
     id: view
     objectName: "slideContent"
 
-    property string kind: "empty" // empty | colour | text | image | video
+    property string kind: "empty" // empty | colour | text | image | video | timer
     property color colour: "white"
     property string text
     property url image
@@ -25,6 +29,7 @@ Item {
     property bool loop: false
     property real volume: 1.0
     property bool playVideo: true
+    property string timerText
 
     readonly property bool themed: kind === "text" && style !== null && style !== undefined
                                    && style.size !== undefined
@@ -112,6 +117,64 @@ Item {
         font.pixelSize: Math.max(12, Math.round(view.height * (view.isMessage ? 0.05 : view.isProps ? 0.06 : 0.07)))
         font.weight: Font.DemiBold
         lineHeight: 1.2
+    }
+
+    // ---- timers ---------------------------------------------------------------
+
+    Rectangle {
+        visible: view.kind === "timer" && view.isMessage
+        width: view.width
+        height: Math.round(view.height * 0.12)
+        color: "#B3000000"
+    }
+    Text {
+        objectName: "timerBanner"
+        visible: view.kind === "timer" && view.isMessage
+        x: view.margin
+        width: view.width - 2 * view.margin
+        height: Math.round(view.height * 0.12)
+        text: view.kind === "timer" ? (view.text !== "" ? view.text + "   " + view.timerText : view.timerText) : ""
+        color: "white"
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        fontSizeMode: Text.Fit
+        minimumPixelSize: 10
+        font.family: "Noto Sans"
+        font.pixelSize: Math.max(12, Math.round(view.height * 0.06))
+        font.weight: Font.DemiBold
+        font.features: { "tnum": 1 } // digits of equal width: the time does not jitter
+    }
+    Column {
+        visible: view.kind === "timer" && !view.isMessage
+        anchors.centerIn: parent
+        width: view.width - 2 * view.margin
+        spacing: Math.round(view.height * 0.02)
+        Text {
+            width: parent.width
+            visible: text !== ""
+            text: view.kind === "timer" ? view.text : ""
+            color: "white"
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
+            font.family: "Noto Sans"
+            font.weight: Font.DemiBold
+            font.pixelSize: Math.max(10, Math.round(view.height * 0.07))
+            style: Text.Outline
+            styleColor: "#80000000"
+        }
+        Text {
+            objectName: "timerText"
+            width: parent.width
+            text: view.kind === "timer" ? view.timerText : ""
+            color: "white"
+            horizontalAlignment: Text.AlignHCenter
+            font.family: "Noto Sans"
+            font.weight: Font.Bold
+            font.pixelSize: Math.max(12, Math.round(view.height * 0.24))
+            font.features: { "tnum": 1 }
+            style: Text.Outline
+            styleColor: "#80000000"
+        }
     }
 
     // ---- themed text ---------------------------------------------------------

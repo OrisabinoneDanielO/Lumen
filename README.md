@@ -29,7 +29,7 @@ toolbox run -c lumen sudo dnf install -y cmake ninja-build gcc-c++ \
 toolbox run -c lumen cmake --preset debug   # and so on
 ```
 
-The audience output runs in its own process, `lumen-render`, so a crash in the operator UI never freezes the screen. It is still experimental (it shows a test frame) and off by default; try it with `lumen --experimental-output`. With one screen it opens as a window; with more it goes fullscreen on the first screen that is not the operator's (`--render-option=--screen=N` to choose).
+The audience output runs in its own process, `lumen-render`, so a crash in the operator UI never freezes the screen. It starts with the app: with one screen it opens as a window; with more it goes fullscreen on the first screen that is not the operator's (`--render-option=--screen=N` to choose). Click **Main** in the toolbar to turn it off or on (remembered), or start with `--no-output`. `--design-preview` leaves it off unless `--output` is given.
 
 In Show mode, click a slide to send it live, or use the keyboard: Space or → next slide, ← previous, Page Down/Up next/previous plan item, F1–F5 clear background/slide/props/messages/all, F6 Logo, F7 Black, C/B/P/E jump to Chorus/Bridge/Pre-chorus/Ending, V then a number for a verse, 1–9 for a section. `lumen --design-preview` loads the mockup's sample service into a temporary library. Edit mode is hidden until editing works (setting `experimental/editor`).
 
@@ -44,6 +44,12 @@ Media: the **Media** tab in the library imports videos (`.mp4`, `.mov`, `.webm`,
 Presentations: the **Presentations** tab imports PowerPoint (`.pptx`, `.ppt`, `.odp`) and PDF files as picture slides, one per slide, in show order (hidden slides are left out). PowerPoint files are converted by PowerPoint (Windows) or LibreOffice when one is installed, so they look exactly as designed; without either, Lumen draws `.pptx` slides itself (backgrounds, pictures, shapes and text, but not charts, tables or effects) and the import report says so. For Keynote, export to PDF first. Optional: install LibreOffice (`sudo dnf install libreoffice-impress`) for exact PowerPoint slides.
 
 Plans and backups: the **Plan** menu above the service plan makes, opens, renames and duplicates plans, adds headers, and exports or imports a plan as a `.lumen` file (the plan, its slides and its media in one file, for the booth PC or another church). Right-click an item to move it, add notes or remove it. Everything is saved as you go; the open plan and item are remembered every 30 seconds, so Lumen reopens where you were after a crash. A backup of the library is made daily (the newest 14 are kept, in `backups` beside the library), and **Restore a backup** puts one back (Lumen restarts; the current library is kept beside it).
+
+Timers and messages: **Timers** in the toolbar starts, pauses and resets countdowns (for a set time or to a time of day) and count-up clocks, and shows one in the banner at the top of the output. Countdown slides, such as a pre-service loop, show the time live. The output counts on its own clock, so a timer keeps time even if the operator window stops. **Message** puts a line of text in the banner over the slides ("Parent of 42, please come to the nursery") and keeps recent ones a click away; Clear Msg (F4) takes it down.
+
+Offline: Lumen makes no network connections. `tests/offline_check.sh` checks this on Linux by tracing the app and its output, and by running them with no network at all.
+
+Linux AppImage: see `packaging/README.md`.
 
 CI (`.github/workflows/ci.yml`) builds and tests on Windows, macOS and Linux with Qt 6.8 LTS.
 

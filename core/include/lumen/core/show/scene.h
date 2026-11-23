@@ -35,13 +35,15 @@ struct Transition
     bool operator==(const Transition &) const = default;
 };
 
-// What one layer shows: a colour fill, text, a still image, or video
-// (batch 9; decoded and played by the render process itself). Text may carry
+// What one layer shows: a colour fill, text, a still image, video (batch 9;
+// decoded and played by the render process itself), or a timer (batch 12;
+// counted by the render process from its own clock, so it keeps time even
+// if the operator UI stops). Text may carry
 // a theme style (batch 8, see textstyle.h) and a footer such as "Romans 8:28
 // (WEB)"; without a style the layer's default placement is used.
 struct Content
 {
-    enum class Kind { Empty, Colour, Text, Image, Video };
+    enum class Kind { Empty, Colour, Text, Image, Video, Timer };
 
     Kind kind = Kind::Empty;
     QColor colour;     // fill for Colour, text colour for Text
@@ -52,21 +54,33 @@ struct Content
     QString videoPath; // Video: a local file
     bool loop = false; // Video: start again at the end (motion backgrounds)
     double volume = 1.0; // Video: 0 silent .. 1 full
+    // Timer: {"mode": "countdown" | "countdownToTime" | "elapsed",
+    //         "endsAtMs" (countdowns) or "startedAtMs" (elapsed): wall-clock
+    //         milliseconds since 1970 UTC, "pausedMs": the value shown while
+    //         paused (absent when running)}. `text` is a label shown with it.
+    QJsonObject timer;
 
     static Content empty() { return {}; }
-    static Content fill(const QColor &colour) { return {Kind::Colour, colour, {}, {}, {}, {}, {}, false, 1.0}; }
+    static Content fill(const QColor &colour) { return {Kind::Colour, colour, {}, {}, {}, {}, {}, false, 1.0, {}}; }
     static Content textContent(const QString &text, const QColor &colour = Qt::white)
     {
-        return {Kind::Text, colour, text, {}, {}, {}, {}, false, 1.0};
+        return {Kind::Text, colour, text, {}, {}, {}, {}, false, 1.0, {}};
     }
     static Content styledText(const QString &text, const QJsonObject &style, const QString &footer = {})
     {
-        return {Kind::Text, Qt::white, text, {}, style, footer, {}, false, 1.0};
+        return {Kind::Text, Qt::white, text, {}, style, footer, {}, false, 1.0, {}};
     }
-    static Content image(const QString &path) { return {Kind::Image, {}, {}, path, {}, {}, {}, false, 1.0}; }
+    static Content image(const QString &path) { return {Kind::Image, {}, {}, path, {}, {}, {}, false, 1.0, {}}; }
     static Content video(const QString &path, bool loop, double volume, const QString &poster = {})
     {
-        return {Kind::Video, {}, {}, poster, {}, {}, path, loop, volume};
+        return {Kind::Video, {}, {}, poster, {}, {}, path, loop, volume, {}};
+    }
+
+    static Content timerContent(const QJsonObject &timer, const QString &label = {})
+    {
+        Content c{Kind::Timer, Qt::white, label, {}, {}, {}, {}, false, 1.0, {}};
+        c.timer = timer;
+        return c;
     }
 
     bool isEmpty() const { return kind == Kind::Empty; }
@@ -98,6 +112,13 @@ struct Scene
 
     bool operator==(const Scene &) const = default;
 };
+
+// What a timer shows at wall-clock time nowMs (ms since 1970 UTC): "4:59",
+// "1:02:03"; countdowns stop at "0:00". Rounds up while counting down, so
+// "1:00" shows for the whole last minute's first second, as clocks do.
+QString timerText(const QJsonObject &timer, qint64 nowMs);
+// Milliseconds the timer shows (negative past the end of a countdown).
+qint64 timerValueMs(const QJsonObject &timer, qint64 nowMs);
 
 QJsonObject toJson(const Scene &scene);
 std::optional<Scene> sceneFromJson(const QJsonObject &json);

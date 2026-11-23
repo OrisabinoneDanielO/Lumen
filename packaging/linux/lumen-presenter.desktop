@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Lumen Presenter
+GenericName=Worship presentation
+Comment=Show lyrics, scripture, media and slides in worship services
+Exec=lumen %F
+Icon=lumen-presenter
+Categories=AudioVideo;Video;Presentation;Office;
+Keywords=worship;church;lyrics;bible;presentation;projector;
+Terminal=false
+StartupWMClass=lumen

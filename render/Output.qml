@@ -41,6 +41,7 @@ Window {
                 video: content.video
                 loop: content.loop
                 volume: content.volume
+                timerText: content.kind === "timer" ? output.scene.timerText(content.timer, output.scene.wallMs) : ""
                 layerName: layer.modelData.name
                 opacity: layer.modelData.current.opaque ? 1.0 : 1.0 - layer.modelData.progress
                 visible: opacity > 0 && layer.modelData.progress < 1.0
@@ -57,6 +58,7 @@ Window {
                 video: content.video
                 loop: content.loop
                 volume: content.volume
+                timerText: content.kind === "timer" ? output.scene.timerText(content.timer, output.scene.wallMs) : ""
                 layerName: layer.modelData.name
                 opacity: layer.modelData.progress
             }

@@ -7,6 +7,7 @@
 
 #include "lumen/core/data/repository.h"
 
+#include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
 #include <QLocale>
@@ -43,6 +44,15 @@ OperatorController::OperatorController(ShowController &show, bool editAvailable,
     m_sessionTimer.setInterval(30000);
     connect(&m_sessionTimer, &QTimer::timeout, this, &OperatorController::saveSession);
     m_sessionTimer.start();
+
+    // Timers shown in Preview and Live tick here too (the output counts on
+    // its own).
+    m_timerTick.setInterval(250);
+    connect(&m_timerTick, &QTimer::timeout, this, [this] {
+        if (!liveTimerText().isEmpty() || !previewTimerText().isEmpty())
+            emit timersTicked();
+    });
+    m_timerTick.start();
 }
 
 QList<QVariantMap> OperatorController::planRows() const
@@ -498,7 +508,8 @@ int OperatorController::previewSlide() const
 QString OperatorController::liveText() const
 {
     const Content &content = m_show.scene().layer(Layer::Slide).content;
-    return content.kind == Content::Kind::Text ? content.text : QString();
+    // A countdown slide's text is its label.
+    return content.kind == Content::Kind::Text || content.kind == Content::Kind::Timer ? content.text : QString();
 }
 
 QString OperatorController::previewText() const
@@ -569,6 +580,9 @@ QVariantList OperatorController::layers() const
             break;
         case Content::Kind::Text:
             value = (layer == Layer::Slide && m_onAir) ? liveLabel() : content.text.section(u'\n', 0, 0);
+            break;
+        case Content::Kind::Timer:
+            value = content.text.isEmpty() ? tr("Timer") : tr("Timer: %1").arg(content.text.section(u'\n', 0, 0));
             break;
         }
         return {{"name", layerName(layer).replace(0, 1, layerName(layer).at(0).toUpper())},
@@ -646,7 +660,11 @@ bool OperatorController::goLive(int index)
                                   : Content::image(slide.mediaPath);
         changes = {{Layer::Media, media}, {Layer::Slide, Content::empty()}};
     } else {
-        const Content content = view->style
+        // A countdown slide shows its timer, counted by the renderer.
+        const std::optional<QJsonObject> timer =
+            slide.hasTimer && m_timerSource ? m_timerSource(slide.timerName) : std::nullopt;
+        const Content content = timer ? Content::timerContent(*timer, slide.text)
+                                : view->style
                                     ? Content::styledText(slide.text, styleWithSize(*view->style, slide.fontSize), slide.footer)
                                     : Content::textContent(slide.text);
         changes = {{Layer::Slide, content}};
@@ -1109,6 +1127,57 @@ bool OperatorController::restoreSession()
     selectItem(session.value(QStringLiteral("item")).toInt());
     refreshSavedPlans();
     return true;
+}
+
+} // namespace lumen::app
+
+namespace lumen::app {
+
+// ---- Timers and messages (batch 12) ----
+
+QString OperatorController::liveTimerText() const
+{
+    const Content &content = m_show.scene().layer(Layer::Slide).content;
+    if (content.kind != Content::Kind::Timer)
+        return {};
+    return core::show::timerText(content.timer, QDateTime::currentMSecsSinceEpoch());
+}
+
+QString OperatorController::previewTimerText() const
+{
+    const ItemView *view = selected();
+    const int index = previewSlide();
+    if (!view || index < 0 || !view->slides[size_t(index)].hasTimer || !m_timerSource)
+        return {};
+    const auto timer = m_timerSource(view->slides[size_t(index)].timerName);
+    return timer ? core::show::timerText(*timer, QDateTime::currentMSecsSinceEpoch()) : QString();
+}
+
+QString OperatorController::messageShown() const
+{
+    const Content &content = m_show.scene().layer(Layer::Messages).content;
+    return content.kind == Content::Kind::Text ? content.text : QString();
+}
+
+bool OperatorController::showMessage(const QString &text)
+{
+    const QString line = text.simplified();
+    if (line.isEmpty())
+        return false;
+    m_show.setContent(Layer::Messages, Content::textContent(line));
+    m_recentMessages.removeAll(line);
+    m_recentMessages.prepend(line);
+    while (m_recentMessages.size() > 8)
+        m_recentMessages.removeLast();
+    emit stateChanged();
+    return true;
+}
+
+void OperatorController::hideMessage()
+{
+    if (!m_show.scene().layer(Layer::Messages).content.isEmpty())
+        m_show.setContent(Layer::Messages, Content::empty());
+    emit stateChanged();
 }
 
 } // namespace lumen::app

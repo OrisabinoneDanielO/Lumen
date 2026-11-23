@@ -12,6 +12,8 @@ Window {
     property QtObject scripture: null
     // The theme editor; optional too.
     property QtObject themes: null
+    // Timers (batch 12); optional.
+    property QtObject timerController: null
 
     width: 1440
     height: 900
@@ -44,6 +46,17 @@ Window {
                 Layout.fillWidth: true
                 Layout.preferredHeight: implicitHeight
                 controller: window.controller
+                timerSummary: window.timerController ? window.timerController.summary : ""
+                onTimersRequested: {
+                    messagePopover.visible = false
+                    timersPopover.active = window.timerController !== null && !timersPopover.active
+                }
+                onMessageRequested: {
+                    timersPopover.active = false
+                    messagePopover.visible = !messagePopover.visible
+                    if (messagePopover.visible)
+                        messagePopover.focusInput()
+                }
             }
 
             RowLayout {
@@ -124,6 +137,34 @@ Window {
         function onScriptureRequested() {
             if (scripturePanel.item)
                 scripturePanel.item.show()
+        }
+    }
+
+    // Toolbar popovers (batch 12), under the toolbar on the right.
+    Loader {
+        id: timersPopover
+        objectName: "timersPopover"
+        active: false
+        x: window.width - width - 16
+        y: 62
+        z: 50
+        sourceComponent: TimersPopover {
+            timers: window.timerController
+            controller: window.controller
+            onCloseRequested: timersPopover.active = false
+        }
+    }
+    MessagePopover {
+        id: messagePopover
+        objectName: "messagePopover"
+        visible: false
+        x: window.width - width - 16
+        y: 62
+        z: 50
+        controller: window.controller
+        onCloseRequested: {
+            visible = false
+            keyRoot.forceActiveFocus()
         }
     }
 }

@@ -16,6 +16,20 @@ void RowModel::setRows(QList<QVariantMap> rows)
         emit countChanged();
 }
 
+void RowModel::updateRows(const QList<QVariantMap> &rows)
+{
+    if (rows.size() != m_rows.size()) {
+        setRows(rows);
+        return;
+    }
+    for (qsizetype i = 0; i < rows.size(); ++i) {
+        if (rows.at(i) == m_rows.at(i))
+            continue;
+        m_rows[i] = rows.at(i);
+        emit dataChanged(index(int(i)), index(int(i)));
+    }
+}
+
 QVariantMap RowModel::get(int row) const
 {
     return row >= 0 && row < m_rows.size() ? m_rows.at(row) : QVariantMap();
