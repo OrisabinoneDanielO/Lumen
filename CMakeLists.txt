@@ -11,7 +11,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(LUMEN_BUILD_TESTS "Build the unit and integration tests" ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick Sql)
 qt_standard_project_setup(REQUIRES 6.5)
 
 # Shared warning settings for every Lumen target.

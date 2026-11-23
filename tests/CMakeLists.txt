@@ -17,6 +17,12 @@ target_compile_definitions(tst_core PRIVATE EXPECTED_VERSION="${PROJECT_VERSION}
 lumen_add_test(tst_mainwindow tst_mainwindow.cpp)
 target_link_libraries(tst_mainwindow PRIVATE lumen_ui lumen_uiplugin Qt6::Quick)
 
+lumen_add_test(tst_database tst_database.cpp)
+target_link_libraries(tst_database PRIVATE Lumen::Data)
+
+lumen_add_test(tst_repositories tst_repositories.cpp)
+target_link_libraries(tst_repositories PRIVATE Lumen::Data)
+
 # The render process stub must build and run on every platform.
 add_test(NAME render_stub_runs COMMAND lumen-render --version)
 set_tests_properties(render_stub_runs PROPERTIES
