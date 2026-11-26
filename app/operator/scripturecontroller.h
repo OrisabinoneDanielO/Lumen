@@ -28,7 +28,16 @@ class ScriptureController : public QObject
     Q_PROPERTY(QString label READ label NOTIFY changed)        // "John 3:16–18"
     Q_PROPERTY(QString error READ error NOTIFY changed)        // why nothing was found
     Q_PROPERTY(QVariantList verses READ verses NOTIFY changed) // {number, text}
+    // 1 or 2 verses on each slide, or 0: as many as fit.
     Q_PROPERTY(int versesPerSlide READ versesPerSlide WRITE setVersesPerSlide NOTIFY changed)
+    // Where the reference goes: "below", "above" or "lowerThird" (the text
+    // and reference in the bottom third; see scriptureStyle).
+    Q_PROPERTY(QString referencePosition READ referencePosition WRITE setReferencePosition NOTIFY changed)
+    // A second translation side by side (an index in translations), or -1.
+    Q_PROPERTY(int secondTranslation READ secondTranslation WRITE setSecondTranslation NOTIFY changed)
+    Q_PROPERTY(QString previewSecondText READ previewSecondText NOTIFY changed)
+    // How many verses the first slide holds (highlighted in the list).
+    Q_PROPERTY(int firstSlideVerses READ firstSlideVerses NOTIFY changed)
     Q_PROPERTY(QString copyright READ copyright NOTIFY changed)
     Q_PROPERTY(QString previewText READ previewText NOTIFY changed)
     Q_PROPERTY(QString previewReference READ previewReference NOTIFY changed)
@@ -55,6 +64,12 @@ public:
     QVariantList verses() const;
     int versesPerSlide() const { return m_versesPerSlide; }
     void setVersesPerSlide(int count);
+    QString referencePosition() const { return m_referencePosition; }
+    void setReferencePosition(const QString &position);
+    int secondTranslation() const { return m_second; }
+    void setSecondTranslation(int index);
+    QString previewSecondText() const;
+    int firstSlideVerses() const { return m_firstSlideVerses; }
     QString copyright() const;
     QString previewText() const;
     QString previewReference() const;
@@ -62,9 +77,10 @@ public:
     QString suggestion() const { return m_completion.suggestion; }
     QString completionStep() const { return m_completion.step; }
 
-    // The passage as slides: one or two verses each, themed, with the
-    // reference and copyright in the footer. Verses too long for one slide
-    // even at the theme's smallest size are split across slides.
+    // The passage as slides: one or two verses each, or as many as fit,
+    // themed, with the reference and copyright in the footer. Verses too
+    // long for one slide even at the theme's smallest size are split across
+    // slides. With a second translation, each slide is two columns.
     const ItemView &item() const { return m_item; }
 
     Q_INVOKABLE void lookup(const QString &text);
@@ -106,7 +122,11 @@ private:
     QString m_query;
     QString m_error;
     int m_versesPerSlide = 1;
+    QString m_referencePosition = QStringLiteral("below");
+    int m_second = -1;
+    int m_firstSlideVerses = 0;
     std::optional<core::scripture::Passage> m_passage;
+    std::optional<core::scripture::Passage> m_secondPassage; // the same verses
     ItemView m_item;
     QString m_addSummary;
 };

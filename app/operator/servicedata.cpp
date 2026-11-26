@@ -1,5 +1,7 @@
 #include "servicedata.h"
 
+#include <cmath>
+
 #include <QUrl>
 
 #include "themes.h"
@@ -161,7 +163,10 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
                            media.mediaKind, media.mediaPath, media.thumbnail, slideTimer, timerName, {}};
             // The operator's choice for this video (Play once by default).
             made.mediaLoop = p.metadata.value(QStringLiteral("videoLoop")).toBool();
-            if (p.kind == PresentationKind::Slides && isComposed(slideElements.value())) {
+            // Slides made in the editor; scripture with a second translation
+            // side by side.
+            if ((p.kind == PresentationKind::Slides || p.kind == PresentationKind::Scripture)
+                && isComposed(slideElements.value())) {
                 // Drawn from its elements, not as text, picture or countdown.
                 made.elements = composedElements(db, slideElements.value());
                 made.mediaKind.clear();
@@ -200,8 +205,12 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
         }
     }
 
-    if (const auto theme = themeFor(db, p))
-        applyTheme(view, theme->style, theme->background);
+    if (const auto theme = themeFor(db, p)) {
+        // Scripture keeps the reference where it was put.
+        const QString position = meta.value(QStringLiteral("referencePosition")).toString();
+        applyTheme(view, p.kind == PresentationKind::Scripture ? scriptureStyle(theme->style, position) : theme->style,
+                   theme->background);
+    }
     return view;
 }
 
@@ -211,6 +220,63 @@ void applyTheme(ItemView &item, const core::show::TextStyle &style, const QJsonO
     item.background = background;
     for (SlideView &slide : item.slides)
         slide.fontSize = core::show::fitText(slide.text, style, !slide.footer.isEmpty()).pixelSize;
+}
+
+core::show::TextStyle scriptureStyle(core::show::TextStyle style, const QString &position)
+{
+    if (position == QLatin1String("above")) {
+        style.footerPosition = QStringLiteral("above");
+    } else if (position == QLatin1String("lowerThird")) {
+        style.footerPosition = QStringLiteral("below");
+        style.safeArea = QRectF(0.05, 0.62, 0.9, 0.33);
+        style.valign = QStringLiteral("bottom");
+        style.maxSize = qMin(style.maxSize, 52);
+        style.minSize = qMin(style.minSize, 32);
+        style.footerSize = qMin(style.footerSize, 26);
+    } else if (position == QLatin1String("below")) {
+        style.footerPosition = QStringLiteral("below");
+    }
+    return style;
+}
+
+QJsonArray sideBySideElements(const core::show::TextStyle &style, const QString &left, const QString &right,
+                              const QString &footer)
+{
+    const auto areas = core::show::textAreas(style, core::show::referenceSize, !footer.isEmpty());
+    const auto colour = [](const QColor &c) { return c.name(c.alpha() == 255 ? QColor::HexRgb : QColor::HexArgb); };
+    const auto frame = [](const QRectF &r) {
+        return QJsonArray{std::round(r.x()), std::round(r.y()), std::round(r.width()), std::round(r.height())};
+    };
+    const QJsonObject textStyle{{"font", style.font},
+                                {"size", style.maxSize},
+                                {"bold", style.weight >= 600},
+                                {"colour", colour(style.colour)},
+                                {"align", style.align},
+                                {"valign", style.valign},
+                                {"shadow", style.shadow},
+                                {"outline", style.outline},
+                                {"outlineColour", colour(style.outlineColour)},
+                                {"fit", true}};
+    const double gap = 64;
+    const double column = (areas.body.width() - gap) / 2;
+    QJsonArray elements{
+        QJsonObject{{"type", "text"},
+                    {"frame", frame(QRectF(areas.body.left(), areas.body.top(), column, areas.body.height()))},
+                    {"style", textStyle},
+                    {"text", left}},
+        QJsonObject{{"type", "text"},
+                    {"frame", frame(QRectF(areas.body.left() + column + gap, areas.body.top(), column, areas.body.height()))},
+                    {"style", textStyle},
+                    {"text", right}}};
+    if (!areas.footer.isEmpty()) {
+        QJsonObject footerStyle = textStyle;
+        footerStyle.insert("size", style.footerSize);
+        footerStyle.insert("colour", colour(style.footerColour));
+        footerStyle.insert("bold", false);
+        footerStyle.insert("valign", "middle");
+        elements.append(QJsonObject{{"type", "text"}, {"frame", frame(areas.footer)}, {"style", footerStyle}, {"text", footer}});
+    }
+    return elements;
 }
 
 QColor defaultGroupColour(const QString &label)

@@ -307,3 +307,11 @@ Page Down and Page Up skip headers (no slides, so Space would do nothing there) 
 
 The operator window asks each output for its status once a second with `RenderLink::ask`, which never waits (a busy or frozen output cannot stall the operator window). The status says which videos could not be played (the renderer's media players report errors; an error is kept until that video is off the screen) and which screen the output is really on. Live and Preview show a failing video; the screen setup compares the real screen with the one given, and on Wayland offers to run the outputs through XWayland (`-platform xcb`, setting `output/xwayland`), as the design doc's placement fallback.
 
+
+## A slide card goes live on one click (QA pass, 2026-11-26)
+
+Songs, media, scripture and plan items go to Preview on a click and live on a double-click, but a slide card in the grid still goes live on a single click. The slide grid is the live surface: once an item is chosen its slides are what the operator fires, one after another, as in ProPresenter and EasyWorship, and a double-click there would slow every slide of every song. Preview already shows the next slide. Kept as it is.
+
+## Scripture side by side, fit and reference position
+
+From the Scripture mockup: a second translation side by side, Verses per slide "Fit to slide", and the reference below the text, above it, or with the text in the lower third (for a stream or camera picture). Side by side slides are composed content (two text columns and a footer, laid out in the theme's text areas, see `sideBySideElements`), so they need no new renderer support; added to the plan they are stored as styled text elements, so scripture presentations may now be composed like editor slides. The reference position is stored in the presentation's metadata (`referencePosition`) and applied over the scripture theme when the plan is loaded. "Lower third only" in the mockup is called "Lower third": it moves the text and its reference, not the reference alone.
