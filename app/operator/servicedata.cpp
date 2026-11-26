@@ -66,11 +66,14 @@ Result<ItemView> loadItem(Database &db, const PlanItem &item)
         ItemView header;
         header.planItemId = item.id;
         header.title = item.headerText;
+        header.notes = item.notes;
         return header;
     }
     auto view = loadPresentationView(db, item.presentationId, item.arrangementId);
-    if (view.ok())
+    if (view.ok()) {
         view.value().planItemId = item.id;
+        view.value().notes = item.notes;
+    }
     return view;
 }
 

@@ -23,6 +23,12 @@ add_library(lumen_operator STATIC
     deckimporter.cpp
     presentationlibrary.h
     presentationlibrary.cpp
+    planstore.h
+    planstore.cpp
+    backups.h
+    backups.cpp
+    lumenfile.h
+    lumenfile.cpp
 )
 add_library(Lumen::Operator ALIAS lumen_operator)
 target_include_directories(lumen_operator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
