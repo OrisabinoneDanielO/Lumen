@@ -31,6 +31,6 @@ add_subdirectory(render)
 
 if(LUMEN_BUILD_TESTS)
     enable_testing()
-    find_package(Qt6 REQUIRED COMPONENTS Test)
+    find_package(Qt6 REQUIRED COMPONENTS Test QuickTest)
     add_subdirectory(tests)
 endif()

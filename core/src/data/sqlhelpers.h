@@ -46,20 +46,34 @@ inline Status exec(QSqlQuery &query, const QString &sql, const QVariantList &val
     return success();
 }
 
-// Runs work inside a transaction, rolling back if it fails.
+// Runs work all-or-nothing, rolling back if it fails. Uses SQLite savepoints,
+// which nest: work may itself call inTransaction (e.g. a song import saving an
+// arrangement). Outside any transaction the outermost savepoint acts as one.
 template <typename Work>
 Status inTransaction(QSqlDatabase db, Work &&work)
 {
-    if (!db.transaction())
-        return sqlError(db.lastError(), QStringLiteral("begin transaction"));
+    static thread_local int depth = 0;
+    const QString name = QStringLiteral("lumen_%1").arg(depth);
+
+    QSqlQuery begin(db);
+    if (!begin.exec(QStringLiteral("SAVEPOINT ") + name))
+        return sqlError(begin.lastError(), QStringLiteral("begin transaction"));
+
+    ++depth;
     Status status = work();
+    --depth;
+
+    QSqlQuery end(db);
     if (!status.ok()) {
-        db.rollback();
+        end.exec(QStringLiteral("ROLLBACK TO ") + name);
+        end.exec(QStringLiteral("RELEASE ") + name);
         return status;
     }
-    if (!db.commit()) {
-        Error error = sqlError(db.lastError(), QStringLiteral("commit"));
-        db.rollback();
+    if (!end.exec(QStringLiteral("RELEASE ") + name)) {
+        Error error = sqlError(end.lastError(), QStringLiteral("commit"));
+        QSqlQuery undo(db);
+        undo.exec(QStringLiteral("ROLLBACK TO ") + name);
+        undo.exec(QStringLiteral("RELEASE ") + name);
         return error;
     }
     return status;

@@ -5,8 +5,10 @@
 #include "servicedata.h"
 
 #include "lumen/core/show/showcontroller.h"
+#include "lumen/core/songs/songlibrary.h"
 
 #include <QObject>
+#include <QUrl>
 #include <QTimer>
 #include <QVariantList>
 
@@ -44,6 +46,10 @@ class OperatorController : public QObject
     Q_PROPERTY(bool outputConnected READ outputConnected NOTIFY stateChanged)
     Q_PROPERTY(QString mode READ mode WRITE setMode NOTIFY stateChanged)
     Q_PROPERTY(bool editAvailable READ editAvailable CONSTANT)
+    Q_PROPERTY(bool libraryAvailable READ libraryAvailable NOTIFY stateChanged)
+    Q_PROPERTY(int selectedSong READ selectedSong NOTIFY stateChanged)
+    Q_PROPERTY(QString importSummary READ importSummary NOTIFY stateChanged)
+    Q_PROPERTY(QString importDetails READ importDetails NOTIFY stateChanged)
 
 public:
     OperatorController(core::show::ShowController &show, bool editAvailable,
@@ -53,6 +59,8 @@ public:
     void setPlan(std::optional<PlanView> plan);
     void setSongs(const std::vector<SongRow> &songs);
     void setOutputConnected(bool connected);
+    // Turns on search, import, showing songs and Add to plan.
+    void attachLibrary(core::data::Database &db, core::songs::SongLibrary &songs);
 
     QObject *plan() { return &m_planModel; }
     QObject *slides() { return &m_slideModel; }
@@ -77,6 +85,21 @@ public:
     QString mode() const { return m_editMode ? QStringLiteral("edit") : QStringLiteral("show"); }
     void setMode(const QString &mode);
     bool editAvailable() const { return m_editAvailable; }
+    bool libraryAvailable() const { return m_songs != nullptr; }
+    int selectedSong() const { return m_selectedSong; }
+    QString importSummary() const { return m_importSummary; }
+    QString importDetails() const { return m_importDetails; }
+
+    // The song list shows the songs matching query (all songs if empty).
+    Q_INVOKABLE void searchSongs(const QString &query);
+    // Shows a song from the list in the slide grid, ready to send live,
+    // without adding it to the plan.
+    Q_INVOKABLE bool showSong(int row);
+    // Appends a song from the list to the plan (creating today's plan if
+    // there is none).
+    Q_INVOKABLE bool addSongToPlan(int row);
+    // Imports song files and folders; returns the summary line.
+    Q_INVOKABLE QString importSongs(const QList<QUrl> &urls);
 
     Q_INVOKABLE void selectItem(int index);
     // Show mode: sends a slide of the selected item live. Edit mode: selects
@@ -102,7 +125,14 @@ signals:
     void stateChanged();
 
 private:
+    static constexpr int libraryItem = -2; // m_current when showing a library song
+
     const ItemView *item(int index) const;
+    void showSelected();
+    // Identifies an item across plan reloads and library browsing.
+    static QString keyOf(const ItemView &item);
+    // True if the live position belongs to the item the grid shows.
+    bool positionIsSelected() const;
     const ItemView *selected() const { return item(m_current); }
     int firstSlideOfGroupFrom(const std::vector<int> &candidates) const;
 
@@ -111,13 +141,23 @@ private:
     bool m_editMode = false;
     bool m_outputConnected = false;
 
+    core::data::Database *m_db = nullptr;
+    core::songs::SongLibrary *m_songs = nullptr;
+    QString m_search;
+    int m_selectedSong = -1;
+    QString m_importSummary;
+    QString m_importDetails;
+    std::optional<ItemView> m_librarySong;
+
     std::optional<PlanView> m_plan;
     int m_current = -1;
     int m_selected = 0;
 
     // The slide last sent live (kept after Clear Slide, so Space carries on).
     int m_positionItem = -1;
+    QString m_positionKey; // which item that was (the grid slot may change)
     int m_positionSlide = -1;
+    QString m_positionLabel; // "Verse 2 · slide 3", fixed when it went live
     bool m_onAir = false;
 
     KeyMap m_keys;
@@ -126,7 +166,7 @@ private:
 
     RowModel m_planModel{{"kind", "title", "subtitle"}};
     RowModel m_slideModel{{"group", "colour", "text"}};
-    RowModel m_songModel{{"title", "author", "copyright", "key"}};
+    RowModel m_songModel{{"title", "author", "copyright", "key", "presentationId"}};
 };
 
 } // namespace lumen::app

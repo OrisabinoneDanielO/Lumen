@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.9" createdIn="Lumen tests">
+  <properties>
+    <titles>
+      <title>A Mighty Fortress Is Our God</title>
+    </titles>
+    <authors>
+      <author>Martin Luther</author>
+      <author type="translation" lang="en">Frederick H. Hedge</author>
+    </authors>
+    <copyright>Public domain</copyright>
+  </properties>
+  <lyrics>
+    <verse name="v1">
+      <lines>A mighty fortress is our God,<br/>A bulwark never failing;<br/>Our helper He amid the flood<br/>Of mortal ills prevailing.</lines>
+    </verse>
+  </lyrics>
+</song>

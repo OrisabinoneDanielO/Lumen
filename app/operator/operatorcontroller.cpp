@@ -1,5 +1,7 @@
 #include "operatorcontroller.h"
 
+#include "lumen/core/data/repository.h"
+
 #include <QFileInfo>
 #include <QLocale>
 
@@ -42,9 +44,109 @@ void OperatorController::setSongs(const std::vector<SongRow> &songs)
     QList<QVariantMap> rows;
     for (const SongRow &song : songs) {
         rows << QVariantMap{{"title", song.title}, {"author", song.author},
-                            {"copyright", song.copyright}, {"key", song.key}};
+                            {"copyright", song.copyright}, {"key", song.key},
+                            {"presentationId", song.presentationId}};
     }
     m_songModel.setRows(rows);
+    m_selectedSong = -1;
+    emit stateChanged();
+}
+
+void OperatorController::attachLibrary(core::data::Database &db, core::songs::SongLibrary &songs)
+{
+    m_db = &db;
+    m_songs = &songs;
+    searchSongs(m_search);
+}
+
+void OperatorController::searchSongs(const QString &query)
+{
+    m_search = query;
+    if (!m_songs)
+        return;
+    auto hits = m_songs->search(query);
+    if (!hits.ok()) {
+        qWarning("Song search failed: %s", qPrintable(hits.error().message));
+        return;
+    }
+    std::vector<SongRow> rows;
+    for (const auto &hit : hits.value())
+        rows.push_back({hit.title, hit.author, hit.copyright, hit.key, hit.presentationId});
+    setSongs(rows);
+}
+
+bool OperatorController::showSong(int row)
+{
+    const QString id = m_songModel.get(row).value(QStringLiteral("presentationId")).toString();
+    if (!m_db || id.isEmpty())
+        return false;
+    auto view = loadPresentationView(*m_db, id);
+    if (!view.ok()) {
+        qWarning("Song not shown: %s", qPrintable(view.error().message));
+        return false;
+    }
+    m_librarySong = std::move(view).value();
+    m_selectedSong = row;
+    m_current = libraryItem;
+    showSelected();
+    return true;
+}
+
+bool OperatorController::addSongToPlan(int row)
+{
+    using namespace core::data;
+    const QString id = m_songModel.get(row).value(QStringLiteral("presentationId")).toString();
+    if (!m_db || id.isEmpty())
+        return false;
+
+    PlanItem added;
+    const auto stored = m_db->inTransaction([&]() -> core::Status {
+        if (!m_plan) {
+            auto plan = Repository<Plan>(*m_db).create({.name = "Sunday Service", .date = QDate::currentDate()});
+            if (!plan.ok())
+                return plan.error();
+            m_plan = PlanView{plan.value().id, plan.value().name, plan.value().date, {}};
+        }
+        auto item = Repository<PlanItem>(*m_db).create(
+            {.planId = m_plan->id, .position = int(m_plan->items.size()), .presentationId = id});
+        if (!item.ok())
+            return item.error();
+        added = item.value();
+        return core::success();
+    });
+    if (!stored.ok()) {
+        qWarning("Song not added to the plan: %s", qPrintable(stored.error().message));
+        return false;
+    }
+    auto view = loadPresentationView(*m_db, id);
+    if (!view.ok())
+        return false;
+    view.value().planItemId = added.id;
+    m_plan->items.push_back(std::move(view).value());
+
+    QList<QVariantMap> rows;
+    for (const ItemView &item : m_plan->items)
+        rows << QVariantMap{{"kind", item.kind}, {"title", item.title}, {"subtitle", item.subtitle}};
+    m_planModel.setRows(rows);
+    if (m_current == -1)
+        selectItem(0);
+    emit stateChanged();
+    return true;
+}
+
+QString OperatorController::importSongs(const QList<QUrl> &urls)
+{
+    if (!m_songs)
+        return {};
+    QStringList paths;
+    for (const QUrl &url : urls)
+        paths << (url.isLocalFile() ? url.toLocalFile() : url.toString());
+    const auto report = m_songs->importFiles(paths);
+    m_importSummary = report.summary();
+    m_importDetails = report.messages.join(u'\n');
+    searchSongs(m_search);
+    emit stateChanged();
+    return m_importSummary;
 }
 
 void OperatorController::setOutputConnected(bool connected)
@@ -57,6 +159,8 @@ void OperatorController::setOutputConnected(bool connected)
 
 const ItemView *OperatorController::item(int index) const
 {
+    if (index == libraryItem)
+        return m_librarySong ? &*m_librarySong : nullptr;
     if (!m_plan || index < 0 || index >= int(m_plan->items.size()))
         return nullptr;
     return &m_plan->items[std::size_t(index)];
@@ -105,9 +209,21 @@ QVariantList OperatorController::arrangement() const
     return chips;
 }
 
+QString OperatorController::keyOf(const ItemView &item)
+{
+    return item.planItemId.isEmpty() ? QStringLiteral("song:") + item.presentationId
+                                     : QStringLiteral("plan:") + item.planItemId;
+}
+
+bool OperatorController::positionIsSelected() const
+{
+    const ItemView *view = selected();
+    return view && m_positionItem == m_current && keyOf(*view) == m_positionKey;
+}
+
 int OperatorController::liveSlide() const
 {
-    return m_onAir && m_positionItem == m_current ? m_positionSlide : -1;
+    return m_onAir && positionIsSelected() ? m_positionSlide : -1;
 }
 
 int OperatorController::previewSlide() const
@@ -115,7 +231,7 @@ int OperatorController::previewSlide() const
     const ItemView *view = selected();
     if (!view || view->slides.empty())
         return -1;
-    if (m_positionItem == m_current && m_positionSlide >= 0) {
+    if (positionIsSelected() && m_positionSlide >= 0) {
         const int next = m_positionSlide + 1;
         return next < int(view->slides.size()) ? next : -1;
     }
@@ -137,10 +253,7 @@ QString OperatorController::previewText() const
 
 QString OperatorController::liveLabel() const
 {
-    const ItemView *view = item(m_positionItem);
-    if (!m_onAir || !view || m_positionSlide < 0)
-        return tr("Clear");
-    return tr("%1 · slide %2").arg(view->slides[std::size_t(m_positionSlide)].group).arg(m_positionSlide + 1);
+    return m_onAir ? m_positionLabel : tr("Clear");
 }
 
 QVariantList OperatorController::layers() const
@@ -180,10 +293,17 @@ void OperatorController::selectItem(int index)
     if (!item(index) || index == m_current)
         return;
     m_current = index;
+    showSelected();
+}
+
+void OperatorController::showSelected()
+{
     m_selected = 0;
     QList<QVariantMap> rows;
-    for (const SlideView &slide : selected()->slides)
-        rows << QVariantMap{{"group", slide.group}, {"colour", slide.colour}, {"text", slide.text}};
+    if (const ItemView *view = selected()) {
+        for (const SlideView &slide : view->slides)
+            rows << QVariantMap{{"group", slide.group}, {"colour", slide.colour}, {"text", slide.text}};
+    }
     m_slideModel.setRows(rows);
     emit stateChanged();
 }
@@ -208,7 +328,9 @@ bool OperatorController::goLive(int index)
     if (m_editMode || !view || index < 0 || index >= int(view->slides.size()))
         return false;
     m_positionItem = m_current;
+    m_positionKey = keyOf(*view);
     m_positionSlide = index;
+    m_positionLabel = tr("%1 · slide %2").arg(view->slides[std::size_t(index)].group).arg(index + 1);
     m_onAir = true;
     const Content content = Content::textContent(view->slides[std::size_t(index)].text);
     if (m_show.scene().layer(Layer::Slide).content == content)
@@ -226,7 +348,7 @@ bool OperatorController::next()
 
 bool OperatorController::previous()
 {
-    if (m_positionItem != m_current || m_positionSlide <= 0)
+    if (!positionIsSelected() || m_positionSlide <= 0)
         return false;
     return goLive(m_positionSlide - 1);
 }
