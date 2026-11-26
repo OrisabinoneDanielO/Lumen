@@ -102,6 +102,9 @@ void RenderServer::onReadyRead(QLocalSocket *socket)
 
 QJsonObject RenderServer::handle(const QJsonObject &request)
 {
+    // "quit" works from any version, so a newer Lumen can replace this one.
+    if (request.value(QStringLiteral("cmd")).toString() == QLatin1String("quit"))
+        return okReply();
     const int version = request.value(QStringLiteral("v")).toInt();
     if (version != protocolVersion) {
         return errorReply(QStringLiteral("Unsupported protocol version %1 (renderer speaks %2)")

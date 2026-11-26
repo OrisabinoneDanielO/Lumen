@@ -2,6 +2,9 @@
 
 #include <QCoreApplication>
 #include <QDeadlineTimer>
+#include <QJsonDocument>
+#include <QRegularExpression>
+#include <QLocalSocket>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -73,8 +76,12 @@ Status RenderLink::connectToRunning(int timeoutMs)
 
 Status RenderLink::start()
 {
-    if (connectToRunning(200).ok())
-        return success();
+    if (connectToRunning(200).ok()) {
+        const auto status = request({{QStringLiteral("cmd"), QStringLiteral("status")}}, 2000);
+        if (status.ok() || !status.error().message.contains(QLatin1String("protocol version")))
+            return success(); // ours (or busy): it keeps showing what it shows
+        retire(status.error().message);
+    }
 
     const QString executable =
         m_options.executable.isEmpty() ? findExecutable() : m_options.executable;
@@ -175,6 +182,31 @@ Result<QJsonObject> RenderLink::request(const QJsonObject &message, int timeoutM
     if (!reply.value(QStringLiteral("ok")).toBool())
         return linkError(reply.value(QStringLiteral("error")).toString());
     return reply;
+}
+
+void RenderLink::retire(const QString &versionError)
+{
+    // "Unsupported protocol version 10 (renderer speaks 9)": quit in its words.
+    static const QRegularExpression speaks(QStringLiteral("renderer speaks (\\d+)"));
+    const auto match = speaks.match(versionError);
+    const QJsonObject quit{{QStringLiteral("v"), match.hasMatch() ? match.captured(1).toInt() : protocolVersion},
+                           {QStringLiteral("cmd"), QStringLiteral("quit")}};
+    qWarning("Replacing a renderer from another version of Lumen (%s)", qPrintable(versionError));
+    m_socket.write(QJsonDocument(quit).toJson(QJsonDocument::Compact) + '\n');
+    m_socket.flush();
+    QDeadlineTimer deadline(3000);
+    while (isConnected() && !deadline.hasExpired())
+        m_socket.waitForDisconnected(100);
+    m_socket.abort();
+    // Until its name is free for ours.
+    while (!deadline.hasExpired()) {
+        QLocalSocket probe;
+        probe.connectToServer(m_options.serverName);
+        if (!probe.waitForConnected(100))
+            break;
+        probe.abort();
+        QThread::msleep(50);
+    }
 }
 
 Status RenderLink::quit()

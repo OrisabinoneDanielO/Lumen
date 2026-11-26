@@ -3,7 +3,13 @@
 #include "lumen/core/render/renderlink.h"
 #include "lumen/core/show/scene.h"
 
+#include <QJsonDocument>
+#include <QLocalServer>
+#include <QLocalSocket>
 #include <QProcess>
+#include <QThread>
+#include <QTimer>
+#include <atomic>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QUuid>
@@ -16,6 +22,57 @@ using namespace lumen::test;
 // Starts the real lumen app with the experimental output on, waits for its
 // test frame, hard-kills lumen, then checks lumen-render is still running,
 // still presenting new frames, and still showing the same picture.
+// A renderer from an older Lumen: speaks protocol 9 only, and quits only
+// when asked in version 9. Runs on its own thread (RenderLink waits for
+// replies synchronously).
+class OldRenderer : public QThread
+{
+public:
+    explicit OldRenderer(QString name) : m_name(std::move(name)) {}
+    std::atomic<bool> listening{false};
+    std::atomic<bool> askedToQuitInItsVersion{false};
+
+protected:
+    void run() override
+    {
+        QLocalServer server;
+        QLocalServer::removeServer(m_name);
+        if (!server.listen(m_name))
+            return;
+        listening = true;
+        QEventLoop loop;
+        QObject::connect(&server, &QLocalServer::newConnection, &server, [&] {
+            QLocalSocket *socket = server.nextPendingConnection();
+            QObject::connect(socket, &QLocalSocket::readyRead, socket, [&, socket] {
+                while (socket->canReadLine()) {
+                    const QJsonObject request = QJsonDocument::fromJson(socket->readLine()).object();
+                    const int v = request.value("v").toInt();
+                    if (v == 9 && request.value("cmd").toString() == QLatin1String("quit")) {
+                        askedToQuitInItsVersion = true;
+                        socket->write("{\"v\":9,\"ok\":true}\n");
+                        socket->flush();
+                        socket->disconnectFromServer();
+                        server.close();
+                        loop.quit();
+                        return;
+                    }
+                    QJsonObject reply{{"v", 9}, {"ok", false},
+                                      {"error", QStringLiteral("Unsupported protocol version %1 (renderer speaks 9)").arg(v)}};
+                    if (request.contains("id"))
+                        reply.insert("id", request.value("id"));
+                    socket->write(QJsonDocument(reply).toJson(QJsonDocument::Compact) + '\n');
+                    socket->flush();
+                }
+            });
+        });
+        QTimer::singleShot(20000, &loop, &QEventLoop::quit);
+        loop.exec();
+    }
+
+private:
+    QString m_name;
+};
+
 class TestRenderSurvivesUiKill : public QObject
 {
     Q_OBJECT
@@ -58,6 +115,39 @@ private slots:
         RenderLink link(linkOptions());
         if (link.connectToRunning(500).ok())
             (void)link.quit();
+    }
+
+    // After an update, a renderer from the old version may still be running
+    // (it outlives the app). It is asked to quit in its own protocol, and the
+    // new renderer takes its place.
+    void oldRendererIsReplaced()
+    {
+        OldRenderer old(m_server);
+        old.start();
+        QTRY_VERIFY(old.listening);
+        RenderLink link(linkOptions());
+        QVERIFY2(link.start().ok(), "the new renderer did not start");
+        QVERIFY(old.askedToQuitInItsVersion);
+        QVERIFY(old.wait(5000));
+        auto status = link.request({{"cmd", "status"}});
+        QVERIFY2(status.ok(), status.ok() ? "" : qPrintable(status.error().message));
+        QCOMPARE(status.value().value("kind").toString(), QStringLiteral("audience"));
+        (void)link.quit();
+    }
+
+    // Any version can ask a renderer to quit.
+    void quitWorksFromAnyVersion()
+    {
+        RenderLink link(linkOptions());
+        QVERIFY(link.start().ok());
+        QLocalSocket raw;
+        raw.connectToServer(m_server);
+        QVERIFY(raw.waitForConnected(2000));
+        raw.write("{\"v\":3,\"cmd\":\"quit\"}\n");
+        raw.flush();
+        QVERIFY(raw.waitForReadyRead(2000));
+        QVERIFY(raw.readLine().contains("\"ok\":true"));
+        QTRY_VERIFY_WITH_TIMEOUT(!RenderLink(linkOptions()).connectToRunning(100).ok(), 5000);
     }
 
     void outputSurvivesUiKill()

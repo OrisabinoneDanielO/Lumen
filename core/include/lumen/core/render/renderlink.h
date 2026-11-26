@@ -41,6 +41,9 @@ public:
     Status connectToRunning(int timeoutMs);
 
     // Connects to a running renderer, or launches one and connects.
+    // A renderer already running from another version of Lumen (it outlives
+    // the app, so an update can leave one running) cannot be talked to: it
+    // is asked to quit, and this version's renderer starts in its place.
     Status start();
 
     bool isConnected() const;
@@ -62,6 +65,10 @@ signals:
     void replyFailed(const QString &error);
 
 private:
+    // Asks the connected renderer, which speaks another protocol version
+    // (from its error), to quit, and waits until it has gone.
+    void retire(const QString &versionError);
+
     void drain();
 
     Options m_options;
