@@ -139,7 +139,7 @@ To move a service to another computer, choose **Plan ▾ → Export plan…** to
 
 ## Status
 
-All 20 batches of the design doc's build plan are built, each with tests for its "Done when" condition; 39 test programs run on every build. Some things have only been tested on the developer's Fedora laptop or with stand-ins (virtual MIDI, generated song libraries, two processes instead of two PCs): [docs/status.md](docs/status.md) lists exactly what has been tested how, and what has not. The MVP gate in the design doc (10 pilot churches, 4 Sundays) has not started.
+All 20 batches of the design doc's build plan are built, each with tests for its "Done when" condition, followed by installers for every system and a screen setup; 41 tests run on every build, and CI runs them on Windows, macOS and Linux and installs and checks every installer. Some things have only been tested on the developer's Fedora laptop or with stand-ins (virtual MIDI, generated song libraries, two processes instead of two PCs): [docs/status.md](docs/status.md) lists exactly what has been tested how, and what has not. The MVP gate in the design doc (10 pilot churches, 4 Sundays) has not started.
 
 ## Building
 

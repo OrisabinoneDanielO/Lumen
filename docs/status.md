@@ -27,13 +27,22 @@ Lumen was built in the 20 batches of the design doc's build plan, each with test
 | 19 | Remote, MIDI, OSC, HTTP | A remote and a MIDI controller drive slides (`tst_remote`, **a virtual MIDI device**) |
 | 20 | Timecode cues | Slides follow a backing track to the frame (`tst_timecode`) |
 
+## Since the build plan
+
+| What | How it is tested |
+| --- | --- |
+| CI on Windows, macOS and Linux | Every test on all three for each change to `main`. On CI's macOS virtual machines (no GPU) the four speed checks against the reference hardware run as advisory; everywhere else they are strict (`tests/support/timing.h`) |
+| Installers: `.msi`, `.dmg` (Apple Silicon and Intel), AppImage, Flatpak, `.deb`, `.rpm` | Each built, installed on a clean machine or container, and checked with `lumen --check-install` (window, Bibles, renderer, first output frame); the `.msi` is also uninstalled (`.github/workflows/packages.yml`) |
+| No sample content in the app | The mockup's sample service is test data only (`tests/support/sampleservice.cpp`) |
+| Screens setup: which screen is the main output, which the stage | `tst_screens` on three virtual screens: roles, memory, labels, the panel, the renderer moving, and the app restoring a setup |
+
 ## Tested only on one machine, or with stand-ins
 
 Everything has run on the developer's laptop (Fedora 45, Intel Iris Xe, Wayland). Not yet tried:
 
-- **Windows and macOS**: built only by CI.
+- **Windows and macOS**: built, tested and installed by CI only; not yet used on a real Windows PC or Mac.
 - **Real song libraries** from EasyWorship, ProPresenter and OpenLP (tests use files written to each program's layout).
-- **Real MIDI hardware** (tests use a virtual MIDI port), **a real phone** with the remote (the page was checked in a desktop browser at phone size), **two physical PCs** sharing (tests use two processes), **a real third screen** for the stage display (tests use virtual screens).
+- **Real MIDI hardware** (tests use a virtual MIDI port), **a real phone** with the remote (the page was checked in a desktop browser at phone size), **two physical PCs** sharing (tests use two processes), **real extra screens** for the screens setup and the stage display (tests use virtual screens).
 - **PowerPoint conversion through Microsoft PowerPoint** on Windows (LibreOffice conversion is tested).
 - **NDI**: written against the NDI Runtime's exported functions but never run with one; behind the `experimental/ndi` setting.
 - **The installers** (`.msi`, `.dmg`, AppImage, Flatpak, `.deb`, `.rpm`): built, installed and checked with `lumen --check-install` by CI on clean machines; not yet installed on a church's computers.
