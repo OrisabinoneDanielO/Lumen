@@ -133,6 +133,8 @@ void RenderLink::drain()
         const QString id = reply->value(QStringLiteral("id")).toString();
         if (m_waiting.contains(id)) {
             m_replies.insert(id, *reply);
+        } else if (auto callback = m_callbacks.take(id)) {
+            callback(*reply);
         } else if (!reply->value(QStringLiteral("ok")).toBool()) {
             emit replyFailed(reply->value(QStringLiteral("error")).toString());
         }
@@ -141,6 +143,25 @@ void RenderLink::drain()
         m_buffer.clear();
         emit replyFailed(QStringLiteral("Reply from the renderer is too long"));
     }
+}
+
+Status RenderLink::ask(const QJsonObject &message, std::function<void(const QJsonObject &)> onReply)
+{
+    if (!isConnected())
+        return linkError(QStringLiteral("Not connected to the renderer"));
+    const QString id = QString::number(m_nextId++);
+    QJsonObject numbered = message;
+    numbered.insert(QStringLiteral("id"), id);
+    // Old unanswered asks are dropped rather than kept for ever.
+    if (m_callbacks.size() > 32)
+        m_callbacks.clear();
+    m_callbacks.insert(id, std::move(onReply));
+    if (m_socket.write(encode(numbered)) < 0) {
+        m_callbacks.remove(id);
+        return linkError(m_socket.errorString());
+    }
+    m_socket.flush();
+    return success();
 }
 
 Status RenderLink::send(const QJsonObject &message)

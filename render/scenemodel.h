@@ -159,6 +159,11 @@ public:
     void update(qint64 nowMs);
 
     QList<QUrl> preloads() const { return m_preloads; }
+
+    // A video on screen or opened ahead could not be played: kept (by local
+    // path) for "status" until that video is no longer used.
+    Q_INVOKABLE void reportVideoError(const QString &path, const QString &message);
+    QJsonArray videoErrors() const;
     void preload(const QString &path);
 
     qint64 wallMs() const { return m_wallShownMs; }
@@ -209,6 +214,8 @@ private:
     qint64 m_wallBaseMs = -1; // wall clock minus render clock
     qint64 m_wallShownMs = 0;
     QJsonObject m_identify;
+    QHash<QString, QString> m_videoErrors; // local path -> message
+    void forgetUnusedVideoErrors();
     QJsonObject m_stage;
     std::array<std::unique_ptr<CueRunner>, core::show::layerCount> m_cueRunners;
     std::function<qint64()> m_clock;

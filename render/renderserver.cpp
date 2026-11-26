@@ -227,6 +227,7 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
                         {QStringLiteral("timeline"), timeline},
                         {QStringLiteral("screen"), m_output.screenName()},
                         {QStringLiteral("identify"), m_output.identify()},
+                        {QStringLiteral("videoErrors"), m_output.videoErrors()},
                         {QStringLiteral("server"), m_server.serverName()}});
     }
 

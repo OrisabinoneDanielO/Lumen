@@ -89,13 +89,15 @@ struct Output
 
 // The stage display's renderer (batch 13): on the screen the screen setup
 // gives it, else in a window. Returns its link, or null if it could not start.
-std::unique_ptr<render::RenderLink> startStage(const QString &executable, const QString &audienceServer, int screen)
+std::unique_ptr<render::RenderLink> startStage(const QString &executable, const QString &audienceServer, int screen,
+                                               const QStringList &extraArguments)
 {
     render::RenderLink::Options options;
     options.serverName = (audienceServer.isEmpty() ? render::defaultServerName() : audienceServer) + QStringLiteral("-stage");
     options.executable = executable;
-    options.arguments = {QStringLiteral("--stage"),
-                         screen >= 0 ? QStringLiteral("--screen=%1").arg(screen) : QStringLiteral("--windowed")};
+    options.arguments = QStringList{QStringLiteral("--stage"),
+                                    screen >= 0 ? QStringLiteral("--screen=%1").arg(screen) : QStringLiteral("--windowed")}
+                        + extraArguments;
     auto link = std::make_unique<render::RenderLink>(options);
     if (auto started = link->start(); !started.ok()) {
         qWarning("Stage display not started: %s", qPrintable(started.error().message));
@@ -433,7 +435,8 @@ int main(int argc, char *argv[])
         // The setup's screen first, so a --render-option=--screen=N given by
         // hand still wins.
         output = startOutput(show, outputServer, parser.value(renderExecutable),
-                             screenArguments(screenSetup.mainScreen()) + parser.values(renderOption));
+                             screenArguments(screenSetup.mainScreen()) + screenSetup.rendererArguments()
+                                 + parser.values(renderOption));
         // A renderer that kept running from before may be on another screen.
         if (output && !parser.isSet(renderOption) && (screenSetup.mainScreen() >= 0 || screenSetup.count() > 1))
             (void)output->link->send(screenCommand(screenSetup.mainScreen()));
@@ -474,7 +477,8 @@ int main(int argc, char *argv[])
     const auto turnStageOn = [&] {
         if (stage)
             return;
-        stage = startStage(parser.value(renderExecutable), parser.value(renderServer), screenSetup.stageScreen());
+        stage = startStage(parser.value(renderExecutable), parser.value(renderServer), screenSetup.stageScreen(),
+                           screenSetup.rendererArguments());
         if (stage) {
             (void)stage->send(screenCommand(screenSetup.stageScreen()));
             render::RenderLink *link = stage.get();
@@ -611,6 +615,52 @@ int main(int argc, char *argv[])
     QObject::connect(&stageController, &app::StageController::changed, &app, [&] {
         screenSetup.setRunning(output != nullptr, stage != nullptr);
     });
+    // Through XWayland or not: the outputs start again to take it.
+    QObject::connect(&screenSetup, &app::ScreenSetup::placementModeChanged, &app, [&] {
+        if (output) {
+            (void)output->link->quit();
+            output.reset();
+            turnOutputOn();
+        }
+        if (stage) {
+            stageController.setConnected(false);
+            stageController.setSender({});
+            (void)stage->quit();
+            stage.reset();
+            turnStageOn();
+        }
+        showLabels();
+    });
+    // How the outputs are doing, asked once a second without ever waiting:
+    // videos they could not play, and the screens they are really on.
+    QString actualMain;
+    QString actualStage;
+    QTimer outputHealth;
+    outputHealth.setInterval(1000);
+    QObject::connect(&outputHealth, &QTimer::timeout, &app, [&] {
+        if (output) {
+            (void)output->link->ask({{QStringLiteral("cmd"), QStringLiteral("status")}}, [&](const QJsonObject &status) {
+                controller.setOutputStatus(status);
+                actualMain = status.value(QStringLiteral("screen")).toString();
+                screenSetup.setActualScreens(actualMain, actualStage);
+            });
+        } else {
+            actualMain.clear();
+            controller.setOutputStatus({});
+        }
+        if (stage) {
+            (void)stage->ask({{QStringLiteral("cmd"), QStringLiteral("status")}}, [&](const QJsonObject &status) {
+                actualStage = status.value(QStringLiteral("screen")).toString();
+                screenSetup.setActualScreens(actualMain, actualStage);
+            });
+        } else {
+            actualStage.clear();
+        }
+        screenSetup.setActualScreens(actualMain, actualStage);
+    });
+    if (!checking)
+        outputHealth.start();
+
     // A screen plugged in or out: a new set of screens opens the setup.
     const auto screensChanged = [&] {
         screenSetup.refresh();

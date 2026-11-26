@@ -19,6 +19,9 @@ import QtMultimedia
 // scroll across the banner instead of standing still.
 Item {
     id: view
+
+    // A video here could not be played (missing file, unknown format).
+    signal videoFailed(string path, string message)
     objectName: "slideContent"
 
     property string kind: "empty" // empty | colour | text | image | video | timer | prop | composed
@@ -117,6 +120,7 @@ Item {
                         muted: view.volume <= 0
                     }
                     Component.onCompleted: play()
+                    onErrorOccurred: (error, errorString) => view.videoFailed(view.video.toString(), errorString)
                 }
                 VideoOutput {
                     id: output
@@ -191,6 +195,7 @@ Item {
     // ---- composed slides (the editor) ----------------------------------------
 
     ComposedSlide {
+        onVideoFailed: (path, message) => view.videoFailed(path, message)
         anchors.fill: parent
         visible: view.kind === "composed"
         elements: view.kind === "composed" ? view.elements : []

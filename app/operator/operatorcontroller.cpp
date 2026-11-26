@@ -481,6 +481,47 @@ QUrl OperatorController::previewPoster() const
     return QUrl::fromLocalFile(view->slides[std::size_t(index)].thumbnail);
 }
 
+void OperatorController::setOutputStatus(const QJsonObject &status)
+{
+    QHash<QString, QString> errors;
+    for (const QJsonValue &v : status.value(QStringLiteral("videoErrors")).toArray())
+        errors.insert(v.toObject().value(QStringLiteral("path")).toString(), v.toObject().value(QStringLiteral("message")).toString());
+    if (errors == m_videoErrors)
+        return;
+    m_videoErrors = errors;
+    emit stateChanged();
+}
+
+QString OperatorController::problemFor(const QString &path) const
+{
+    const auto it = m_videoErrors.constFind(path);
+    if (path.isEmpty() || it == m_videoErrors.cend())
+        return {};
+    return tr("\"%1\" cannot be played: %2").arg(QFileInfo(path).fileName(), it.value());
+}
+
+QString OperatorController::liveProblem() const
+{
+    for (const Layer layer : {Layer::Media, Layer::Background}) {
+        const Content &content = m_show.scene().layer(layer).content;
+        if (content.kind == Content::Kind::Video) {
+            if (const QString problem = problemFor(content.videoPath); !problem.isEmpty())
+                return problem;
+        }
+    }
+    return {};
+}
+
+QString OperatorController::previewProblem() const
+{
+    const ItemView *view = selected();
+    const int index = previewSlide();
+    if (!view || index < 0 || index >= int(view->slides.size()))
+        return {};
+    const SlideView &slide = view->slides[std::size_t(index)];
+    return slide.mediaKind == QLatin1String("video") ? problemFor(slide.mediaPath) : QString();
+}
+
 QUrl OperatorController::livePoster() const
 {
     const Content &media = m_show.scene().layer(Layer::Media).content;

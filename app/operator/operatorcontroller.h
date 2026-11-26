@@ -94,6 +94,10 @@ class OperatorController : public QObject
     Q_PROPERTY(bool logoOn READ logoOn NOTIFY stateChanged)
     Q_PROPERTY(bool blackOn READ blackOn NOTIFY stateChanged)
     Q_PROPERTY(bool outputConnected READ outputConnected NOTIFY stateChanged)
+    // A video on Live, or the next one in Preview, that the output could not
+    // play: what is wrong, for the operator (empty when all is well).
+    Q_PROPERTY(QString liveProblem READ liveProblem NOTIFY stateChanged)
+    Q_PROPERTY(QString previewProblem READ previewProblem NOTIFY stateChanged)
     Q_PROPERTY(QString mode READ mode WRITE setMode NOTIFY stateChanged)
     Q_PROPERTY(bool editAvailable READ editAvailable CONSTANT)
     Q_PROPERTY(bool libraryAvailable READ libraryAvailable NOTIFY stateChanged)
@@ -109,6 +113,10 @@ public:
     void setPlan(std::optional<PlanView> plan);
     void setSongs(const std::vector<SongRow> &songs);
     void setOutputConnected(bool connected);
+    // The output's "status" reply (polled): its video errors.
+    void setOutputStatus(const QJsonObject &status);
+    QString liveProblem() const;
+    QString previewProblem() const;
     // Turns on search, import, showing songs and Add to plan.
     void attachLibrary(core::data::Database &db, core::songs::SongLibrary &songs);
 
@@ -352,6 +360,8 @@ private:
     QString m_importDetails;
     std::optional<ItemView> m_librarySong;
     QString m_transition = QStringLiteral("cut");
+    QHash<QString, QString> m_videoErrors; // local path -> why the output could not play it
+    QString problemFor(const QString &path) const;
     int m_transitionMs = 600;
     void applyTransition();
 

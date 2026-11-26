@@ -2,6 +2,10 @@
 
 #include <QGuiApplication>
 #include <QQuickWindow>
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QTemporaryDir>
 #include <QTest>
 
 using lumen::render::OutputWindow;
@@ -34,6 +38,25 @@ private slots:
         QVERIFY(QTest::qWaitForWindowExposed(m_output->window()));
     }
     void cleanup() { m_output.reset(); }
+
+    // A video that cannot be played (missing, or not a video) is reported in
+    // the renderer's status, and forgotten once it is off the screen.
+    void unplayableVideoIsReported()
+    {
+        QTemporaryDir dir;
+        const QString broken = dir.filePath(QStringLiteral("broken.mp4"));
+        QFile file(broken);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("this is not a video");
+        file.close();
+        show(Content::fill(Qt::black), Content::video(broken, false, 0.0));
+        QTRY_VERIFY_WITH_TIMEOUT(!m_output->videoErrors().isEmpty(), 5000);
+        const QJsonObject error = m_output->videoErrors().first().toObject();
+        QCOMPARE(error.value("path").toString(), broken);
+        QVERIFY(!error.value("message").toString().isEmpty());
+        show(Content::fill(Qt::black)); // off the screen
+        QVERIFY(m_output->videoErrors().isEmpty());
+    }
 
     void motionLoopPlaysAndLoops()
     {

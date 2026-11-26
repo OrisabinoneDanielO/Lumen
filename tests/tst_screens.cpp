@@ -163,6 +163,27 @@ private slots:
         QVERIFY(rows->get(1).value("areaX").toDouble() < rows->get(2).value("areaX").toDouble());
     }
 
+    // An output the desktop put on another screen than it was given: the
+    // setup says so (and where); on the right screen, nothing.
+    void placementIsChecked()
+    {
+        ScreenSetup setup; // main on the projector (screen 2)
+        QVERIFY(setup.placementWarning().isEmpty());
+        setup.setActualScreens(QStringLiteral("Projector"), QString());
+        QVERIFY(setup.placementWarning().isEmpty());
+        setup.setActualScreens(QStringLiteral("Laptop"), QString());
+        QVERIFY2(setup.placementWarning().contains(QStringLiteral("screen 1")) && setup.placementWarning().contains(QStringLiteral("screen 2")),
+                 qPrintable(setup.placementWarning()));
+        setup.setRole(2, QStringLiteral("stage"));
+        setup.setActualScreens(QStringLiteral("Projector"), QStringLiteral("Laptop"));
+        QVERIFY(setup.placementWarning().contains(QStringLiteral("stage display")));
+        // XWayland is only offered on Wayland (not here, offscreen).
+        QVERIFY(!setup.onWayland());
+        setup.setViaXWayland(true);
+        QVERIFY(!setup.viaXWayland());
+        QVERIFY(setup.rendererArguments().isEmpty());
+    }
+
     // The Screens panel in the operator window: opens with the setup, its
     // buttons give the roles, Done closes it; Plan ▾ → Screens… opens it.
     void panelInTheWindow()

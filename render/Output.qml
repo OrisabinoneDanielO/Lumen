@@ -55,6 +55,8 @@ Window {
                 source: parent.modelData
                 videoOutput: warm
                 Component.onCompleted: { play(); pause() }
+                // Found out ahead: the operator hears before it goes live.
+                onErrorOccurred: (error, errorString) => output.scene.reportVideoError(String(source), errorString)
             }
             VideoOutput {
                 id: warm

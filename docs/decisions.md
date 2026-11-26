@@ -303,3 +303,7 @@ F1 to F7 (Clear background, slide, props, messages, all; Logo; Black) are applic
 
 Page Down and Page Up skip headers (no slides, so Space would do nothing there) and return to the plan from a library song or scripture; batch 5's `pageDownSelectsTheNextItemWithoutGoingLive` expected Page Up to land on a header and was updated. The full report is [qa/2026-11-26.md](qa/2026-11-26.md).
 
+## Outputs report back
+
+The operator window asks each output for its status once a second with `RenderLink::ask`, which never waits (a busy or frozen output cannot stall the operator window). The status says which videos could not be played (the renderer's media players report errors; an error is kept until that video is off the screen) and which screen the output is really on. Live and Preview show a failing video; the screen setup compares the real screen with the one given, and on Wayland offers to run the outputs through XWayland (`-platform xcb`, setting `output/xwayland`), as the design doc's placement fallback.
+

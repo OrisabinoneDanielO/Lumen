@@ -35,6 +35,7 @@ QString roleText(const QString &role)
 
 ScreenSetup::ScreenSetup(QObject *parent) : QObject(parent)
 {
+    m_viaXWayland = onWayland() && QSettings().value(QStringLiteral("output/xwayland"), false).toBool();
     refresh();
 }
 
@@ -174,6 +175,57 @@ void ScreenSetup::close()
     m_open = false;
     publish();
     emit openChanged();
+}
+
+void ScreenSetup::setActualScreens(const QString &mainScreen, const QString &stageScreen)
+{
+    if (mainScreen == m_actualMain && stageScreen == m_actualStage)
+        return;
+    m_actualMain = mainScreen;
+    m_actualStage = stageScreen;
+    emit changed();
+}
+
+QString ScreenSetup::placementWarning() const
+{
+    const auto check = [this](const QString &role, const QString &actual, const QString &what) -> QString {
+        const int index = indexOf(role);
+        if (index < 0 || actual.isEmpty() || m_screens.at(index)->name() == actual)
+            return {};
+        int actualIndex = -1;
+        for (int i = 0; i < m_screens.size(); ++i)
+            actualIndex = m_screens.at(i)->name() == actual ? i : actualIndex;
+        const QString where = actualIndex >= 0 ? tr("screen %1").arg(actualIndex + 1) : actual;
+        return tr("The %1 is on %2, not on screen %3: this desktop chose where it goes.").arg(what, where).arg(index + 1);
+    };
+    QString warning = check(QStringLiteral("main"), m_actualMain, tr("main output"));
+    if (warning.isEmpty())
+        warning = check(QStringLiteral("stage"), m_actualStage, tr("stage display"));
+    return warning;
+}
+
+bool ScreenSetup::onWayland() const
+{
+    return QGuiApplication::platformName().startsWith(QLatin1String("wayland"))
+           && !qEnvironmentVariableIsEmpty("DISPLAY"); // XWayland is there
+}
+
+void ScreenSetup::setViaXWayland(bool on)
+{
+    on = on && onWayland();
+    if (on == m_viaXWayland)
+        return;
+    m_viaXWayland = on;
+    QSettings().setValue(QStringLiteral("output/xwayland"), on);
+    m_actualMain.clear();
+    m_actualStage.clear();
+    emit changed();
+    emit placementModeChanged();
+}
+
+QStringList ScreenSetup::rendererArguments() const
+{
+    return m_viaXWayland ? QStringList{QStringLiteral("-platform"), QStringLiteral("xcb")} : QStringList{};
 }
 
 void ScreenSetup::setRunning(bool mainRunning, bool stageRunning)

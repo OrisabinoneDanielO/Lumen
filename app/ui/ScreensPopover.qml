@@ -59,6 +59,52 @@ Rectangle {
             color: Theme.textMuted
         }
 
+        // An output is not where it was put (some desktops decide that).
+        Rectangle {
+            objectName: "screensPlacement"
+            Layout.fillWidth: true
+            visible: root.setup.placementWarning !== "" || (root.setup.onWayland && root.setup.viaXWayland)
+            implicitHeight: placementColumn.implicitHeight + 16
+            radius: 6
+            color: Theme.warnBackground
+            border.color: Theme.warnBorder
+            ColumnLayout {
+                id: placementColumn
+                anchors.fill: parent
+                anchors.margins: 8
+                spacing: 6
+                LText {
+                    Layout.fillWidth: true
+                    visible: root.setup.placementWarning !== ""
+                    text: root.setup.placementWarning
+                    wrapMode: Text.WordWrap
+                    elide: Text.ElideNone
+                    color: Theme.warnText
+                    font.pixelSize: 12
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: root.setup.onWayland
+                    LText {
+                        Layout.fillWidth: true
+                        text: qsTr("Place outputs through XWayland (can put each output on its chosen screen on this desktop)")
+                        wrapMode: Text.WordWrap
+                        elide: Text.ElideNone
+                        color: Theme.warnHint
+                        font.pixelSize: 11
+                    }
+                    LButton {
+                        objectName: "screensXWayland"
+                        text: root.setup.viaXWayland ? qsTr("On") : qsTr("Off")
+                        variant: root.setup.viaXWayland ? "primary" : "default"
+                        implicitHeight: 28
+                        radius: 6
+                        onClicked: root.setup.viaXWayland = !root.setup.viaXWayland
+                    }
+                }
+            }
+        }
+
         // The arrangement, as in the system's display settings.
         Item {
             id: arrangement

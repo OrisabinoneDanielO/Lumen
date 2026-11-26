@@ -55,6 +55,7 @@ Item {
                 elements: content.elements
                 wallMs: stack.scene.wallMs
                 layerName: layer.modelData.name
+                onVideoFailed: (path, message) => stack.scene.reportVideoError(path, message)
                 opacity: layer.kind === "push" || layer.kind === "pushUp" || layer.kind === "wipe" ? 1.0
                          : layer.kind === "fade" && layer.modelData.current.opaque ? 1.0
                          : 1.0 - layer.p
@@ -89,6 +90,7 @@ Item {
                 elements: content.elements
                 wallMs: stack.scene.wallMs
                 layerName: layer.modelData.name
+                onVideoFailed: (path, message) => stack.scene.reportVideoError(path, message)
                 opacity: layer.kind === "push" || layer.kind === "pushUp" || layer.kind === "wipe" ? 1.0 : layer.p
             }
             }
