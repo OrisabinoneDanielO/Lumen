@@ -139,11 +139,18 @@ private slots:
         QString error;
         QVERIFY2(ui.load(false, &error), qPrintable(error));
         QTest::keyClick(ui.window, Qt::Key_B, Qt::ControlModifier);
+        QTRY_VERIFY(ui.item("scriptureDialog"));
+        QQuickWindow *window = ui.item("scriptureDialog")->window(); // its own window
         for (const char c : QByteArray("rom 8 28-30"))
-            QTest::keyClick(ui.window, c);
+            QTest::keyClick(window, c);
         ui.settle();
         QTest::qWait(100);
-        QVERIFY(ui.window->grabWindow().save(dir + QStringLiteral("/scripture.png")));
+        QVERIFY(window->grabWindow().save(dir + QStringLiteral("/scripture.png")));
+        // Typing ahead: "j" and the suggestion in grey.
+        ui.item("scriptureReference")->setProperty("text", QString());
+        QTest::keyClick(window, 'j');
+        QTest::qWait(100);
+        QVERIFY(window->grabWindow().save(dir + QStringLiteral("/scripture-typing.png")));
     }
 
     // The same through the operator window, for every translation.

@@ -23,6 +23,11 @@ Window {
     visible: false
     color: Theme.panel
 
+    // While the typing is not a passage yet but leads to one, say how to
+    // finish it rather than show an error.
+    readonly property bool suggesting: root.scripture.label === "" && root.scripture.suggestion !== ""
+    readonly property string hint: qsTr("Space to complete, Enter for %1").arg(root.scripture.suggestion)
+
     function show() {
         visible = true
         raise()
@@ -67,7 +72,7 @@ Window {
                     radius: 8
                     color: Theme.window
                     border.width: 2
-                    border.color: root.scripture.error !== "" && reference.text !== "" ? Theme.live : Theme.next
+                    border.color: root.scripture.error !== "" && reference.text !== "" && !root.suggesting ? Theme.live : Theme.next
 
                     RowLayout {
                         anchors.fill: parent
@@ -146,9 +151,10 @@ Window {
                         LText {
                             objectName: "scriptureLabel"
                             Layout.maximumWidth: 320
-                            text: root.scripture.error !== "" && reference.text !== "" ? root.scripture.error
+                            text: root.suggesting ? root.hint
+                                  : root.scripture.error !== "" && reference.text !== "" ? root.scripture.error
                                                                                        : root.scripture.label
-                            color: root.scripture.error !== "" ? Theme.warnText : Theme.textMuted
+                            color: root.scripture.error !== "" && !root.suggesting ? Theme.warnText : Theme.textMuted
                             font.pixelSize: 12
                         }
                     }
@@ -279,7 +285,8 @@ Window {
                             width: parent.width
                             visible: root.scripture.verses.length === 0
                             text: reference.text === "" ? qsTr("Type a reference above, e.g. John 3:16-18 or ps 23.")
-                                                        : root.scripture.error
+                                  : root.suggesting ? root.hint
+                                  : root.scripture.error
                             wrapMode: Text.WordWrap
                             color: Theme.textMuted
                         }
