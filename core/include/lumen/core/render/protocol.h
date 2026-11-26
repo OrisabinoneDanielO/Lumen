@@ -46,7 +46,9 @@ namespace lumen::core::render {
 // v7 (batch 15): stream outputs (lumen-render --stream): "status" kind
 //     "stream" and "stream" (where its frames go).
 // v8 (batch 16): composed content (positioned elements from the editor).
-inline constexpr int protocolVersion = 8;
+// v9 (batch 20): cued content (slides following a backing track); "status"
+//     reports "timeline".
+inline constexpr int protocolVersion = 9;
 
 // Longest line either side accepts, to bound memory use.
 inline constexpr qsizetype maxLineBytes = 1024 * 1024;

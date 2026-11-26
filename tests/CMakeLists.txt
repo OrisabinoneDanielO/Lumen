@@ -229,3 +229,9 @@ if(TARGET lumen_rtmidi)
     target_link_libraries(tst_remote PRIVATE lumen_rtmidi)
     target_compile_definitions(tst_remote PRIVATE LUMEN_HAVE_MIDI)
 endif()
+
+# Timecode cues (batch 20). Done when: slides follow a backing track to the
+# frame.
+lumen_add_test(tst_timecode tst_timecode.cpp operatorharness.h)
+target_link_libraries(tst_timecode PRIVATE lumen_render_lib lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
+set_tests_properties(tst_timecode PROPERTIES TIMEOUT 120)

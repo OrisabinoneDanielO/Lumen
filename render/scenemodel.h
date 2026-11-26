@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cuerunner.h"
 #include "lumen/core/show/scene.h"
 
 #include <QColor>
@@ -9,6 +10,8 @@
 #include <QUrl>
 #include <QVariantMap>
 
+#include <array>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -155,6 +158,11 @@ public:
     void setWallClock(qint64 wallMs, qint64 nowMs);
     Q_INVOKABLE QString timerText(const QVariantMap &timer, qint64 wallMs) const;
 
+    // The render clock, for cue runners (set by the output window).
+    void setClock(std::function<qint64()> clock) { m_clock = std::move(clock); }
+    // Cued content (batch 20): where its timeline is, for status.
+    QJsonObject timelineStatus(qint64 nowMs) const;
+
     QVariantMap stage() const { return m_stage.toVariantMap(); }
     void setStage(const QJsonObject &stage)
     {
@@ -180,6 +188,8 @@ private:
     qint64 m_wallBaseMs = -1; // wall clock minus render clock
     qint64 m_wallShownMs = 0;
     QJsonObject m_stage;
+    std::array<std::unique_ptr<CueRunner>, core::show::layerCount> m_cueRunners;
+    std::function<qint64()> m_clock;
 };
 
 } // namespace lumen::render

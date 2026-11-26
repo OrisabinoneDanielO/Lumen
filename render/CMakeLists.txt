@@ -13,6 +13,8 @@ qt_add_library(lumen_render_lib STATIC
     keyfill.cpp
     ndisink.h
     ndisink.cpp
+    cuerunner.h
+    cuerunner.cpp
     outputwindow.h
     outputwindow.cpp
     renderserver.h

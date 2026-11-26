@@ -585,6 +585,9 @@ QVariantList OperatorController::layers() const
         case Content::Kind::Timer:
             value = content.text.isEmpty() ? tr("Timer") : tr("Timer: %1").arg(content.text.section(u'\n', 0, 0));
             break;
+        case Content::Kind::Cued:
+            value = tr("Following the backing track");
+            break;
         case Content::Kind::Composed:
             value = (layer == Layer::Slide && m_onAir) ? liveLabel() : tr("Slide");
             break;
@@ -673,15 +676,7 @@ bool OperatorController::goLive(int index)
                                   : Content::image(slide.mediaPath);
         changes = {{Layer::Media, media}, {Layer::Slide, Content::empty()}};
     } else {
-        // A countdown slide shows its timer, counted by the renderer.
-        const std::optional<QJsonObject> timer =
-            slide.hasTimer && m_timerSource ? m_timerSource(slide.timerName) : std::nullopt;
-        const Content content = !slide.elements.isEmpty() ? Content::composed(resolveTimers(slide.elements))
-                                : timer ? Content::timerContent(*timer, slide.text)
-                                : view->style
-                                    ? Content::styledText(slide.text, styleWithSize(*view->style, slide.fontSize), slide.footer)
-                                    : Content::textContent(slide.text);
-        changes = {{Layer::Slide, content}};
+        changes = {{Layer::Slide, slideContent(*view, index)}};
         // Full-screen media gives way to the next slide.
         if (!m_show.scene().layer(Layer::Media).content.isEmpty())
             changes.push_back({Layer::Media, Content::empty()});
@@ -694,7 +689,23 @@ bool OperatorController::goLive(int index)
     m_show.setContents(changes);
     if (m_show.scene().sequence == before)
         emit stateChanged(); // same text, new position (e.g. a repeated chorus)
+    emit slideSentLive(index);
     return true;
+}
+
+Content OperatorController::slideContent(const ItemView &view, int index) const
+{
+    const SlideView &slide = view.slides[std::size_t(index)];
+    if (slide.mediaKind == QLatin1String("video"))
+        return Content::video(slide.mediaPath, false, 1.0, slide.thumbnail);
+    if (slide.mediaKind == QLatin1String("image"))
+        return Content::image(slide.mediaPath);
+    // A countdown slide shows its timer, counted by the renderer.
+    const std::optional<QJsonObject> timer = slide.hasTimer && m_timerSource ? m_timerSource(slide.timerName) : std::nullopt;
+    return !slide.elements.isEmpty() ? Content::composed(resolveTimers(slide.elements))
+           : timer                   ? Content::timerContent(*timer, slide.text)
+           : view.style              ? Content::styledText(slide.text, styleWithSize(*view.style, slide.fontSize), slide.footer)
+                                     : Content::textContent(slide.text);
 }
 
 bool OperatorController::next()
@@ -1317,6 +1328,59 @@ void OperatorController::refreshLibrary()
     refreshMedia();
     refreshDecks();
     emit stateChanged();
+}
+
+} // namespace lumen::app
+
+namespace lumen::app {
+
+// ---- Timecode cues (batch 20) ----
+
+bool OperatorController::playCues(const QJsonObject &timeline, qint64 offsetMs)
+{
+    // timeline: the item's {"audio", "cues": [{"ms", "slide"}]}.
+    const ItemView *view = selected();
+    if (m_editMode || !view)
+        return false;
+    QJsonArray cues;
+    for (const QJsonValue &v : timeline.value("cues").toArray()) {
+        const int slide = v.toObject().value("slide").toInt(-1);
+        if (slide < 0 || slide >= int(view->slides.size()))
+            continue;
+        cues.append(QJsonObject{{"ms", v.toObject().value("ms").toInteger()},
+                                {"content", core::show::contentToJson(slideContent(*view, slide))}});
+    }
+    if (cues.isEmpty())
+        return false;
+    static int runs = 0;
+    const QJsonObject live{{"id", QStringLiteral("%1-%2").arg(view->presentationId).arg(++runs)},
+                           {"audio", timeline.value("audio").toString()},
+                           {"playing", true},
+                           {"offsetMs", offsetMs},
+                           {"cues", cues}};
+    std::vector<std::pair<Layer, Content>> changes{{Layer::Slide, Content::cued(live)}};
+    if (!m_show.scene().layer(Layer::Media).content.isEmpty())
+        changes.push_back({Layer::Media, Content::empty()});
+    if (const auto background = backgroundContent(view->background); background && !m_manualBackground)
+        changes.push_back({Layer::Background, *background});
+    m_positionItem = m_current;
+    m_positionKey = keyOf(*view);
+    m_positionSlide = -1;
+    m_positionLabel = tr("Following the backing track");
+    m_onAir = true;
+    m_show.setContents(changes);
+    return true;
+}
+
+void OperatorController::stopCues()
+{
+    if (cuesPlaying())
+        m_show.setContent(Layer::Slide, Content::empty());
+}
+
+bool OperatorController::cuesPlaying() const
+{
+    return m_show.scene().layer(Layer::Slide).content.kind == Content::Kind::Cued;
 }
 
 } // namespace lumen::app

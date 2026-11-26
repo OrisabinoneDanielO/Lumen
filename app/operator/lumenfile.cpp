@@ -83,6 +83,34 @@ Result<QJsonObject> presentationJson(Database &db, const QString &id, QJsonArray
         if (auto theme = Repository<Theme>(db).get(p.value().themeId); theme.ok())
             out.insert("theme", theme.value().name);
     }
+    // A media file into the list (once); returns its hash.
+    const auto addMedia = [&](const QString &assetId) -> Result<QString> {
+        auto asset = Repository<MediaAsset>(db).get(assetId);
+        if (!asset.ok())
+            return asset.error();
+        if (!mediaIds.contains(asset.value().id)) {
+            const QString name = QStringLiteral("media/%1-%2").arg(media.size() + 1).arg(QFileInfo(asset.value().filePath).fileName());
+            QJsonObject m{{"id", asset.value().id},
+                          {"file", name},
+                          {"hash", asset.value().hash},
+                          {"durationMs", asset.value().durationMs},
+                          {"loop", asset.value().loop},
+                          {"trimInMs", asset.value().trimInMs},
+                          {"trimOutMs", asset.value().trimOutMs},
+                          {"source", asset.value().filePath}};
+            if (!asset.value().thumbnailPath.isEmpty() && QFileInfo::exists(asset.value().thumbnailPath))
+                m.insert("thumbnail", QStringLiteral("media/%1-thumb-%2").arg(media.size() + 1).arg(QFileInfo(asset.value().thumbnailPath).fileName()));
+            m.insert("thumbnailSource", asset.value().thumbnailPath);
+            media.append(m);
+            mediaIds.insert(asset.value().id, asset.value().hash);
+        }
+        return mediaIds.value(asset.value().id);
+    };
+    // A backing track for timecode cues (batch 20) travels too.
+    if (const QString track = p.value().metadata.value("timeline").toObject().value("audioAssetId").toString(); !track.isEmpty()) {
+        if (auto added = addMedia(track); !added.ok())
+            return added.error();
+    }
     auto groups = Repository<Group>(db).listChildren(id);
     if (!groups.ok())
         return groups.error();
@@ -104,27 +132,11 @@ Result<QJsonObject> presentationJson(Database &db, const QString &id, QJsonArray
                                     {"z", e.zOrder},
                                     {"content", e.content}};
                 if (!e.mediaAssetId.isEmpty()) {
-                    auto asset = Repository<MediaAsset>(db).get(e.mediaAssetId);
-                    if (!asset.ok())
-                        return asset.error();
-                    if (!mediaIds.contains(asset.value().id)) {
-                        const QString name = QStringLiteral("media/%1-%2").arg(media.size() + 1).arg(QFileInfo(asset.value().filePath).fileName());
-                        QJsonObject m{{"id", asset.value().id},
-                                      {"file", name},
-                                      {"hash", asset.value().hash},
-                                      {"durationMs", asset.value().durationMs},
-                                      {"loop", asset.value().loop},
-                                      {"trimInMs", asset.value().trimInMs},
-                                      {"trimOutMs", asset.value().trimOutMs},
-                                      {"source", asset.value().filePath}};
-                        if (!asset.value().thumbnailPath.isEmpty() && QFileInfo::exists(asset.value().thumbnailPath))
-                            m.insert("thumbnail", QStringLiteral("media/%1-thumb-%2").arg(media.size() + 1).arg(QFileInfo(asset.value().thumbnailPath).fileName()));
-                        m.insert("thumbnailSource", asset.value().thumbnailPath);
-                        media.append(m);
-                        mediaIds.insert(asset.value().id, asset.value().hash);
-                    }
-                    element.insert("media", asset.value().id);
-                    element.insert("mediaHash", mediaIds.value(asset.value().id));
+                    auto added = addMedia(e.mediaAssetId);
+                    if (!added.ok())
+                        return added.error();
+                    element.insert("media", e.mediaAssetId);
+                    element.insert("mediaHash", added.value());
                 }
                 elementsJson.append(element);
             }
@@ -153,6 +165,21 @@ Result<QJsonObject> presentationJson(Database &db, const QString &id, QJsonArray
     out.insert("arrangements", arrangementsJson);
     out.insert("fingerprint", fingerprint(out));
     return out;
+}
+
+// A timeline's backing track, from the file's media id to this library's.
+QJsonObject withLocalTrack(QJsonObject metadata, const QHash<QString, QString> &assetIds)
+{
+    QJsonObject timeline = metadata.value("timeline").toObject();
+    const QString track = timeline.value("audioAssetId").toString();
+    if (track.isEmpty())
+        return metadata;
+    if (assetIds.contains(track))
+        timeline.insert("audioAssetId", assetIds.value(track));
+    else
+        timeline.remove("audioAssetId");
+    metadata.insert("timeline", timeline);
+    return metadata;
 }
 
 QString libraryId(Database &db)
@@ -421,7 +448,7 @@ Result<ImportReport> importFile(Database &db, const QString &file, const QString
                                                                 .kind = *kind,
                                                                 .title = p.value("title").toString(),
                                                                 .themeId = themeId,
-                                                                .metadata = p.value("metadata").toObject()});
+                                                                .metadata = withLocalTrack(p.value("metadata").toObject(), assetIds)});
             if (!created.ok())
                 return created.error();
             presentationIds.insert(fileId, created.value().id);

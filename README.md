@@ -59,6 +59,8 @@ Sharing between computers (no internet needed): **Plan ▾ → Share with other 
 
 Remote control: **Plan ▾ → Remote control and MIDI…**. The phone and tablet remote is a web page Lumen serves on the local network: turn it on, open the address it shows on a phone on the same Wi-Fi, enter the code, and use Next, Previous, Clear, Logo, Black, the plan and the slides (no app, no internet). OSC (UDP, port 8000) takes `/lumen/next`, `/lumen/previous`, `/lumen/slide 3`, `/lumen/clear/slide`, `/lumen/black` and more, for show-control software and tablet apps. MIDI controllers (pads, keyboards, foot switches) drive the slides too: by default C4 is Next, B3 Previous, G4 Black, A4 Logo, and a program change picks a plan item; **Learn** gives any action the next key, pad or pedal pressed. The same commands are an HTTP API: `GET /api/state`, `POST /api/next` and so on, with the code in an `X-Lumen-Code` header. All of these are off until turned on.
 
+Timecode cues: **Cues** above the slides gives the selected item a backing track (an audio file) and cues: times in the track, each with a slide. **Record** plays the track and turns each slide you send live into a cue at that moment; nudge any cue a frame earlier or later; **Play on output** has the output play the track and change slides on the frame. The cues and the track travel in `.lumen` files.
+
 Offline: Lumen makes no internet connections (sharing, when turned on, talks only to computers on the local network). `tests/offline_check.sh` checks this on Linux by tracing the app and its output, and by running them with no network at all.
 
 Linux AppImage: see `packaging/README.md`.

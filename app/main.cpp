@@ -6,6 +6,7 @@
 #include "editorcontroller.h"
 #include "messagetemplates.h"
 #include "sharing.h"
+#include "cuecontroller.h"
 #include "livecontrol.h"
 #include "midiinput.h"
 #include "oscserver.h"
@@ -333,6 +334,10 @@ int main(int argc, char *argv[])
 
     // Remote control (batch 19): the phone remote, OSC and MIDI, each off
     // until turned on (remembered), all through the same live commands.
+    // Timecode cues (batch 20).
+    app::CueController cueController(controller);
+    cueController.attach(*library);
+
     app::LiveControl liveControl(controller);
     app::RemoteServer remote(liveControl, quint16(settings.value(QLatin1String(remotePortKey), 8180).toInt()));
     app::OscServer osc(liveControl, quint16(settings.value(QLatin1String(oscPortKey), 8000).toInt()));
@@ -542,7 +547,8 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("sharing"), QVariant::fromValue<QObject *>(&sharing)},
                                  {QStringLiteral("remote"), QVariant::fromValue<QObject *>(&remote)},
                                  {QStringLiteral("osc"), QVariant::fromValue<QObject *>(&osc)},
-                                 {QStringLiteral("midi"), QVariant::fromValue<QObject *>(&midi)}});
+                                 {QStringLiteral("midi"), QVariant::fromValue<QObject *>(&midi)},
+                                 {QStringLiteral("cues"), QVariant::fromValue<QObject *>(&cueController)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     if (parser.isSet(quitAfter))

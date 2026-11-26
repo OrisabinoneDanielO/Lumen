@@ -51,6 +51,8 @@ add_library(lumen_operator STATIC
     oscserver.cpp
     midiinput.h
     midiinput.cpp
+    cuecontroller.h
+    cuecontroller.cpp
 )
 # The phone remote's page (batch 19).
 qt_add_resources(lumen_operator "remote_page"

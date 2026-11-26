@@ -177,6 +177,7 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
                                     {"startMs", video.startMs},
                                     {"starts", qint64(video.starts)},
                                     {"playing", m_output.videosPlaying()}};
+        const QJsonObject timeline = m_output.timelineStatus();
         const OutputWindow::Timing timing = m_output.timing();
         const QJsonObject timingJson{{"tickMaxGapMs", timing.tickMaxGapMs},
                                      {"tickStalls", qint64(timing.tickStalls)},
@@ -191,6 +192,7 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
                                                  : m_output.kind() == OutputWindow::Kind::Stream ? QStringLiteral("stream")
                                                                                                  : QStringLiteral("audience")},
                         {QStringLiteral("stream"), m_output.streamStatus()},
+                        {QStringLiteral("timeline"), timeline},
                         {QStringLiteral("screen"), m_output.screenName()},
                         {QStringLiteral("server"), m_server.serverName()}});
     }

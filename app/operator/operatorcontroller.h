@@ -135,6 +135,14 @@ public:
     // Something arrived in the library (sharing, batch 18): plans, songs,
     // media and decks are listed again.
     void refreshLibrary();
+    // What a slide of an item looks like on the Slide layer (cues, batch 20).
+    core::show::Content slideContent(const ItemView &view, int index) const;
+    const ItemView *selectedItem() const { return selected(); }
+    // Plays the selected item's cues with its backing track on the output
+    // (batch 20), or stops it.
+    bool playCues(const QJsonObject &timeline, qint64 offsetMs = 0);
+    void stopCues();
+    bool cuesPlaying() const;
     QString messageShown() const;
     QStringList recentMessages() const { return m_recentMessages; }
 
@@ -276,6 +284,7 @@ signals:
     void scriptureRequested(); // Ctrl+B
     void previewVideoChanged(const QString &path);
     void decksImported(const QString &summary);
+    void slideSentLive(int index); // a slide of the selected item (cue recording, batch 20)
     void restartRequested();
     void timersTicked();
     void outputToggleRequested(bool on);
