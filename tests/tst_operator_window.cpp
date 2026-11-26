@@ -36,8 +36,7 @@ private slots:
     {
         // Any warning fails, except Qt's note that a missing font family
         // made font lookup slow (macOS, where "Sans Serif" does not exist).
-        // (Also Qt's note that offscreen video frames are converted on the CPU.)
-        QTest::failOnWarning(QRegularExpression(QStringLiteral("^(?!Populating font family aliases took |.*No RHI backend\\. Using CPU conversion).*")));
+        QTest::failOnWarning(QRegularExpression(QStringLiteral("^(?!Populating font family aliases took ).*")));
     }
 
     void cleanup() { m_ui.reset(); }
@@ -154,28 +153,15 @@ private slots:
         QVERIFY2(onAir().startsWith(QLatin1String("Holy, holy, holy")), qPrintable(onAir()));
     }
 
-    // A new (empty) plan leaves no old slides in the grid; Edit mode never
-    // puts a background on the screen.
-    void emptyPlanAndEditMode()
+    // A new (empty) plan leaves no old slides in the grid. (Edit mode and
+    // Use as background: tst_media, which handles real videos.)
+    void emptyPlanClearsTheGrid()
     {
         open(true);
         m_ui->click("planItem-2");
         QVERIFY(m_ui->controller->slides()->property("count").toInt() > 0);
         QVERIFY(m_ui->controller->newPlan(QStringLiteral("Empty")));
         QCOMPARE(m_ui->controller->slides()->property("count").toInt(), 0);
-
-        // A real video, so only Edit mode can be what stops it.
-        m_ui->controller->importMedia({QUrl::fromLocalFile(QStringLiteral(LUMEN_MEDIA_DIR "/loop-1080p-vp9.webm"))});
-        QVERIFY(m_ui->controller->media()->property("count").toInt() > 0);
-        QVERIFY(m_ui->show.scene().layer(Layer::Background).content.isEmpty());
-        m_ui->controller->setProperty("mode", QStringLiteral("edit"));
-        QCOMPARE(m_ui->controller->property("mode").toString(), QStringLiteral("edit"));
-        QVERIFY(!m_ui->controller->useAsBackground(0));
-        QVERIFY(m_ui->show.scene().layer(Layer::Background).content.isEmpty());
-        // In Show mode it works.
-        m_ui->controller->setProperty("mode", QStringLiteral("show"));
-        QVERIFY(m_ui->controller->useAsBackground(0));
-        QCOMPARE(m_ui->show.scene().layer(Layer::Background).content.kind, Content::Kind::Video);
     }
 
     // Restoring a backup asks first and says what the backup holds; only

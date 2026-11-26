@@ -234,6 +234,25 @@ private slots:
         QVERIFY(!h.item(QStringLiteral("videoOnce"))->isVisible());
     }
 
+    // Edit mode never changes the screen: Use as background does nothing
+    // there; in Show mode it puts the video under everything.
+    void useAsBackgroundNotInEditMode()
+    {
+        test::OperatorHarness h;
+        QString error;
+        QVERIFY2(h.load(true, &error), qPrintable(error));
+        h.controller->importMedia({QUrl::fromLocalFile(media("loop-1080p-vp9.webm"))});
+        const int loop = mediaRow(*h.controller, QStringLiteral("loop-1080p-vp9"));
+        QVERIFY(loop >= 0);
+        h.controller->setProperty("mode", QStringLiteral("edit"));
+        QCOMPARE(h.controller->property("mode").toString(), QStringLiteral("edit"));
+        QVERIFY(!h.controller->useAsBackground(loop));
+        QVERIFY(h.show.scene().layer(Layer::Background).content.isEmpty());
+        h.controller->setProperty("mode", QStringLiteral("show"));
+        QVERIFY(h.controller->useAsBackground(loop));
+        QCOMPARE(h.show.scene().layer(Layer::Background).content.kind, Content::Kind::Video);
+    }
+
     void mediaTabShowsCards()
     {
         OperatorHarness h;
