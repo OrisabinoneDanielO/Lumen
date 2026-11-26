@@ -220,3 +220,12 @@ if(UNIX AND NOT APPLE)
     set_tests_properties(tst_sharing_offline PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endif()
+
+# Phone remote, MIDI and OSC (batch 19). Done when: a remote and a MIDI
+# controller drive slides on the LAN.
+lumen_add_test(tst_remote tst_remote.cpp operatorharness.h)
+target_link_libraries(tst_remote PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest Qt6::Network)
+if(TARGET lumen_rtmidi)
+    target_link_libraries(tst_remote PRIVATE lumen_rtmidi)
+    target_compile_definitions(tst_remote PRIVATE LUMEN_HAVE_MIDI)
+endif()

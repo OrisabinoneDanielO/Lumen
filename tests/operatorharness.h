@@ -17,6 +17,10 @@
 #include "editorcontroller.h"
 #include "messagetemplates.h"
 #include "sharing.h"
+#include "livecontrol.h"
+#include "midiinput.h"
+#include "oscserver.h"
+#include "remoteserver.h"
 #include "propscontroller.h"
 #include "stagecontroller.h"
 #include "timercontroller.h"
@@ -47,6 +51,10 @@ public:
     ~OperatorHarness()
     {
         engine.reset();
+        midi.reset();
+        osc.reset();
+        remote.reset();
+        live.reset();
         sharing.reset();
         editor.reset();
         templates.reset();
@@ -107,6 +115,10 @@ public:
         editor = std::make_unique<app::EditorController>(*controller);
         editor->attach(*m_db, songs.get());
         sharing = std::make_unique<app::Sharing>(*m_db, QStringLiteral("Test PC"), thumbnails.path());
+        live = std::make_unique<app::LiveControl>(*controller);
+        remote = std::make_unique<app::RemoteServer>(*live, 0);
+        osc = std::make_unique<app::OscServer>(*live, 0);
+        midi = std::make_unique<app::MidiInput>(*live);
         media = std::make_unique<app::MediaLibrary>(*m_db, thumbnails.path());
         controller->attachMedia(*media);
         decks = std::make_unique<app::PresentationLibrary>(*m_db, slidePictures.path());
@@ -124,7 +136,10 @@ public:
              {QStringLiteral("propsController"), QVariant::fromValue<QObject *>(props.get())},
              {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(templates.get())},
              {QStringLiteral("editorController"), QVariant::fromValue<QObject *>(editor.get())},
-             {QStringLiteral("sharing"), QVariant::fromValue<QObject *>(sharing.get())}});
+             {QStringLiteral("sharing"), QVariant::fromValue<QObject *>(sharing.get())},
+             {QStringLiteral("remote"), QVariant::fromValue<QObject *>(remote.get())},
+             {QStringLiteral("osc"), QVariant::fromValue<QObject *>(osc.get())},
+             {QStringLiteral("midi"), QVariant::fromValue<QObject *>(midi.get())}});
         engine->loadFromModule("Lumen.Ui", "Main");
         if (engine->rootObjects().isEmpty()) {
             *error = QStringLiteral("Main.qml did not load");
@@ -209,6 +224,10 @@ public:
     std::unique_ptr<app::MessageTemplates> templates;
     std::unique_ptr<app::EditorController> editor;
     std::unique_ptr<app::Sharing> sharing;
+    std::unique_ptr<app::LiveControl> live;
+    std::unique_ptr<app::RemoteServer> remote;
+    std::unique_ptr<app::OscServer> osc;
+    std::unique_ptr<app::MidiInput> midi;
     std::unique_ptr<app::OperatorController> controller;
     std::unique_ptr<QQmlApplicationEngine> engine;
     QQuickWindow *window = nullptr;

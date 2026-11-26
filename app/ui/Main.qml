@@ -25,6 +25,10 @@ Window {
     property QtObject editorController: null
     // Sharing on the local network (batch 18); optional.
     property QtObject sharing: null
+    // Remote control (batch 19); optional.
+    property QtObject remote: null
+    property QtObject osc: null
+    property QtObject midi: null
 
     width: 1440
     height: 900
@@ -111,6 +115,7 @@ Window {
                     controller: window.controller
                     onItemClicked: keyRoot.forceActiveFocus()
                     onShareRequested: sharePopover.active = window.sharing !== null
+                    onRemoteRequested: remotePopover.active = window.remote !== null
                 }
 
                 SlideGridPanel {
@@ -198,6 +203,20 @@ Window {
             timers: window.timerController
             controller: window.controller
             onCloseRequested: timersPopover.active = false
+        }
+    }
+    Loader {
+        id: remotePopover
+        objectName: "remotePopover"
+        active: false
+        x: 16
+        y: 62
+        z: 50
+        sourceComponent: RemotePopover {
+            remote: window.remote
+            osc: window.osc
+            midi: window.midi
+            onCloseRequested: remotePopover.active = false
         }
     }
     Loader {

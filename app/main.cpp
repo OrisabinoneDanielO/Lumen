@@ -6,6 +6,10 @@
 #include "editorcontroller.h"
 #include "messagetemplates.h"
 #include "sharing.h"
+#include "livecontrol.h"
+#include "midiinput.h"
+#include "oscserver.h"
+#include "remoteserver.h"
 #include "propscontroller.h"
 #include "stagecontroller.h"
 #include "streamcontroller.h"
@@ -27,6 +31,8 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QScreen>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QSettings>
 #include <QSysInfo>
 #include <QStandardPaths>
@@ -50,6 +56,12 @@ constexpr auto outputEnabledKey = "output/enabled"; // on by default since batch
 constexpr auto stageEnabledKey = "stage/enabled";   // off by default (needs a screen)
 constexpr auto stageLayoutKey = "stage/layout";
 constexpr auto sharingEnabledKey = "sharing/enabled"; // off by default (batch 18)
+constexpr auto remoteEnabledKey = "remote/enabled";   // batch 19, all off by default
+constexpr auto remotePortKey = "remote/port";
+constexpr auto oscEnabledKey = "osc/enabled";
+constexpr auto oscPortKey = "osc/port";
+constexpr auto midiEnabledKey = "midi/enabled";
+constexpr auto midiMappingKey = "midi/mapping";
 constexpr auto streamEnabledKey = "stream/enabled";   // off by default
 constexpr auto streamKeyFillKey = "stream/keyFill";
 constexpr auto streamNdiKey = "stream/ndi";
@@ -318,6 +330,31 @@ int main(int argc, char *argv[])
             QSettings().setValue(QLatin1String(sharingEnabledKey), sharing.enabled());
     });
     QObject::connect(&sharing, &app::Sharing::imported, &controller, &app::OperatorController::refreshLibrary);
+
+    // Remote control (batch 19): the phone remote, OSC and MIDI, each off
+    // until turned on (remembered), all through the same live commands.
+    app::LiveControl liveControl(controller);
+    app::RemoteServer remote(liveControl, quint16(settings.value(QLatin1String(remotePortKey), 8180).toInt()));
+    app::OscServer osc(liveControl, quint16(settings.value(QLatin1String(oscPortKey), 8000).toInt()));
+    app::MidiInput midi(liveControl);
+    midi.setMappingsJson(QJsonDocument::fromJson(settings.value(QLatin1String(midiMappingKey)).toByteArray()).array());
+    if (!parser.isSet(designPreview)) {
+        remote.setEnabled(settings.value(QLatin1String(remoteEnabledKey), false).toBool());
+        osc.setEnabled(settings.value(QLatin1String(oscEnabledKey), false).toBool());
+        midi.setEnabled(settings.value(QLatin1String(midiEnabledKey), false).toBool());
+        QObject::connect(&remote, &app::RemoteServer::changed, &app, [&remote] {
+            QSettings().setValue(QLatin1String(remoteEnabledKey), remote.enabled());
+        });
+        QObject::connect(&osc, &app::OscServer::changed, &app, [&osc] {
+            QSettings().setValue(QLatin1String(oscEnabledKey), osc.enabled());
+        });
+        QObject::connect(&midi, &app::MidiInput::changed, &app, [&midi] {
+            QSettings().setValue(QLatin1String(midiEnabledKey), midi.enabled());
+        });
+        QObject::connect(&midi, &app::MidiInput::mappingsChanged, &app, [&midi] {
+            QSettings().setValue(QLatin1String(midiMappingKey), QJsonDocument(midi.mappingsJson()).toJson(QJsonDocument::Compact));
+        });
+    }
     themeController.attach(*library);
 
     // Media: thumbnails go beside the library (a temporary folder for the
@@ -502,7 +539,10 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(&messageTemplates)},
                                  {QStringLiteral("streamController"), QVariant::fromValue<QObject *>(&streamController)},
                                  {QStringLiteral("editorController"), QVariant::fromValue<QObject *>(&editorController)},
-                                 {QStringLiteral("sharing"), QVariant::fromValue<QObject *>(&sharing)}});
+                                 {QStringLiteral("sharing"), QVariant::fromValue<QObject *>(&sharing)},
+                                 {QStringLiteral("remote"), QVariant::fromValue<QObject *>(&remote)},
+                                 {QStringLiteral("osc"), QVariant::fromValue<QObject *>(&osc)},
+                                 {QStringLiteral("midi"), QVariant::fromValue<QObject *>(&midi)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     if (parser.isSet(quitAfter))
