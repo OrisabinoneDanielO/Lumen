@@ -12,7 +12,12 @@
 #include <QTest>
 #include <QTimer>
 
+#ifdef Q_OS_WIN
+#define NOMINMAX
+#include <windows.h>
+#else
 #include <csignal>
+#endif
 
 using namespace lumen;
 using namespace lumen::app;
@@ -42,6 +47,21 @@ QStringList titles(const PlanView &plan)
 
 // The other PC: shares its library (the sample service plus "Youth Night")
 // and writes its port and code to a file. Ends when the test does.
+// The other computer quits when the test that started it has gone.
+bool processAlive(qint64 pid)
+{
+#ifdef Q_OS_WIN
+    HANDLE process = OpenProcess(SYNCHRONIZE, FALSE, DWORD(pid));
+    if (!process)
+        return false;
+    const bool running = WaitForSingleObject(process, 0) == WAIT_TIMEOUT;
+    CloseHandle(process);
+    return running;
+#else
+    return ::kill(pid_t(pid), 0) == 0;
+#endif
+}
+
 int otherComputer(const QString &infoFile, qint64 parentPid)
 {
     auto db = sampleLibrary();
@@ -67,7 +87,7 @@ int otherComputer(const QString &infoFile, qint64 parentPid)
     info.close();
     QTimer watch;
     QObject::connect(&watch, &QTimer::timeout, [parentPid] {
-        if (::kill(pid_t(parentPid), 0) != 0)
+        if (!processAlive(parentPid))
             QCoreApplication::quit();
     });
     watch.start(500);

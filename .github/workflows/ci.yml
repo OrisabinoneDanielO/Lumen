@@ -115,6 +115,12 @@ jobs:
           curl -sSL -o build/tools/linuxdeploy-plugin-qt-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x build/tools/*.AppImage
 
+      - name: Leave out SQL drivers Lumen does not use
+        # Lumen only uses SQLite; the others need client libraries
+        # (Mimer, MySQL, PostgreSQL) the AppImage would have to carry.
+        run: |
+          find "$QT_ROOT_DIR/plugins/sqldrivers" -name 'libqsql*.so' ! -name 'libqsqlite.so' -print -delete
+
       - name: Build the AppImage
         run: packaging/linux/build-appimage.sh
 
