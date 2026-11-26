@@ -245,8 +245,13 @@ Rectangle {
                                     return
                                 }
                                 root.itemMenuFor = -1
-                                root.controller.chooseItem(planRow.index)
+                                root.controller.selectItem(planRow.index)
                                 root.itemClicked(planRow.index)
+                            }
+                            // Double-click: its first slide on the screen now.
+                            onDoubleClicked: mouse => {
+                                if (mouse.button === Qt.LeftButton)
+                                    root.controller.playItem(planRow.index)
                             }
                         }
                     }

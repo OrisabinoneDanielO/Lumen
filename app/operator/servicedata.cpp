@@ -159,6 +159,8 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
             }
             SlideView made{slide.id, group->label, colour, lines.join(u'\n'), {}, 0,
                            media.mediaKind, media.mediaPath, media.thumbnail, slideTimer, timerName, {}};
+            // The operator's choice for this video (Play once by default).
+            made.mediaLoop = p.metadata.value(QStringLiteral("videoLoop")).toBool();
             if (p.kind == PresentationKind::Slides && isComposed(slideElements.value())) {
                 // Drawn from its elements, not as text, picture or countdown.
                 made.elements = composedElements(db, slideElements.value());

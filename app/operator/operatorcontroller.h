@@ -70,6 +70,8 @@ class OperatorController : public QObject
     Q_PROPERTY(QString itemDetail READ itemDetail NOTIFY stateChanged)
     Q_PROPERTY(QVariantList arrangement READ arrangement NOTIFY stateChanged)
     Q_PROPERTY(int liveItem READ liveItem NOTIFY stateChanged)
+    Q_PROPERTY(bool shownIsVideo READ shownIsVideo NOTIFY stateChanged)
+    Q_PROPERTY(bool shownVideoLoops READ shownVideoLoops WRITE setShownVideoLoops NOTIFY stateChanged)
     Q_PROPERTY(int liveSlide READ liveSlide NOTIFY stateChanged)       // in the grid, or -1
     Q_PROPERTY(int previewSlide READ previewSlide NOTIFY stateChanged) // in the grid, or -1
     Q_PROPERTY(int selectedSlide READ selectedSlide NOTIFY stateChanged) // Edit mode
@@ -168,14 +170,21 @@ public:
     void attachMedia(MediaLibrary &media);
     Q_INVOKABLE QString importMedia(const QList<QUrl> &urls);
     Q_INVOKABLE bool showMedia(int row);       // in the slide grid, ready to send live
-    // A video or picture from the library, live at once (a video starts
-    // playing); in Edit mode only shown, as everything there.
+    // A video or picture from the library double-clicked: live at once (a
+    // video starts playing); in Edit mode only shown, as everything there.
     Q_INVOKABLE bool playMedia(int row);
     // The output opens a library video ahead of a click (pointed at).
     Q_INVOKABLE void preloadMedia(int row);
-    // A plan item clicked: shown in the slide grid; a video or picture item
-    // goes live at once.
-    Q_INVOKABLE void chooseItem(int index);
+    // A plan item double-clicked: its first slide live at once (a click only
+    // shows it, in the slide grid and Preview).
+    Q_INVOKABLE bool playItem(int index);
+    // The item shown is a video: whether it loops until cleared or plays
+    // once and stops (kept with the video in the library).
+    bool shownIsVideo() const;
+    bool shownVideoLoops() const;
+    Q_INVOKABLE void setShownVideoLoops(bool loops);
+    // A library song double-clicked: its first slide live at once.
+    Q_INVOKABLE bool playSong(int row);
     Q_INVOKABLE bool useAsBackground(int row); // a looping, silent motion background
     Q_INVOKABLE bool addMediaToPlan(int row);
     // Turns on the Presentations tab (batch 10).

@@ -158,16 +158,23 @@ private slots:
             const QString id = value.toObject().value("id").toString();
             const Expected expected = m_expected.value(id);
 
+            // Scripture is a window of its own (it stays open beside the
+            // operator window); Ctrl+B opens it or brings it forward.
+            // Back in the operator window (as clicking it would), Ctrl+B.
+            ui.window->requestActivate();
+            QTRY_VERIFY(ui.window->activeFocusItem());
             QTest::keyClick(ui.window, Qt::Key_B, Qt::ControlModifier);
+            QTRY_VERIFY(ui.item("scriptureDialog"));
             QQuickItem *dialog = ui.item("scriptureDialog");
-            QVERIFY(dialog);
-            QTRY_VERIFY(dialog->isVisible());
+            QQuickWindow *scriptureWindow = dialog->window();
+            QVERIFY(scriptureWindow != ui.window);
+            QTRY_VERIFY(scriptureWindow->isVisible());
             QQuickItem *input = ui.item("scriptureReference");
             QTRY_VERIFY(input->hasActiveFocus());
 
             // Type it as an operator would.
             for (const char c : QByteArray("jn 3 16-18"))
-                QTest::keyClick(ui.window, c);
+                QTest::keyClick(scriptureWindow, c);
             QVERIFY(ui.click("translation-" + id));
             QCOMPARE(ui.scripture->label(), expected.book + QStringLiteral(" 3:16–18"));
             QCOMPARE(ui.scripture->verses().size(), 3);
@@ -175,8 +182,15 @@ private slots:
             QCOMPARE(ui.item("scriptureCopyright")->property("text").toString(),
                      value.toObject().value("copyright").toString());
 
-            QTest::keyClick(ui.window, Qt::Key_Return);
-            QTRY_VERIFY(!dialog->isVisible());
+            // Enter: in Preview, not yet on the screen (the user's request:
+            // "choosing a scripture should take it to the preview window
+            // first"); Shift+Enter: on the screen. The window stays open.
+            const QString liveBefore = ui.controller->liveText();
+            QTest::keyClick(scriptureWindow, Qt::Key_Return);
+            QTRY_VERIFY2(ui.controller->previewText().startsWith(expected.start), qPrintable(ui.controller->previewText()));
+            QCOMPARE(ui.controller->liveText(), liveBefore);
+            QTest::keyClick(scriptureWindow, Qt::Key_Return, Qt::ShiftModifier);
+            QVERIFY(scriptureWindow->isVisible());
             QVERIFY2(ui.controller->liveText().startsWith(expected.start), qPrintable(ui.controller->liveText()));
             // Batch 8: the reference and the translation's copyright line are
             // the slide's footer (they ended the slide text in batch 7).

@@ -169,7 +169,19 @@ public:
     }
 
     // Searches the visual item tree (which also reaches Repeater delegates).
-    QQuickItem *item(const QString &name) const { return find(window->contentItem(), name); }
+    // In the operator window, or another of Lumen's windows (Scripture).
+    QQuickItem *item(const QString &name) const
+    {
+        if (QQuickItem *found = find(window->contentItem(), name))
+            return found;
+        for (QWindow *other : QGuiApplication::allWindows()) {
+            auto *quick = qobject_cast<QQuickWindow *>(other);
+            if (quick && quick != window && quick->isVisible())
+                if (QQuickItem *found = find(quick->contentItem(), name))
+                    return found;
+        }
+        return nullptr;
+    }
 
     // Waits until Qt Quick has laid items out. Items created for a new model
     // all start at the same spot until the next polish, so a click before
@@ -188,7 +200,20 @@ public:
         if (!target)
             return false;
         const QPointF centre = target->mapToScene(QPointF(target->width() / 2, target->height() / 2));
-        QTest::mouseClick(window, Qt::LeftButton, {}, centre.toPoint());
+        QTest::mouseClick(target->window(), Qt::LeftButton, {}, centre.toPoint());
+        return true;
+    }
+
+    bool doubleClick(const QString &name) const
+    {
+        settle();
+        QQuickItem *target = item(name);
+        if (!target)
+            return false;
+        const QPoint centre = target->mapToScene(QPointF(target->width() / 2, target->height() / 2)).toPoint();
+        // As a mouse sends it: a click, then the second press as a double-click.
+        QTest::mouseClick(target->window(), Qt::LeftButton, {}, centre);
+        QTest::mouseDClick(target->window(), Qt::LeftButton, {}, centre);
         return true;
     }
 

@@ -65,6 +65,8 @@ public:
     Q_INVOKABLE void selectTranslation(int index) { setTranslation(index); }
     // Sends the first slide live and shows the passage in the slide grid.
     Q_INVOKABLE bool showNow();
+    // The passage in the slide grid and Preview, not yet on the screen.
+    Q_INVOKABLE bool preview();
     // Stores the passage as a scripture presentation and appends it to the plan.
     Q_INVOKABLE bool addToPlan();
     // Adds a Bible from a folder of USFM files or a USFX file.

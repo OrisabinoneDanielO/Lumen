@@ -29,6 +29,7 @@ Rectangle {
         property string badge
         property bool selected: false
         signal hovered()
+        signal doubleClicked()
         signal clicked()
         width: 168
         height: 124
@@ -77,6 +78,7 @@ Rectangle {
             cursorShape: Qt.PointingHandCursor
             hoverEnabled: true
             onClicked: card.clicked()
+            onDoubleClicked: card.doubleClicked()
             onContainsMouseChanged: if (containsMouse) card.hovered()
         }
     }
@@ -86,6 +88,7 @@ Rectangle {
         property var cells: []
         property bool header: false
         property bool selected: false
+        signal doubleClicked()
         signal clicked()
 
         width: parent ? parent.width : 0
@@ -117,6 +120,7 @@ Rectangle {
             enabled: !tableRow.header
             cursorShape: Qt.PointingHandCursor
             onClicked: tableRow.clicked()
+            onDoubleClicked: tableRow.doubleClicked()
         }
     }
 
@@ -354,6 +358,7 @@ Rectangle {
                         cells: [title, author, copyright, key]
                         selected: index === root.controller.selectedSong
                         onClicked: root.controller.showSong(index)
+                        onDoubleClicked: root.controller.playSong(index)
                     }
                 }
             }
@@ -386,9 +391,11 @@ Rectangle {
                         objectName: "mediaCard-" + index
                         badge: duration === "" ? "" : loop ? qsTr("Loop · %1").arg(duration) : duration
                         selected: index === root.controller.selectedMedia
-                        // Chosen: on the screen at once. Pointed at: the
-                        // output opens it already, so it starts at once.
-                        onClicked: root.controller.playMedia(index)
+                        // Click: in Preview. Double-click: on the screen now.
+                        // Pointed at: the output opens it already, so it
+                        // starts at once when it goes live.
+                        onClicked: root.controller.showMedia(index)
+                        onDoubleClicked: root.controller.playMedia(index)
                         onHovered: root.controller.preloadMedia(index)
                     }
                 }

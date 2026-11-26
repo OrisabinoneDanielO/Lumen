@@ -209,6 +209,11 @@ bool ScriptureController::showNow()
     return m_op.goLive(0);
 }
 
+bool ScriptureController::preview()
+{
+    return m_passage && m_op.showItem(m_item);
+}
+
 bool ScriptureController::addToPlan()
 {
     using namespace core::data;
