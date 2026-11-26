@@ -585,6 +585,15 @@ QVariantList OperatorController::layers() const
         case Content::Kind::Timer:
             value = content.text.isEmpty() ? tr("Timer") : tr("Timer: %1").arg(content.text.section(u'\n', 0, 0));
             break;
+        case Content::Kind::Prop: {
+            QStringList parts;
+            if (content.prop.contains("lowerThird"))
+                parts << tr("Lower third: %1").arg(content.prop.value("lowerThird").toObject().value("line1").toString());
+            if (content.prop.contains("bug"))
+                parts << tr("Logo");
+            value = parts.join(QStringLiteral(" + "));
+            break;
+        }
         }
         return {{"name", layerName(layer).replace(0, 1, layerName(layer).at(0).toUpper())},
                 {"value", value},
@@ -1160,12 +1169,15 @@ QString OperatorController::messageShown() const
     return content.kind == Content::Kind::Text ? content.text : QString();
 }
 
-bool OperatorController::showMessage(const QString &text)
+bool OperatorController::showMessage(const QString &text, bool ticker)
 {
     const QString line = text.simplified();
     if (line.isEmpty())
         return false;
-    m_show.setContent(Layer::Messages, Content::textContent(line));
+    Content content = Content::textContent(line);
+    if (ticker)
+        content.style = QJsonObject{{"ticker", true}};
+    m_show.setContent(Layer::Messages, content);
     m_recentMessages.removeAll(line);
     m_recentMessages.prepend(line);
     while (m_recentMessages.size() > 8)

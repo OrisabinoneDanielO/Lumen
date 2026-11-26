@@ -13,6 +13,7 @@ Rectangle {
     signal timersRequested()
     signal messageRequested()
     signal stageRequested()
+    signal propsRequested()
     // Whether the stage display is up (batch 13).
     property bool stageConnected: false
 
@@ -126,6 +127,11 @@ Rectangle {
                 objectName: "timersButton"
                 text: root.timerSummary !== "" ? root.timerSummary : qsTr("Timers")
                 onClicked: root.timersRequested()
+            }
+            LButton {
+                objectName: "propsButton"
+                text: qsTr("Props")
+                onClicked: root.propsRequested()
             }
             LButton {
                 objectName: "messageButton"

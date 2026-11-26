@@ -135,7 +135,8 @@ public:
     QJsonObject stageState() const;
 
     // Messages: a line of text in the banner, without touching the slide.
-    Q_INVOKABLE bool showMessage(const QString &text);
+    // ticker: scroll across the banner (batch 14) instead of standing still.
+    Q_INVOKABLE bool showMessage(const QString &text, bool ticker = false);
     Q_INVOKABLE void hideMessage();
     // The Main output light in the toolbar turns the output on and off.
     Q_INVOKABLE void toggleOutput() { emit outputToggleRequested(!m_outputConnected); }

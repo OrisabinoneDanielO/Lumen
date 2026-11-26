@@ -57,5 +57,6 @@ extern template class Repository<Output>;
 extern template class Repository<StageLayout>;
 extern template class Repository<Message>;
 extern template class Repository<Timer>;
+extern template class Repository<Prop>;
 
 } // namespace lumen::core::data

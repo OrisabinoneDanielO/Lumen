@@ -16,6 +16,9 @@ Window {
     property QtObject timerController: null
     // The stage display (batch 13); optional.
     property QtObject stageController: null
+    // Props and message templates (batch 14); optional.
+    property QtObject propsController: null
+    property QtObject messageTemplates: null
 
     width: 1440
     height: 900
@@ -50,17 +53,26 @@ Window {
                 controller: window.controller
                 timerSummary: window.timerController ? window.timerController.summary : ""
                 stageConnected: window.stageController ? window.stageController.connected : false
+                onPropsRequested: {
+                    timersPopover.active = false
+                    messagePopover.visible = false
+                    stagePopover.active = false
+                    propsPopover.active = window.propsController !== null && !propsPopover.active
+                }
                 onStageRequested: {
+                    propsPopover.active = false
                     timersPopover.active = false
                     messagePopover.visible = false
                     stagePopover.active = window.stageController !== null && !stagePopover.active
                 }
                 onTimersRequested: {
+                    propsPopover.active = false
                     messagePopover.visible = false
                     stagePopover.active = false
                     timersPopover.active = window.timerController !== null && !timersPopover.active
                 }
                 onMessageRequested: {
+                    propsPopover.active = false
                     timersPopover.active = false
                     stagePopover.active = false
                     messagePopover.visible = !messagePopover.visible
@@ -165,6 +177,18 @@ Window {
         }
     }
     Loader {
+        id: propsPopover
+        objectName: "propsPopover"
+        active: false
+        x: window.width - width - 16
+        y: 62
+        z: 50
+        sourceComponent: PropsPopover {
+            props: window.propsController
+            onCloseRequested: propsPopover.active = false
+        }
+    }
+    Loader {
         id: stagePopover
         objectName: "stagePopover"
         active: false
@@ -184,6 +208,7 @@ Window {
         y: 62
         z: 50
         controller: window.controller
+        templates: window.messageTemplates
         onCloseRequested: {
             visible = false
             keyRoot.forceActiveFocus()
