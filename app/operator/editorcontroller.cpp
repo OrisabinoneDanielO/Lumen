@@ -559,36 +559,8 @@ QString EditorController::lyricsOf(const std::vector<std::pair<QString, QStringL
 
 QString EditorController::toSongText(const QString &lyrics)
 {
-    // Inside a group a blank line starts a slide ("---" to the importer);
-    // before a [header] it ends the group.
-    const QStringList lines = QString(lyrics).replace(QStringLiteral("\r\n"), QStringLiteral("\n")).split(u'\n');
-    QStringList out;
-    bool inGroup = false;
-    for (int i = 0; i < lines.size(); ++i) {
-        const QString line = lines[i].trimmed();
-        if (!songs::sectionLabelFromHeader(line).isEmpty()) {
-            inGroup = true;
-            out << QString() << line;
-            continue;
-        }
-        if (line.isEmpty()) {
-            // The next line with text decides: lyrics continue the group.
-            int next = i + 1;
-            while (next < lines.size() && lines[next].trimmed().isEmpty())
-                ++next;
-            const bool header = next < lines.size() && !songs::sectionLabelFromHeader(lines[next].trimmed()).isEmpty();
-            if (inGroup && next < lines.size() && !header) {
-                if (out.isEmpty() || out.last() != QLatin1String("---"))
-                    out << QStringLiteral("---");
-            } else {
-                out << QString();
-            }
-            i = next - 1;
-            continue;
-        }
-        out << line;
-    }
-    return out.join(u'\n');
+    // Inside a group a blank line starts a slide ("---" to the importer).
+    return songs::slideBreaksFromBlankLines(lyrics);
 }
 
 Status EditorController::saveSong()

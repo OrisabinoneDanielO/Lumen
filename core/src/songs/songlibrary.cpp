@@ -1,4 +1,5 @@
 #include "lumen/core/songs/songlibrary.h"
+#include "lumen/core/songs/foreignimport.h"
 
 #include "lumen/core/data/repository.h"
 
@@ -55,6 +56,12 @@ Result<ParsedSong> SongLibrary::parseFile(const QString &path) const
         return Error{Error::Code::Invalid, file.errorString()};
     const QByteArray bytes = file.readAll();
     const QByteArray head = bytes.left(512).trimmed();
+    const QString suffix = QFileInfo(path).suffix().toLower();
+    if (suffix == QLatin1String("pro6") || suffix == QLatin1String("pro5"))
+        return parseProPresenter(bytes, titleFromFileName(path));
+    if (suffix == QLatin1String("pro"))
+        return Error{Error::Code::Invalid, QStringLiteral("ProPresenter 7 documents cannot be read; in ProPresenter "
+                                                          "export the song as text and import that")};
     const bool xml = path.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive)
                      || head.startsWith("<?xml") || head.startsWith("<song");
     if (xml)
@@ -172,8 +179,11 @@ ImportReport SongLibrary::importFiles(const QStringList &paths)
     for (const QString &path : paths) {
         const QFileInfo info(path);
         if (info.isDir()) {
-            QDirIterator it(path, {QStringLiteral("*.txt"), QStringLiteral("*.xml")}, QDir::Files,
-                            QDirIterator::Subdirectories);
+            // Song files, and other programs' songs and libraries (batch 17).
+            QDirIterator it(path, {QStringLiteral("*.txt"), QStringLiteral("*.xml"), QStringLiteral("*.pro6"),
+                                   QStringLiteral("*.pro5"), QStringLiteral("*.pro"), QStringLiteral("songs.sqlite"),
+                                   QStringLiteral("Songs.db")},
+                            QDir::Files, QDirIterator::Subdirectories);
             QStringList found;
             while (it.hasNext())
                 found << it.next();
@@ -185,15 +195,8 @@ ImportReport SongLibrary::importFiles(const QStringList &paths)
     }
 
     ImportReport report;
-    for (const QString &file : files) {
-        const QString name = QFileInfo(file).fileName();
-        auto parsed = parseFile(file);
-        if (!parsed.ok()) {
-            ++report.failed;
-            report.messages << QStringLiteral("%1: %2").arg(name, parsed.error().message);
-            continue;
-        }
-        auto added = add(parsed.value());
+    const auto store = [&](const QString &name, const ParsedSong &song) {
+        auto added = add(song);
         if (!added.ok()) {
             ++report.failed;
             report.messages << QStringLiteral("%1: %2").arg(name, added.error().message);
@@ -204,6 +207,37 @@ ImportReport SongLibrary::importFiles(const QStringList &paths)
             ++report.imported;
             report.presentationIds << added.value().presentationId;
         }
+    };
+    for (const QString &file : files) {
+        const QString name = QFileInfo(file).fileName();
+        // A whole library from OpenLP or EasyWorship: every song in it.
+        if (const LibraryKind kind = libraryKind(file); kind != LibraryKind::None) {
+            auto songs = kind == LibraryKind::OpenLP ? readOpenLP(file) : readEasyWorship(file);
+            if (!songs.ok()) {
+                ++report.failed;
+                report.messages << QStringLiteral("%1: %2").arg(name, songs.error().message);
+                continue;
+            }
+            for (const LibrarySong &song : songs.value()) {
+                const QString where = QStringLiteral("%1, %2").arg(name, song.source);
+                if (song.song.sections.empty()) {
+                    ++report.failed;
+                    report.messages << QStringLiteral("%1: \"%2\" has no lyrics").arg(where, song.song.title);
+                    continue;
+                }
+                for (const QString &warning : song.song.warnings)
+                    report.messages << QStringLiteral("%1: %2").arg(where, warning);
+                store(where, song.song);
+            }
+            continue;
+        }
+        auto parsed = parseFile(file);
+        if (!parsed.ok()) {
+            ++report.failed;
+            report.messages << QStringLiteral("%1: %2").arg(name, parsed.error().message);
+            continue;
+        }
+        store(name, parsed.value());
     }
     return report;
 }
