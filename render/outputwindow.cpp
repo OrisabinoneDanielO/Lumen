@@ -23,6 +23,7 @@ namespace lumen::render {
 OutputWindow::OutputWindow(Kind kind, QObject *parent) : QObject(parent), m_kind(kind)
 {
     m_since.start();
+    m_model.setClock([this] { return m_clock.now(); });
     m_tickClock.start();
     m_swapClock.start();
     // Advance transitions and ask for a new frame every display refresh. With

@@ -17,6 +17,7 @@
 #include "editorcontroller.h"
 #include "messagetemplates.h"
 #include "sharing.h"
+#include "cuecontroller.h"
 #include "livecontrol.h"
 #include "midiinput.h"
 #include "oscserver.h"
@@ -51,6 +52,7 @@ public:
     ~OperatorHarness()
     {
         engine.reset();
+        cues.reset();
         midi.reset();
         osc.reset();
         remote.reset();
@@ -119,6 +121,8 @@ public:
         remote = std::make_unique<app::RemoteServer>(*live, 0);
         osc = std::make_unique<app::OscServer>(*live, 0);
         midi = std::make_unique<app::MidiInput>(*live);
+        cues = std::make_unique<app::CueController>(*controller);
+        cues->attach(*m_db);
         media = std::make_unique<app::MediaLibrary>(*m_db, thumbnails.path());
         controller->attachMedia(*media);
         decks = std::make_unique<app::PresentationLibrary>(*m_db, slidePictures.path());
@@ -139,7 +143,8 @@ public:
              {QStringLiteral("sharing"), QVariant::fromValue<QObject *>(sharing.get())},
              {QStringLiteral("remote"), QVariant::fromValue<QObject *>(remote.get())},
              {QStringLiteral("osc"), QVariant::fromValue<QObject *>(osc.get())},
-             {QStringLiteral("midi"), QVariant::fromValue<QObject *>(midi.get())}});
+             {QStringLiteral("midi"), QVariant::fromValue<QObject *>(midi.get())},
+             {QStringLiteral("cues"), QVariant::fromValue<QObject *>(cues.get())}});
         engine->loadFromModule("Lumen.Ui", "Main");
         if (engine->rootObjects().isEmpty()) {
             *error = QStringLiteral("Main.qml did not load");
@@ -228,6 +233,7 @@ public:
     std::unique_ptr<app::RemoteServer> remote;
     std::unique_ptr<app::OscServer> osc;
     std::unique_ptr<app::MidiInput> midi;
+    std::unique_ptr<app::CueController> cues;
     std::unique_ptr<app::OperatorController> controller;
     std::unique_ptr<QQmlApplicationEngine> engine;
     QQuickWindow *window = nullptr;

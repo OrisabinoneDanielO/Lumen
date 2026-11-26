@@ -29,6 +29,8 @@ Window {
     property QtObject remote: null
     property QtObject osc: null
     property QtObject midi: null
+    // Timecode cues (batch 20); optional.
+    property QtObject cues: null
 
     width: 1440
     height: 900
@@ -124,7 +126,9 @@ Window {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     controller: window.controller
+                    cuesAvailable: window.cues !== null && window.cues.available
                     onSlideClicked: keyRoot.forceActiveFocus()
+                    onCuesRequested: cuesPopover.active = !cuesPopover.active
                 }
 
                 EditorPanel {
@@ -203,6 +207,19 @@ Window {
             timers: window.timerController
             controller: window.controller
             onCloseRequested: timersPopover.active = false
+        }
+    }
+    // Cues stay open while recording, beside the slides (not over them).
+    Loader {
+        id: cuesPopover
+        objectName: "cuesPopover"
+        active: false
+        x: window.width - width - 16
+        y: window.height - height - 16
+        z: 50
+        sourceComponent: CuesPopover {
+            cues: window.cues
+            onCloseRequested: cuesPopover.active = false
         }
     }
     Loader {
