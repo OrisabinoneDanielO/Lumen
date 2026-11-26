@@ -45,7 +45,8 @@ namespace lumen::core::render {
 //     stage state; "texts" (test mode); "status" reports "kind" and "screen".
 // v7 (batch 15): stream outputs (lumen-render --stream): "status" kind
 //     "stream" and "stream" (where its frames go).
-inline constexpr int protocolVersion = 7;
+// v8 (batch 16): composed content (positioned elements from the editor).
+inline constexpr int protocolVersion = 8;
 
 // Longest line either side accepts, to bound memory use.
 inline constexpr qsizetype maxLineBytes = 1024 * 1024;

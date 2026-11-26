@@ -47,6 +47,7 @@ Rectangle {
                     footer: root.controller.previewFooter
                     poster: root.controller.previewPoster
                     timerText: root.controller.previewTimerText
+                    elements: root.controller.previewElements
                     background: root.controller.previewBackground
                     frameColor: Theme.next
                 }
@@ -82,6 +83,7 @@ Rectangle {
                     footer: root.controller.liveFooter
                     poster: root.controller.livePoster
                     timerText: root.controller.liveTimerText
+                    elements: root.controller.liveElements
                     background: root.controller.liveBackground
                     frameColor: Theme.live
                     frameWidth: 3
