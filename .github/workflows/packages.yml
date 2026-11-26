@@ -24,7 +24,7 @@ jobs:
     name: Windows (.msi)
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ilammy/msvc-dev-cmd@v1
       - uses: lukka/get-cmake@latest
       - uses: jurplel/install-qt-action@v4
@@ -68,7 +68,7 @@ jobs:
           if ($u.ExitCode -ne 0) { exit 1 }
           if (Test-Path $exe) { 'lumen.exe is still there after uninstalling'; exit 1 }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: Lumen-Presenter-Windows
           path: build/packages/*.msi
@@ -77,7 +77,7 @@ jobs:
     name: macOS (.dmg)
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: lukka/get-cmake@latest
       - uses: jurplel/install-qt-action@v4
         with:
@@ -108,7 +108,7 @@ jobs:
           lipo -archs "$app/Contents/MacOS/lumen-render" | grep -q arm64
           QT_QPA_PLATFORM=offscreen "$app/Contents/MacOS/Lumen Presenter" --check-install
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: Lumen-Presenter-macOS
           path: build/packages/*.dmg
@@ -118,7 +118,7 @@ jobs:
     runs-on: ubuntu-24.04
     container: debian:trixie
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build dependencies
         run: |
           apt-get update
@@ -133,7 +133,7 @@ jobs:
         run: |
           cd build/release && cpack -G DEB -B ../packages
           dpkg-deb --info ../packages/*.deb
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: Lumen-Presenter-deb
           path: build/packages/*.deb
@@ -144,7 +144,7 @@ jobs:
     runs-on: ubuntu-24.04
     container: debian:trixie
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: Lumen-Presenter-deb
       - name: Install and check
@@ -158,7 +158,7 @@ jobs:
     runs-on: ubuntu-24.04
     container: fedora:latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build dependencies
         run: |
           dnf install -y cmake ninja-build gcc-c++ rpm-build file \
@@ -172,7 +172,7 @@ jobs:
         run: |
           cd build/release && cpack -G RPM -B ../packages
           rpm -qpR ../packages/*.rpm
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: Lumen-Presenter-rpm
           path: build/packages/*.rpm
@@ -183,7 +183,7 @@ jobs:
     runs-on: ubuntu-24.04
     container: fedora:latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: Lumen-Presenter-rpm
       - name: Install and check
@@ -191,27 +191,40 @@ jobs:
           dnf install -y ./lumen-presenter-*.rpm
           QT_QPA_PLATFORM=offscreen lumen --check-install
 
+  # Built on the runner itself, not in flathub-infra's container: updating the
+  # runtimes inside that container fails ("Invalid cross-device link").
   flatpak:
     name: Flatpak
     runs-on: ubuntu-24.04
-    container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.8
-      options: --privileged
     steps:
-      - uses: actions/checkout@v4
-      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+      - uses: actions/checkout@v6
+      - name: Flatpak tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          # Ubuntu 24.04 stops unprivileged user namespaces, which bubblewrap
+          # (Flatpak's sandbox) needs.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+      - name: Build
+        run: |
+          flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean \
+            --repo=build/flatpak-repo build/flatpak-app packaging/flatpak/io.github.OrisabinoneDanielO.Lumen.yml
+          flatpak build-bundle build/flatpak-repo Lumen-Presenter.flatpak io.github.OrisabinoneDanielO.Lumen
+      - name: Install and check
+        run: |
+          flatpak install --user -y --noninteractive Lumen-Presenter.flatpak
+          flatpak run --env=QT_QPA_PLATFORM=offscreen io.github.OrisabinoneDanielO.Lumen --check-install
+      - uses: actions/upload-artifact@v6
         with:
-          bundle: Lumen-Presenter.flatpak
-          manifest-path: packaging/flatpak/io.github.OrisabinoneDanielO.Lumen.yml
-          cache-key: flatpak-builder-${{ github.sha }}
+          name: Lumen-Presenter-Flatpak
+          path: Lumen-Presenter.flatpak
 
-  # The Linux AppImage (batch 12), built on the oldest supported Ubuntu so it
-  # runs on as many distributions as possible.
   appimage:
     name: AppImage
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install build dependencies
         run: |
@@ -256,7 +269,7 @@ jobs:
           app=$(ls build/appimage/Lumen-Presenter-*-x86_64.AppImage)
           QT_QPA_PLATFORM=offscreen APPIMAGE_EXTRACT_AND_RUN=1 "$app" --check-install
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: Lumen-Presenter-AppImage
           path: build/appimage/Lumen-Presenter-*-x86_64.AppImage
@@ -271,14 +284,19 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
         with:
           path: installers
           merge-multiple: true
+      # Notes from docs/releases/<tag>.md when there are some, else a list of
+      # the changes since the last release.
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -la installers
+          notes="docs/releases/$GITHUB_REF_NAME.md"
+          if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
           gh release create "$GITHUB_REF_NAME" installers/* --repo "$GITHUB_REPOSITORY" \
-            --title "Lumen Presenter ${GITHUB_REF_NAME#v}" --generate-notes --draft
+            --title "Lumen Presenter ${GITHUB_REF_NAME#v}" --draft "$@"
