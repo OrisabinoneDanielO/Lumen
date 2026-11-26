@@ -108,24 +108,56 @@ Item {
                     font.pixelSize: Math.max(10, parent.height * 0.3)
                 }
             }
-            Loader {
+            // As in SlideContent: a leaving video is hidden and muted at once
+            // and its player destroyed a moment later, so a slow decoder
+            // shutdown cannot hold the next frame.
+            Item {
+                id: videoHost
+                readonly property bool wanted: element.modelData.type === "video" && root.playVideo
+                                               && (element.modelData.video || "") !== ""
+                property Item current: null
                 anchors.fill: parent
-                active: element.modelData.type === "video" && root.playVideo && (element.modelData.video || "") !== ""
-                sourceComponent: Item {
-                    MediaPlayer {
-                        id: player
-                        source: element.modelData.video
-                        loops: element.s.loop === false ? 1 : MediaPlayer.Infinite
-                        videoOutput: output
-                        audioOutput: AudioOutput { muted: element.s.muted !== false }
-                        Component.onCompleted: play()
+
+                function refresh() {
+                    if (current && !wanted) {
+                        const leaving = current
+                        current = null
+                        leaving.retire()
                     }
-                    VideoOutput {
-                        id: output
-                        objectName: "videoOutput"
-                        property real mediaDurationUs: player.duration * 1000
+                    if (wanted && !current)
+                        current = videoComponent.createObject(videoHost)
+                }
+                onWantedChanged: refresh()
+                Component.onCompleted: refresh()
+
+                Component {
+                    id: videoComponent
+                    Item {
                         anchors.fill: parent
-                        fillMode: element.s.fit === "cover" ? VideoOutput.PreserveAspectCrop : VideoOutput.PreserveAspectFit
+                        function retire() {
+                            visible = false
+                            sound.muted = true
+                            player.source = player.source
+                            destroy(300)
+                        }
+                        MediaPlayer {
+                            id: player
+                            source: element.modelData.video
+                            loops: element.s.loop === false ? 1 : MediaPlayer.Infinite
+                            videoOutput: output
+                            audioOutput: AudioOutput {
+                                id: sound
+                                muted: element.s.muted !== false
+                            }
+                            Component.onCompleted: play()
+                        }
+                        VideoOutput {
+                            id: output
+                            objectName: "videoOutput"
+                            property real mediaDurationUs: player.duration * 1000
+                            anchors.fill: parent
+                            fillMode: element.s.fit === "cover" ? VideoOutput.PreserveAspectCrop : VideoOutput.PreserveAspectFit
+                        }
                     }
                 }
             }

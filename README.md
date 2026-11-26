@@ -29,6 +29,114 @@ See the [user guide](docs/user-guide.md) for how to use each part.
 | ![Theme editor](docs/images/theme-editor.png) | ![Phone remote](docs/images/phone-remote.png) |
 | The theme editor | The phone remote |
 
+## Install
+
+Download the installer for your computer from the **[Releases page](https://github.com/OrisabinoneDanielO/Lumen/releases)**. Every installer includes everything Lumen needs, the Bibles too; Lumen never needs the internet, an account or a licence key.
+
+| Your computer | Download |
+| --- | --- |
+| Windows 10 or 11 (64-bit) | `Lumen-Presenter-<version>-windows-x64.msi` |
+| macOS 12 or newer (Apple Silicon and Intel) | `Lumen-Presenter-<version>-macos.dmg` |
+| Linux, any distribution | `Lumen-Presenter-<version>-x86_64.AppImage`, or the Flatpak |
+| Debian 13, Ubuntu 25.04 or newer | `lumen-presenter_<version>_amd64.deb` |
+| Fedora | `lumen-presenter-<version>-1.x86_64.rpm` |
+
+Before the first release, the newest installers are attached to each run of the [Packages workflow](https://github.com/OrisabinoneDanielO/Lumen/actions/workflows/packages.yml) (open a run and scroll to **Artifacts**; you need to be signed in to GitHub).
+
+The Windows and macOS installers are **not code-signed yet**, so the first time, Windows and macOS warn that the app is from an unknown developer. The steps below say how to get past that warning.
+
+### Windows
+
+1. Double-click the `.msi` file.
+2. If **Windows protected your PC** appears, click **More info**, then **Run anyway**.
+3. Follow the installer. Lumen Presenter is installed in `C:\Program Files\Lumen Presenter` and added to the Start menu and the desktop.
+
+To **update**, run the newer `.msi`: it replaces the old version and keeps your library. To **uninstall**: **Settings → Apps → Installed apps → Lumen Presenter → Uninstall** (your library is kept).
+
+### macOS
+
+1. Open the `.dmg` file and drag **Lumen Presenter** onto **Applications**.
+2. Open Lumen Presenter from Applications. The first time, macOS says it cannot check the app for malicious software:
+   - **macOS 15 or newer:** click **Done**, open **System Settings → Privacy & Security**, scroll down to the message about Lumen Presenter and click **Open Anyway**, then confirm.
+   - **macOS 12 to 14:** right-click (or Control-click) the app in Applications, choose **Open**, then **Open** again.
+3. Allow access when macOS asks (for example to the microphone or local network). Lumen uses the local network only for features you turn on, such as the phone remote.
+
+To **update**, drag the newer version to Applications and choose **Replace**. To **uninstall**, drag Lumen Presenter from Applications to the Bin.
+
+### Linux
+
+**AppImage** (any distribution): make it executable and run it.
+
+```sh
+chmod +x Lumen-Presenter-*-x86_64.AppImage
+./Lumen-Presenter-*-x86_64.AppImage
+```
+
+Most file managers can do the same: right-click → **Properties → Permissions → Allow executing as program**, then double-click. If it says FUSE is missing, install `libfuse2` (Debian, Ubuntu) or `fuse-libs` (Fedora), or run it with `APPIMAGE_EXTRACT_AND_RUN=1`.
+
+**Flatpak:**
+
+```sh
+flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --user Lumen-Presenter.flatpak
+flatpak run io.github.OrisabinoneDanielO.Lumen
+```
+
+**Debian and Ubuntu** (`.deb`, Debian 13 or Ubuntu 25.04 and newer):
+
+```sh
+sudo apt install ./lumen-presenter_*_amd64.deb
+```
+
+**Fedora** (`.rpm`):
+
+```sh
+sudo dnf install ./lumen-presenter-*.x86_64.rpm
+```
+
+Fedora's own FFmpeg leaves out some video formats (such as H.264 `.mp4`); to play those, install `ffmpeg` from [RPM Fusion](https://rpmfusion.org/Configuration).
+
+After installing, Lumen Presenter is in your desktop's app list (or run `lumen`). To uninstall: `sudo apt remove lumen-presenter`, `sudo dnf remove lumen-presenter`, `flatpak uninstall io.github.OrisabinoneDanielO.Lumen`, or delete the AppImage.
+
+### Checking an installation
+
+`lumen --check-install` checks that the window, the Bibles and the audience output all work, and prints a line for each; every line should start with `ok`.
+
+- **Windows:** `"C:\Program Files\Lumen Presenter\lumen.exe" --check-install > check.txt`, then open `check.txt`
+- **macOS:** `"/Applications/Lumen Presenter.app/Contents/MacOS/Lumen Presenter" --check-install`
+- **Linux:** `lumen --check-install`
+
+## Use
+
+The [user guide](docs/user-guide.md) explains every part. To get going:
+
+1. **Connect the screens.** Plug in the projector or TV and set it as an *extended* display (not mirrored) in your system's display settings. When Lumen starts, the audience output goes full screen on the screen that is not the operator's. With one screen it opens in a window. Click **Main** in the toolbar to turn the output off or on.
+2. **Add songs.** In the library, **Import songs…** reads plain-text lyrics, OpenLyrics, and libraries from OpenLP, EasyWorship 6/7 and ProPresenter 5/6. **Import folder…** reads a whole folder. Sections are split into slides automatically.
+3. **Add media and slides.** The **Media** tab takes videos and pictures (as slides or looping backgrounds). The **Presentations** tab takes PowerPoint and PDF files.
+4. **Make a service plan.** Choose **Plan ▾ → New plan…** above the service plan. In the library, pick each song, media item or presentation and click **Add to plan**, then drag items into service order. **Plan ▾ → Add header…** separates parts of the service (Worship, Sermon). Everything is saved as you go, with a daily backup.
+5. **Run the service.** Click a slide to send it live, or use the keyboard:
+
+   | Key | Does |
+   | --- | --- |
+   | Space or → / ← | next / previous slide |
+   | Page Down / Page Up | next / previous plan item |
+   | C, B, P, E / V and a number | jump to Chorus, Bridge, Pre-chorus, Ending / Verse *n* |
+   | F1 to F5 | clear background, slide, props, messages, everything |
+   | F6 / F7 | Logo / Black |
+   | Ctrl+B (Cmd+B on a Mac) | scripture: type `jn 3 16-18` and press Enter |
+
+6. **More:** in the toolbar, **Timers** (countdowns and clocks), **Message** (for example "Parent of 42, please come to the nursery") and **Props** (lower thirds and logos). The **Stage** and **Stream** lights beside **Main** set up a screen for the musicians and the speaker, and an output with transparency for live streams. **Plan ▾ → Remote control and MIDI…** sets up the phone remote, MIDI and OSC; **Plan ▾ → Share with other computers…** shares plans and songs on the local network. Each of these is off until you turn it on.
+
+**Your library** (songs, plans, media, backups) is kept on your computer:
+
+| System | Folder |
+| --- | --- |
+| Windows | `%APPDATA%\Lumen\Lumen Presenter` |
+| macOS | `~/Library/Application Support/Lumen/Lumen Presenter` |
+| Linux | `~/.local/share/Lumen/Lumen Presenter` (Flatpak: `~/.var/app/io.github.OrisabinoneDanielO.Lumen/data/Lumen/Lumen Presenter`) |
+
+To move a service to another computer, choose **Plan ▾ → Export plan…** to save a `.lumen` file (the plan with its songs and media), then **Plan ▾ → Import plan…** on the other computer.
+
 ## Status
 
 All 20 batches of the design doc's build plan are built, each with tests for its "Done when" condition; 39 test programs run on every build. Some things have only been tested on the developer's Fedora laptop or with stand-ins (virtual MIDI, generated song libraries, two processes instead of two PCs): [docs/status.md](docs/status.md) lists exactly what has been tested how, and what has not. The MVP gate in the design doc (10 pilot churches, 4 Sundays) has not started.
@@ -41,7 +149,7 @@ Needs CMake 3.24+, Ninja, a C++20 compiler and Qt 6.5+ with Multimedia and PDF (
 cmake --preset debug          # or: release
 cmake --build --preset debug
 ctest --preset debug          # every test, offscreen
-./build/debug/bin/lumen --design-preview   # a sample service in a temporary library
+./build/debug/bin/lumen                    # opens your library (empty the first time)
 ```
 
 Per-platform setup (Fedora, Ubuntu, Windows, macOS), the AppImage and the long-running tests are in [docs/building.md](docs/building.md).
@@ -55,7 +163,7 @@ render/     lumen-render: the output process (audience, stage and stream)
 tools/      build-time tools (lumen-bible-build)
 bibles/     bundled Bible translations and their licences
 tests/      unit and integration tests (Qt Test), test data and scripts
-packaging/  installers (Linux AppImage so far)
+packaging/  installers: Windows .msi, macOS .dmg, Linux AppImage, Flatpak, .deb, .rpm
 thirdparty/ RtMidi (MIT), for MIDI input
 docs/       user guide, architecture, decisions, design doc
 design/     UI mockups (open design/mockups/index.html)

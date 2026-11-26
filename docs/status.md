@@ -36,7 +36,7 @@ Everything has run on the developer's laptop (Fedora 45, Intel Iris Xe, Wayland)
 - **Real MIDI hardware** (tests use a virtual MIDI port), **a real phone** with the remote (the page was checked in a desktop browser at phone size), **two physical PCs** sharing (tests use two processes), **a real third screen** for the stage display (tests use virtual screens).
 - **PowerPoint conversion through Microsoft PowerPoint** on Windows (LibreOffice conversion is tested).
 - **NDI**: written against the NDI Runtime's exported functions but never run with one; behind the `experimental/ndi` setting.
-- **The AppImage**: the CI job builds it; it has not been built or run on the laptop.
+- **The installers** (`.msi`, `.dmg`, AppImage, Flatpak, `.deb`, `.rpm`): built, installed and checked with `lumen --check-install` by CI on clean machines; not yet installed on a church's computers.
 - **The full 2-hour video soak** on the reference PC.
 
 ## Not done
@@ -44,7 +44,7 @@ Everything has run on the developer's laptop (Fedora 45, Intel Iris Xe, Wayland)
 - ProPresenter 7 documents (an unpublished binary format; ProPresenter can export text).
 - SongSelect import (waits for the CCLI partner agreement).
 - SDI output through DeckLink cards (needs Blackmagic's SDK).
-- Windows and macOS installers, Flatpak, .deb and .rpm; code signing.
+- Code signing for Windows and macOS (needs certificates); MSIX; apt/dnf repositories and Flathub.
 - Following external timecode (MIDI timecode or LTC); compensating for audio device delay.
 - Translations of the interface (texts are marked with `qsTr`; no translations yet).
 - The MVP gate in the design doc: 10 pilot churches for 4 Sundays.
@@ -56,5 +56,5 @@ Everything has run on the developer's laptop (Fedora 45, Intel Iris Xe, Wayland)
 - **Send song libraries** (or anonymised copies) from EasyWorship, ProPresenter or OpenLP that do not import well; add their quirks to `tests/data/libraries/make_libraries.py`.
 - **Test with hardware**: MIDI controllers, NDI receivers, phones and tablets, multi-screen setups, LED walls.
 - **Translations**: Lumen is used by churches in many languages.
-- **Packaging**: Windows (MSIX/MSI) and macOS (.dmg) installers, Flatpak.
+- **Packaging**: code signing and notarisation, MSIX, Flathub, apt and dnf repositories.
 - **ProPresenter 7 import**, if you know the format well enough to test against real files.

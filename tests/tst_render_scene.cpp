@@ -1,3 +1,4 @@
+#include "support/timing.h"
 #include "outputwindow.h"
 #include "rendercheck.h"
 
@@ -46,7 +47,9 @@ private:
 private slots:
     void init()
     {
-        QTest::failOnWarning(QRegularExpression(QStringLiteral(".*")));
+        // Any warning fails, except Qt's note that a missing font family
+        // made font lookup slow (macOS, where "Sans Serif" does not exist).
+        QTest::failOnWarning(QRegularExpression(QStringLiteral("^(?!Populating font family aliases took ).*")));
     }
 
     void startsBlackAndEmpty()
@@ -85,6 +88,7 @@ private slots:
 
     void keepsPresentingFrames()
     {
+        LUMEN_TIMING_CHECK();
         auto output = open(QSize(320, 180));
         QVERIFY(output);
         QTRY_VERIFY(output->framesPresented() > 0);

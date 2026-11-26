@@ -1,4 +1,5 @@
 #include "operatorcontroller.h"
+#include "sampleservice.h"
 #include "servicedata.h"
 
 #include "lumen/core/data/database.h"
@@ -21,7 +22,7 @@ using namespace lumen;
 
 // Loads the real main window offscreen and checks the five regions from the
 // design (toolbar, service plan, slide grid, preview/live, library), with an
-// empty library and with the mockup's sample service (--design-preview).
+// empty library and with the mockup's sample service (test data).
 //
 // Batch 5: the window now takes an OperatorController instead of reading the
 // QML SampleData singleton, so this test builds one; the checks are the same.
@@ -33,12 +34,12 @@ class TestMainWindow : public QObject
     Q_OBJECT
 
 private:
-    void load(bool designPreview)
+    void load(bool sampleService)
     {
         auto db = core::data::Database::open(core::data::Database::inMemory());
         QVERIFY(db.ok());
         m_db = std::move(db).value();
-        if (designPreview)
+        if (sampleService)
             QVERIFY(app::seedSampleService(*m_db).ok());
 
         m_show = std::make_unique<core::show::ShowController>();
@@ -83,9 +84,9 @@ private:
 
     static void addModes()
     {
-        QTest::addColumn<bool>("designPreview");
+        QTest::addColumn<bool>("sampleService");
         QTest::newRow("default") << false;
-        QTest::newRow("design preview") << true;
+        QTest::newRow("sample service") << true;
     }
 
     std::unique_ptr<core::data::Database> m_db;
@@ -98,7 +99,9 @@ private slots:
     void init()
     {
         // Any QML warning (bad binding, binding loop, missing type) fails the test.
-        QTest::failOnWarning(QRegularExpression(QStringLiteral(".*")));
+        // Any warning fails, except Qt's note that a missing font family
+        // made font lookup slow (macOS, where "Sans Serif" does not exist).
+        QTest::failOnWarning(QRegularExpression(QStringLiteral("^(?!Populating font family aliases took ).*")));
     }
 
     void cleanup()
@@ -113,14 +116,14 @@ private slots:
     void windowHasTitle_data() { addModes(); }
     void windowHasTitle()
     {
-        QFETCH(bool, designPreview);
-        load(designPreview);
+        QFETCH(bool, sampleService);
+        load(sampleService);
         QCOMPARE(m_window->title(), QStringLiteral("Lumen Presenter"));
     }
 
     void hasFiveRegions_data()
     {
-        QTest::addColumn<bool>("designPreview");
+        QTest::addColumn<bool>("sampleService");
         QTest::addColumn<QString>("name");
         for (bool preview : {false, true}) {
             const char *mode = preview ? "preview" : "default";
@@ -131,9 +134,9 @@ private slots:
 
     void hasFiveRegions()
     {
-        QFETCH(bool, designPreview);
+        QFETCH(bool, sampleService);
         QFETCH(QString, name);
-        load(designPreview);
+        load(sampleService);
         auto *item = m_window->findChild<QQuickItem *>(name);
         QVERIFY2(item, qPrintable(name));
         QVERIFY(item->isVisible());
@@ -143,8 +146,8 @@ private slots:
     void regionsAreLaidOutAsDesigned_data() { addModes(); }
     void regionsAreLaidOutAsDesigned()
     {
-        QFETCH(bool, designPreview);
-        load(designPreview);
+        QFETCH(bool, sampleService);
+        load(sampleService);
         auto *root = m_window->contentItem();
         auto *toolbar = region("toolbar");
         auto *plan = region("servicePlan");
@@ -182,8 +185,8 @@ private slots:
         QVERIFY(!m_controller->outputConnected());
     }
 
-    // --design-preview reproduces the mockup's content.
-    void designPreviewShowsMockupContent()
+    // With the sample service (test data), the window reproduces the mockup.
+    void sampleServiceShowsMockupContent()
     {
         load(true);
         QCOMPARE(m_controller->planName(), QStringLiteral("Sunday Service"));
@@ -259,9 +262,9 @@ private slots:
         const QString dir = qEnvironmentVariable("LUMEN_SCREENSHOT_DIR");
         if (dir.isEmpty())
             QSKIP("LUMEN_SCREENSHOT_DIR not set");
-        QFETCH(bool, designPreview);
-        load(designPreview);
-        if (designPreview) {
+        QFETCH(bool, sampleService);
+        load(sampleService);
+        if (sampleService) {
             // The mockup's moment: Amazing Grace, verse 2 live.
             m_controller->selectItem(2);
             m_controller->goLive(2);
@@ -269,7 +272,7 @@ private slots:
         QTest::qWait(150);
         const QImage image = m_window->grabWindow();
         QVERIFY(!image.isNull());
-        const QString file = QDir(dir).filePath(designPreview ? QStringLiteral("main-preview.png")
+        const QString file = QDir(dir).filePath(sampleService ? QStringLiteral("main-preview.png")
                                                               : QStringLiteral("main-default.png"));
         QVERIFY(image.save(file));
     }

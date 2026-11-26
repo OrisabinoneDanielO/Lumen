@@ -61,5 +61,5 @@ target_link_libraries(lumen_render_lib
 qt_add_executable(lumen-render main.cpp)
 target_link_libraries(lumen-render PRIVATE lumen_render_lib lumen_warnings)
 
-include(GNUInstallDirs)
-install(TARGETS lumen-render RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+# Beside lumen (inside the bundle on macOS), where RenderLink looks for it.
+install(TARGETS lumen-render RUNTIME DESTINATION ${LUMEN_INSTALL_BINDIR})

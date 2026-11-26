@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.OrisabinoneDanielO.Lumen</id>
+  <name>Lumen Presenter</name>
+  <summary>Show lyrics, scripture, media and slides in worship services</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="io.github.OrisabinoneDanielO">
+    <name>Lumen Presenter contributors</name>
+  </developer>
+  <description>
+    <p>
+      Lumen Presenter puts song lyrics, Bible passages, videos, pictures and slide decks on the
+      screens of a church service. It is free for everyone, works without internet, and keeps the
+      audience output running even if the operator window stops.
+    </p>
+    <ul>
+      <li>A service plan, a song library with fast search, and imports from other programs</li>
+      <li>Every freely licensed Bible translation, bundled</li>
+      <li>Themes, timers, messages, lower thirds, a stage display and a stream output</li>
+      <li>A phone remote, MIDI and OSC control, and sharing plans on the local network</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">lumen-presenter.desktop</launchable>
+  <url type="homepage">https://github.com/OrisabinoneDanielO/Lumen</url>
+  <url type="bugtracker">https://github.com/OrisabinoneDanielO/Lumen/issues</url>
+  <content_rating type="oars-1.1"/>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Office</category>
+  </categories>
+  <releases>
+    <release version="0.1.0" date="2026-11-26"/>
+  </releases>
+</component>

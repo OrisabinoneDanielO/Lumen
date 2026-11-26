@@ -73,28 +73,59 @@ Item {
 
     // Video, decoded here in the render process (hardware decode where the
     // GPU supports the codec). Motion backgrounds loop silently.
-    Loader {
+    //
+    // A video that leaves is hidden and muted at once and its player is
+    // destroyed a moment later: shutting a decoder down can take a second or
+    // more (software decode on macOS), and the next frame must not wait.
+    Item {
+        id: videoHost
+        readonly property bool wanted: view.kind === "video" && view.playVideo && view.video.toString() !== ""
+        property Item current: null
         anchors.fill: parent
-        active: view.kind === "video" && view.playVideo && view.video.toString() !== ""
-        sourceComponent: Item {
-            MediaPlayer {
-                id: player
-                source: view.video
-                loops: view.loop ? MediaPlayer.Infinite : 1
-                videoOutput: output
-                audioOutput: AudioOutput {
-                    volume: view.volume
-                    muted: view.volume <= 0
-                }
-                Component.onCompleted: play()
+
+        function refresh() {
+            if (current && !wanted) {
+                const leaving = current
+                current = null
+                leaving.retire()
             }
-            VideoOutput {
-                id: output
-                objectName: "videoOutput"
-                // Read by the renderer's frame monitor (microseconds).
-                property real mediaDurationUs: player.duration * 1000
+            if (wanted && !current)
+                current = videoComponent.createObject(videoHost)
+        }
+        onWantedChanged: refresh()
+        Component.onCompleted: refresh()
+
+        Component {
+            id: videoComponent
+            Item {
+                id: videoItem
                 anchors.fill: parent
-                fillMode: view.layerName === "background" ? VideoOutput.PreserveAspectCrop : VideoOutput.PreserveAspectFit
+                function retire() {
+                    visible = false
+                    sound.muted = true
+                    player.source = player.source // keeps the source when the slide's goes
+                    destroy(300)
+                }
+                MediaPlayer {
+                    id: player
+                    source: view.video
+                    loops: view.loop ? MediaPlayer.Infinite : 1
+                    videoOutput: output
+                    audioOutput: AudioOutput {
+                        id: sound
+                        volume: view.volume
+                        muted: view.volume <= 0
+                    }
+                    Component.onCompleted: play()
+                }
+                VideoOutput {
+                    id: output
+                    objectName: "videoOutput"
+                    // Read by the renderer's frame monitor (microseconds).
+                    property real mediaDurationUs: player.duration * 1000
+                    anchors.fill: parent
+                    fillMode: view.layerName === "background" ? VideoOutput.PreserveAspectCrop : VideoOutput.PreserveAspectFit
+                }
             }
         }
     }

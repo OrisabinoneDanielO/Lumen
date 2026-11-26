@@ -1,0 +1,40 @@
+# Flatpak for any Linux distribution:
+#   flatpak-builder --user --install --install-deps-from=flathub build/flatpak \
+#       packaging/flatpak/io.github.OrisabinoneDanielO.Lumen.yml
+id: io.github.OrisabinoneDanielO.Lumen
+runtime: org.kde.Platform
+runtime-version: '6.8'
+sdk: org.kde.Sdk
+# Qt PDF (PDF slide decks) is not in the KDE runtime; this base app has it.
+base: io.qt.qtwebengine.BaseApp
+base-version: '6.8'
+command: lumen
+rename-desktop-file: lumen-presenter.desktop
+rename-icon: lumen-presenter
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  # GPU video decode and MIDI controllers.
+  - --device=all
+  # Local-network features (phone remote, OSC, sharing), each off until
+  # turned on in the app. Lumen never contacts the internet on its own.
+  - --share=network
+  # Media and song files are used where they are.
+  - --filesystem=home
+cleanup:
+  - /include
+  - /lib/cmake
+  - '*.a'
+modules:
+  - name: lumen
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DLUMEN_BUILD_TESTS=OFF
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - build

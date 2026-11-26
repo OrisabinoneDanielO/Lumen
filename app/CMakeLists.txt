@@ -3,9 +3,26 @@
 add_subdirectory(ui)
 add_subdirectory(operator)
 
-qt_add_executable(lumen main.cpp)
+# The program's icon: lumen.rc on Windows, an .icns in the macOS bundle.
+set(lumen_icon)
+if(WIN32)
+    set(lumen_icon ${CMAKE_SOURCE_DIR}/packaging/windows/lumen.rc)
+elseif(APPLE)
+    set(lumen_icon ${CMAKE_SOURCE_DIR}/packaging/icons/lumen-presenter.icns)
+    set_source_files_properties(${lumen_icon} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+endif()
+
+qt_add_executable(lumen main.cpp ${lumen_icon})
+# On macOS the bundle is "Lumen Presenter.app"; elsewhere the program is lumen.
+if(APPLE)
+    set(lumen_output_name "${LUMEN_BUNDLE_NAME}")
+else()
+    set(lumen_output_name lumen)
+endif()
 set_target_properties(lumen PROPERTIES
-    OUTPUT_NAME lumen
+    OUTPUT_NAME "${lumen_output_name}"
+    MACOSX_BUNDLE_ICON_FILE lumen-presenter.icns
+    MACOSX_BUNDLE_COPYRIGHT "GPL-3.0"
     WIN32_EXECUTABLE TRUE
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_BUNDLE_NAME "Lumen Presenter"
@@ -24,8 +41,7 @@ target_link_libraries(lumen PRIVATE
     Qt6::Quick
     lumen_warnings)
 
-include(GNUInstallDirs)
 install(TARGETS lumen
     BUNDLE DESTINATION .
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    RUNTIME DESTINATION ${LUMEN_INSTALL_BINDIR})
 add_dependencies(lumen bibles)

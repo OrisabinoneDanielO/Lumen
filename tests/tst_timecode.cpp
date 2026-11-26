@@ -1,3 +1,4 @@
+#include "support/timing.h"
 #include "operatorharness.h"
 #include "outputwindow.h"
 
@@ -143,6 +144,7 @@ private slots:
     // comes up within a frame of its time in the track.
     void cuesFollowTheAudio()
     {
+        LUMEN_TIMING_CHECK();
         QTemporaryDir dir;
         const QString track = dir.filePath(QStringLiteral("backing.wav"));
         QVERIFY(writeTone(track, 6));

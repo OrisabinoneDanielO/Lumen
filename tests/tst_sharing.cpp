@@ -1,4 +1,5 @@
 #include "planstore.h"
+#include "sampleservice.h"
 #include "servicedata.h"
 #include "sharing.h"
 
@@ -11,8 +12,14 @@
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTimer>
+#include <QUdpSocket>
 
+#ifdef Q_OS_WIN
+#define NOMINMAX
+#include <windows.h>
+#else
 #include <csignal>
+#endif
 
 using namespace lumen;
 using namespace lumen::app;
@@ -42,6 +49,39 @@ QStringList titles(const PlanView &plan)
 
 // The other PC: shares its library (the sample service plus "Youth Night")
 // and writes its port and code to a file. Ends when the test does.
+// Whether a multicast datagram sent from this machine comes back to it.
+// Some networks join the group but never deliver (CI's macOS runners).
+bool multicastLoopsBack(quint16 port)
+{
+    const QHostAddress group(QStringLiteral("239.255.76.77"));
+    QUdpSocket socket;
+    if (!socket.bind(QHostAddress::AnyIPv4, port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint)
+        || !socket.joinMulticastGroup(group))
+        return false;
+    socket.setSocketOption(QAbstractSocket::MulticastLoopbackOption, 1);
+    for (int attempt = 0; attempt < 3; ++attempt) {
+        socket.writeDatagram("lumen-probe", group, port);
+        if (socket.waitForReadyRead(700))
+            return true;
+    }
+    return false;
+}
+
+// The other computer quits when the test that started it has gone.
+bool processAlive(qint64 pid)
+{
+#ifdef Q_OS_WIN
+    HANDLE process = OpenProcess(SYNCHRONIZE, FALSE, DWORD(pid));
+    if (!process)
+        return false;
+    const bool running = WaitForSingleObject(process, 0) == WAIT_TIMEOUT;
+    CloseHandle(process);
+    return running;
+#else
+    return ::kill(pid_t(pid), 0) == 0;
+#endif
+}
+
 int otherComputer(const QString &infoFile, qint64 parentPid)
 {
     auto db = sampleLibrary();
@@ -67,7 +107,7 @@ int otherComputer(const QString &infoFile, qint64 parentPid)
     info.close();
     QTimer watch;
     QObject::connect(&watch, &QTimer::timeout, [parentPid] {
-        if (::kill(pid_t(parentPid), 0) != 0)
+        if (!processAlive(parentPid))
             QCoreApplication::quit();
     });
     watch.start(500);
@@ -203,6 +243,8 @@ private slots:
         second.discover(); // looking, without sharing itself
         if (first.status().contains(QStringLiteral("cannot be found")))
             QSKIP("no multicast on this network");
+        if (!multicastLoopsBack(quint16(options.discoveryPort + 1)))
+            QSKIP("multicast is not delivered on this network");
         auto *peers = qobject_cast<RowModel *>(second.peers());
         QTRY_VERIFY_WITH_TIMEOUT(peers->rowCount() > 0, 8000);
         QCOMPARE(peers->get(0).value("name").toString(), QStringLiteral("Sound desk"));

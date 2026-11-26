@@ -1,3 +1,4 @@
+#include "support/timing.h"
 #include "lumen/core/render/renderlink.h"
 #include "lumen/core/show/scene.h"
 
@@ -79,6 +80,7 @@ private slots:
 
     void preloadedVideoStartsQuickly()
     {
+        LUMEN_TIMING_CHECK();
         QFETCH(QString, file);
         const QString path = QStringLiteral(LUMEN_MEDIA_DIR "/") + file;
 

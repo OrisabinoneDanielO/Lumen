@@ -22,7 +22,7 @@ jobs:
             os: ubuntu-24.04
             qt_arch: linux_gcc_64
           - name: macOS
-            os: macos-14
+            os: macos-15
             qt_arch: clang_64
           - name: Windows
             os: windows-2022
@@ -59,56 +59,31 @@ jobs:
       - name: Build
         run: cmake --build --preset release
 
+      # macOS runners are virtual machines without a GPU, far slower than any
+      # operator PC: speed checks (tests/support/timing.h) are skipped here and
+      # run in the advisory step below. Linux and Windows run them strictly.
       - name: Test
         run: ctest --preset release
+        env:
+          LUMEN_SKIP_TIMING: ${{ runner.os == 'macOS' && '1' || '0' }}
 
-  # The Linux AppImage (batch 12), built on the oldest supported Ubuntu so it
-  # runs on as many distributions as possible.
-  appimage:
-    name: AppImage
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
+      - name: Speed checks (advisory on macOS)
+        if: runner.os == 'macOS' && !cancelled()
+        continue-on-error: true
+        run: ctest --preset release -L timing --output-on-failure
 
-      - name: Install build dependencies
+      # A test that crashes loses its buffered output (on Windows
+      # especially); run the failed ones again writing to a file as they go.
+      - name: Rerun failed tests with full output
+        if: failure()
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libfontconfig1-dev \
-            libpulse0 libva2 libva-drm2 libva-x11-2 libfuse2 libasound2-dev
-
-      - name: Install CMake and Ninja
-        uses: lukka/get-cmake@latest
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.8.3'
-          arch: linux_gcc_64
-          cache: true
-          modules: 'qtmultimedia qtpdf'
-
-      - name: Build
-        run: |
-          cmake --preset release
-          cmake --build --preset release
-
-      - name: Get linuxdeploy
-        run: |
-          mkdir -p build/tools
-          curl -sSL -o build/tools/linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          curl -sSL -o build/tools/linuxdeploy-plugin-qt-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
-          chmod +x build/tools/*.AppImage
-
-      - name: Build the AppImage
-        run: packaging/linux/build-appimage.sh
-
-      - name: The AppImage starts and quits
-        run: |
-          app=$(ls build/appimage/Lumen-Presenter-*-x86_64.AppImage)
-          QT_QPA_PLATFORM=offscreen "$app" --version
-          QT_QPA_PLATFORM=offscreen "$app" --no-output --quit-after=3000
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Lumen-Presenter-AppImage
-          path: build/appimage/Lumen-Presenter-*-x86_64.AppImage
+          cd build/release
+          for t in $(ctest --show-only=json-v1 | python3 -c "import json,sys; print(' '.join(t['name'] for t in json.load(sys.stdin)['tests'] if t['name'].startswith('tst_')))"); do
+            if grep -q "^$t\$" Testing/Temporary/LastTestsFailed.log 2>/dev/null || grep -q ":$t\$" Testing/Temporary/LastTestsFailed.log 2>/dev/null; then
+              echo "::group::$t"
+              rc=0; QT_QPA_FONTDIR="${WINDIR:-}/Fonts" QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./bin/$t -o $t.txt,txt -v1 || rc=$?; echo "exit code $rc"
+              cat $t.txt || true
+              echo "::endgroup::"
+            fi
+          done

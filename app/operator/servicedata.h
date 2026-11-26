@@ -113,9 +113,4 @@ core::Result<std::optional<PlanView>> loadLatestPlan(core::data::Database &db);
 
 core::Result<std::vector<SongRow>> loadSongs(core::data::Database &db);
 
-// Fills a database with the sample service from design/mockups/Main.html
-// (public-domain hymns; scripture from the World English Bible). Used only by
-// --design-preview, on an in-memory database.
-core::Status seedSampleService(core::data::Database &db);
-
 } // namespace lumen::app

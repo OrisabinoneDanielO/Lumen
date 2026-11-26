@@ -13,7 +13,7 @@ Thank you for helping. Lumen is free software for churches; every bug report, te
 
 1. Read the [README](README.md), then [docs/architecture.md](docs/architecture.md) for how the code fits together.
 2. Build and run the tests: [docs/building.md](docs/building.md).
-3. Run `lumen --design-preview` to try the app with a sample service.
+3. Run `lumen` and try it: import a few songs (**Import songs…** in the library), make a plan and send slides live. Lumen ships no sample content; the tests' sample service lives in `tests/support/sampleservice.cpp`.
 
 ## The rules that keep services safe
 

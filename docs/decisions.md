@@ -96,7 +96,7 @@ Basic messages (this batch) are a line of text in the top banner on the Messages
 
 ### The output is on by default
 
-The audience output starts with the app (setting `output/enabled`, default on; `--no-output` to skip it; the design preview leaves it off unless `--output` is given). The **Main** light in the toolbar turns it off and on.
+The audience output starts with the app (setting `output/enabled`, default on; `--no-output` to skip it; `--output` starts it even when the setting is off). The **Main** light in the toolbar turns it off and on.
 
 ### Linux AppImage only
 
@@ -255,3 +255,7 @@ In the presentation's metadata ("timeline": the backing track's media asset and 
 ### External timecode
 
 Following an external clock (MIDI timecode or LTC from a playback system) is not in this batch; the cue runner takes its clock from one place, so MTC through the MIDI input (batch 19) is the natural next step.
+
+## No sample content in the app
+
+The app once had `--design-preview`, which loaded the mockup's sample service into a temporary library to compare the window with `design/mockups`. It was removed before the first release so the app ships no sample or mock content: a first start shows an empty library. The sample service is now test data only (`tests/support/sampleservice.cpp`), used by the operator tests.

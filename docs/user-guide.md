@@ -2,15 +2,25 @@
 
 How to use each part of Lumen. For building and contributing, see the [README](../README.md) and [CONTRIBUTING](../CONTRIBUTING.md).
 
-Start Lumen with `lumen`, or `lumen --design-preview` to try it with a sample service in a temporary library (nothing you do is kept).
+## Installing
+
+- **Windows:** run the `.msi`. Lumen Presenter is added to the Start menu and the desktop. The installer is not signed yet: if SmartScreen stops it, choose **More info → Run anyway**.
+- **macOS:** open the `.dmg` and drag Lumen Presenter to Applications. It is not notarised yet, so the first time macOS blocks it: on macOS 15 or newer, open **System Settings → Privacy & Security** and click **Open Anyway**; on older versions, right-click the app and choose **Open**.
+- **Linux:** the AppImage runs on any distribution (make it executable and double-click it). There are also a Flatpak, a `.deb` for Debian 13 and Ubuntu 25.04 or newer, and an `.rpm` for Fedora.
+
+Step-by-step instructions for each system are in the [README](../README.md#install). Everything Lumen needs is included, the Bibles too, and it never needs the internet. To check an installation, run `lumen --check-install` (on Windows, `lumen.exe --check-install > check.txt`); every line should start with `ok`.
+
+## Starting
+
+Start Lumen from the Start menu, Applications or your desktop's app list (or `lumen` in a terminal). The first time, the library is empty: import songs (from files or another program), add media and decks, and make a plan for the service. The bundled Bibles are there from the start.
 
 ## The audience output
 
-The audience output runs in its own process, `lumen-render`, so a crash in the operator UI never freezes the screen. It starts with the app: with one screen it opens as a window; with more it goes fullscreen on the first screen that is not the operator's (`--render-option=--screen=N` to choose). Click **Main** in the toolbar to turn it off or on (remembered), or start with `--no-output`. `--design-preview` leaves it off unless `--output` is given.
+The audience output runs in its own process, `lumen-render`, so a crash in the operator UI never freezes the screen. It starts with the app: with one screen it opens as a window; with more it goes fullscreen on the first screen that is not the operator's (`--render-option=--screen=N` to choose). Click **Main** in the toolbar to turn it off or on (remembered), or start with `--no-output`.
 
 ## Running a service
 
-In Show mode, click a slide to send it live, or use the keyboard: Space or → next slide, ← previous, Page Down/Up next/previous plan item, F1–F5 clear background/slide/props/messages/all, F6 Logo, F7 Black, C/B/P/E jump to Chorus/Bridge/Pre-chorus/Ending, V then a number for a verse, 1–9 for a section. `lumen --design-preview` loads the mockup's sample service into a temporary library. Edit mode (the slide editor; set `experimental/editor` to false to hide it) edits a draft of the selected item and nothing is stored or shown until **Save**. Slides presentations take text boxes, shapes, pictures, videos, clocks and countdowns, dragged into place on the canvas and styled on the right, with a background picture or motion loop and a transition per slide; **New slides** makes a new presentation in the plan. Songs are edited as lyrics: a blank line starts a slide, a line like [Verse 2] starts a group.
+In Show mode, click a slide to send it live, or use the keyboard: Space or → next slide, ← previous, Page Down/Up next/previous plan item, F1–F5 clear background/slide/props/messages/all, F6 Logo, F7 Black, C/B/P/E jump to Chorus/Bridge/Pre-chorus/Ending, V then a number for a verse, 1–9 for a section. Edit mode (the slide editor; set `experimental/editor` to false to hide it) edits a draft of the selected item and nothing is stored or shown until **Save**. Slides presentations take text boxes, shapes, pictures, videos, clocks and countdowns, dragged into place on the canvas and styled on the right, with a background picture or motion loop and a transition per slide; **New slides** makes a new presentation in the plan. Songs are edited as lyrics: a blank line starts a slide, a line like [Verse 2] starts a group.
 
 ## Songs
 
