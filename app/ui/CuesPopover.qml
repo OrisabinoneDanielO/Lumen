@@ -93,6 +93,28 @@ Rectangle {
                 }
             }
 
+            RowLayout {
+                Layout.fillWidth: true
+                visible: !root.cues.followTimecode
+                LText {
+                    Layout.fillWidth: true
+                    text: qsTr("Sound delay (ms), for a mixer or wireless that makes the audience hear the track late")
+                    wrapMode: Text.WordWrap
+                    elide: Text.ElideNone
+                    font.pixelSize: 11
+                    color: Theme.textMuted
+                }
+                SearchField {
+                    objectName: "cuesSoundDelay"
+                    inputName: "cuesSoundDelayInput"
+                    Layout.preferredWidth: 70
+                    placeholder: "0"
+                    text: String(root.cues.soundDelayMs)
+                    onAccepted: root.cues.soundDelayMs = parseInt(text) || 0
+                    onInputFocusedChanged: if (!inputFocused) root.cues.soundDelayMs = parseInt(text) || 0
+                }
+            }
+
             GridLayout {
                 Layout.fillWidth: true
                 visible: root.cues.followTimecode

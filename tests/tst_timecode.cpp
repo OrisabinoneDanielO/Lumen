@@ -1,6 +1,7 @@
 #include "support/timing.h"
 #include "operatorharness.h"
 #include "outputwindow.h"
+#include "cuerunner.h"
 
 #include "lumenfile.h"
 #include "lumen/core/show/timecode.h"
@@ -266,6 +267,59 @@ private slots:
         cues.setFollowTimecode(false);
         QVERIFY(!cues.liveTimeline().contains("source"));
         QCOMPARE(cues.timecodeStart(), QStringLiteral("02:00:00:00"));
+    }
+
+    // A sound delay (a mixer, wireless in-ears): the cues follow the track
+    // as the audience hears it, that much after Lumen plays it.
+    void soundDelayShiftsTheCues()
+    {
+        const auto switchTimes = [](int delayMs) {
+            qint64 now = 0;
+            QJsonObject tl = timeline(QStringLiteral("track.wav"), {{0, "One"}, {1000, "Two"}, {2000, "Three"}});
+            tl.insert("testFeed", true);
+            tl.insert("delayMs", delayMs);
+            render::CueRunner runner(tl, [&now] { return now; });
+            QList<qint64> times;
+            int cue = -2;
+            // The player reports its position every 85 ms; frames every 16 ms.
+            for (now = 0; now <= 3000; ++now) {
+                if (now % 85 == 0)
+                    runner.onAudioPosition(now + 85);
+                // (With a delay, nothing shows until the audience hears the start.)
+                if (now % 16 == 0 && runner.update(now, &cue) && cue >= 0)
+                    times << now;
+            }
+            return times;
+        };
+        const QList<qint64> direct = switchTimes(0);
+        const QList<qint64> delayed = switchTimes(150);
+        QCOMPARE(direct.size(), 3);
+        QCOMPARE(delayed.size(), 3);
+        for (int i = 0; i < 3; ++i) {
+            const qint64 shift = delayed.at(i) - direct.at(i);
+            QVERIFY2(shift >= 150 - 16 && shift <= 150 + 16, qPrintable(QString::number(shift)));
+        }
+
+        // The setting: for this computer, sent to the output with the cues.
+        test::OperatorHarness ui;
+        QString error;
+        QVERIFY2(ui.load(true, &error), qPrintable(error));
+        ui.controller->selectItem(2);
+        CueController &cues = *ui.cues;
+        cues.setSoundDelayMs(120);
+        QCOMPARE(cues.soundDelayMs(), 120);
+        cues.setSoundDelayMs(99999);
+        QCOMPARE(cues.soundDelayMs(), 2000);
+        cues.setSoundDelayMs(120);
+        qint64 t = 0;
+        cues.setRecordingClock([&t] { return t; });
+        QVERIFY(cues.startRecording());
+        QVERIFY(ui.controller->goLive(0));
+        cues.stopRecording();
+        QVERIFY(cues.play());
+        QCOMPARE(ui.show.scene().layer(Layer::Slide).content.timeline.value("delayMs").toInt(), 120);
+        cues.stop();
+        cues.setSoundDelayMs(0);
     }
 
     void recordAndPlay()

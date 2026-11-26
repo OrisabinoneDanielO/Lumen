@@ -57,6 +57,9 @@ class CueController : public QObject
     Q_PROPERTY(QString timecodeDevice READ timecodeDevice WRITE setTimecodeDevice NOTIFY changed)
     Q_PROPERTY(QString timecodeStart READ timecodeStart WRITE setTimecodeStart NOTIFY changed)
     Q_PROPERTY(bool timecodeAvailable READ timecodeAvailable CONSTANT)
+    // How long the sound system takes to bring the track to the audience
+    // (ms, 0 to 2000); one setting for this computer, not per song.
+    Q_PROPERTY(int soundDelayMs READ soundDelayMs WRITE setSoundDelayMs NOTIFY changed)
 
 public:
     // One frame at 60 frames per second, the nudge step.
@@ -76,6 +79,8 @@ public:
     QString position() const;
     QString message() const { return m_message; }
 
+    int soundDelayMs() const;
+    void setSoundDelayMs(int ms);
     bool followTimecode() const { return m_timeline.value("source").toString() == QLatin1String("mtc"); }
     void setFollowTimecode(bool on);
     QString timecodeDevice() const { return m_timeline.value("mtcDevice").toString(); }

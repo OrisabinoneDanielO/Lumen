@@ -32,6 +32,10 @@ namespace lumen::render {
 // device instead: cue time 0 is the timecode "mtcStart" (for example
 // 01:00:00:00), the clock runs while the timecode runs and stops when it
 // stops, and a jump in the timecode (a locate) may take cues back.
+//
+// "delayMs": how long the sound system takes to bring the track to the
+// audience (a digital mixer, wireless in-ears); the cues follow the track as
+// heard, that much after Lumen plays it.
 class CueRunner : public QObject
 {
     Q_OBJECT
@@ -42,7 +46,8 @@ public:
     ~CueRunner() override;
 
     const QJsonObject &timeline() const { return m_timeline; }
-    // Same id, play state and offset: the same run (nothing to restart).
+    // Same id, play state, offset, delay and source: the same run (nothing
+    // to restart).
     bool sameRun(const QJsonObject &timeline) const;
 
     // Timeline position at render-clock time nowMs.
@@ -79,12 +84,18 @@ public:
 
 private:
     void anchor(qint64 positionMs, qint64 nowMs);
+
+public:
+    // The player reported this position (tests call it with "testFeed").
     void onAudioPosition(qint64 audioMs);
+
+private:
 
     QJsonObject m_timeline;
     std::vector<std::pair<qint64, core::show::Content>> m_cues;
     bool m_playing = false;
     qint64 m_offsetMs = 0;
+    qint64 m_delayMs = 0;
     // position = m_anchorPos + (now - m_anchorNow) while running.
     qint64 m_anchorPos = 0;
     qint64 m_anchorNow = 0;

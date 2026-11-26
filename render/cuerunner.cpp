@@ -23,7 +23,8 @@ constexpr qint64 jumpMs = 250;       // a bigger difference from the audio is a 
 // towards the middle of each step; only a stall or a seek makes it jump.
 CueRunner::CueRunner(const QJsonObject &timeline, std::function<qint64()> clock, QObject *parent)
     : QObject(parent), m_timeline(timeline), m_playing(timeline.value("playing").toBool()),
-      m_offsetMs(timeline.value("offsetMs").toInteger()), m_clock(std::move(clock))
+      m_offsetMs(timeline.value("offsetMs").toInteger()),
+      m_delayMs(std::clamp<qint64>(timeline.value("delayMs").toInteger(), 0, 2000)), m_clock(std::move(clock))
 {
     const qint64 nowMs = m_clock();
     m_startNow = nowMs;
@@ -54,6 +55,14 @@ CueRunner::CueRunner(const QJsonObject &timeline, std::function<qint64()> clock,
         m_running = m_playing;
         return;
     }
+    if (timeline.value("testFeed").toBool()) {
+        // Tests report the audio's position themselves.
+        m_audioState = m_playing ? QStringLiteral("playing") : QStringLiteral("paused");
+        m_running = m_playing;
+        m_runningSince = nowMs;
+        anchor(m_offsetMs - m_delayMs, nowMs);
+        return;
+    }
     m_player = std::make_unique<QMediaPlayer>();
     m_output = std::make_unique<QAudioOutput>();
     m_player->setAudioOutput(m_output.get());
@@ -74,7 +83,8 @@ CueRunner::CueRunner(const QJsonObject &timeline, std::function<qint64()> clock,
             m_audioState = QStringLiteral("playing");
             m_running = true;
             m_runningSince = m_clock();
-            anchor(m_offsetMs, m_runningSince);
+            // The audience hears the start delayMs later.
+            anchor(m_offsetMs - m_delayMs, m_runningSince);
         }
     });
     connect(m_player.get(), &QMediaPlayer::positionChanged, this, &CueRunner::onAudioPosition);
@@ -93,6 +103,7 @@ bool CueRunner::sameRun(const QJsonObject &timeline) const
 {
     return timeline.value("id") == m_timeline.value("id") && timeline.value("playing") == m_timeline.value("playing")
            && timeline.value("offsetMs") == m_timeline.value("offsetMs")
+           && timeline.value("delayMs") == m_timeline.value("delayMs")
            && timeline.value("source") == m_timeline.value("source")
            && timeline.value("mtcStart") == m_timeline.value("mtcStart")
            && timeline.value("mtcDevice") == m_timeline.value("mtcDevice");
@@ -143,12 +154,14 @@ void CueRunner::onAudioPosition(qint64 audioMs)
             m_stepMs = (m_stepMs * 7 + step) / 8;
     }
     m_lastReport = audioMs;
-    // The sound is in the step before the report: aim at its middle.
-    const qint64 error = audioMs - m_stepMs / 2 - positionMs(nowMs);
+    // The sound is in the step before the report: aim at its middle, as the
+    // audience hears it (delayMs later).
+    const qint64 heard = audioMs - m_stepMs / 2 - m_delayMs;
+    const qint64 error = heard - positionMs(nowMs);
     if (nowMs - m_runningSince > 1000)
         m_worstSync = std::max(m_worstSync, std::abs(error));
     if (std::abs(error) > jumpMs) {
-        anchor(audioMs - m_stepMs / 2, nowMs);
+        anchor(heard, nowMs);
         m_jumped = true;
     } else {
         m_anchorPos += error / 4;

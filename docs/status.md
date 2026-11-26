@@ -56,7 +56,7 @@ Everything has run on the developer's laptop (Fedora 45, Intel Iris Xe, Wayland)
 - SongSelect import (waits for the CCLI partner agreement).
 - SDI output through DeckLink cards (needs Blackmagic's SDK).
 - Code signing for Windows and macOS (needs certificates); MSIX; apt/dnf repositories and Flathub.
-- Following LTC (audio timecode); compensating for audio device delay. (MIDI timecode is followed.)
+- Following LTC (audio timecode). (MIDI timecode is followed, and a sound delay setting compensates for mixers and wireless.)
 - Translations of the interface (texts are marked with `qsTr`; no translations yet).
 - The MVP gate in the design doc: 10 pilot churches for 4 Sundays.
 

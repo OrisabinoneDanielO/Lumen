@@ -1360,6 +1360,7 @@ bool OperatorController::playCues(const QJsonObject &timeline, qint64 offsetMs)
                      {"audio", timeline.value("audio").toString()},
                      {"playing", true},
                      {"offsetMs", offsetMs},
+                     {"delayMs", timeline.value("delayMs").toInteger()},
                      {"cues", cues}};
     const bool timecode = timeline.value("source").toString() == QLatin1String("mtc");
     if (timecode) {
