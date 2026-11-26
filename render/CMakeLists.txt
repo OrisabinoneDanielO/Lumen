@@ -14,6 +14,8 @@ qt_add_library(lumen_render_lib STATIC
     renderclock.h
     scenemodel.h
     scenemodel.cpp
+    videomonitor.h
+    videomonitor.cpp
 )
 qt_add_qml_module(lumen_render_lib
     URI Lumen.Render
@@ -32,6 +34,7 @@ target_link_libraries(lumen_render_lib
         Qt6::Gui
         Qt6::Quick
         Qt6::Network
+        Qt6::Multimedia
     PRIVATE lumen_warnings)
 
 qt_add_executable(lumen-render main.cpp)

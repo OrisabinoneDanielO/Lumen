@@ -45,6 +45,7 @@ Rectangle {
                     text: root.controller.previewText
                     slideStyle: root.controller.previewStyle
                     footer: root.controller.previewFooter
+                    poster: root.controller.previewPoster
                     background: root.controller.previewBackground
                     frameColor: Theme.next
                 }
@@ -78,6 +79,7 @@ Rectangle {
                     text: root.controller.liveText
                     slideStyle: root.controller.liveStyle
                     footer: root.controller.liveFooter
+                    poster: root.controller.livePoster
                     background: root.controller.liveBackground
                     frameColor: Theme.live
                     frameWidth: 3

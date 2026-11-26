@@ -2,8 +2,10 @@
 
 // Loads the real operator window (Lumen.Ui Main.qml) with an OperatorController
 // over an in-memory library holding the mockup's sample service, or over a
-// library the test provides. The song library (search, import) is attached.
+// library the test provides. The song library (search, import) and a media
+// library (thumbnails in a temporary folder) are attached.
 
+#include "medialibrary.h"
 #include "operatorcontroller.h"
 #include "scripturecontroller.h"
 #include "servicedata.h"
@@ -19,6 +21,7 @@
 #include <QQmlApplicationEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QTemporaryDir>
 #include <QTest>
 #include <QtQuickTest/quicktest.h>
 #include <QtQml/qqmlextensionplugin.h>
@@ -38,6 +41,7 @@ public:
         themes.reset();
         scripture.reset();
         controller.reset();
+        media.reset();
         songs.reset();
         m_db.reset();
     }
@@ -77,6 +81,8 @@ public:
         scripture->setStores(bibles, nullptr);
         themes = std::make_unique<app::ThemeController>(*controller);
         themes->attach(*m_db);
+        media = std::make_unique<app::MediaLibrary>(*m_db, thumbnails.path());
+        controller->attachMedia(*media);
 
         engine = std::make_unique<QQmlApplicationEngine>();
         engine->setInitialProperties(
@@ -155,6 +161,8 @@ public:
 
     core::show::ShowController show;
     std::unique_ptr<core::songs::SongLibrary> songs;
+    QTemporaryDir thumbnails;
+    std::unique_ptr<app::MediaLibrary> media;
     std::unique_ptr<app::ScriptureController> scripture;
     std::unique_ptr<app::ThemeController> themes;
     std::unique_ptr<app::OperatorController> controller;

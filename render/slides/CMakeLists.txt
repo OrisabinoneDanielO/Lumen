@@ -8,4 +8,4 @@ qt_add_qml_module(lumen_slides
     QML_FILES
         SlideContent.qml
 )
-target_link_libraries(lumen_slides PUBLIC Qt6::Quick PRIVATE lumen_warnings)
+target_link_libraries(lumen_slides PUBLIC Qt6::Quick Qt6::Multimedia PRIVATE lumen_warnings)

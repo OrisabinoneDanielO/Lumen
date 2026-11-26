@@ -29,6 +29,9 @@ class ContentModel : public QObject
     Q_PROPERTY(bool opaque READ opaque NOTIFY changed)
     Q_PROPERTY(QVariantMap style READ style NOTIFY changed)
     Q_PROPERTY(QString footer READ footer NOTIFY changed)
+    Q_PROPERTY(QUrl video READ video NOTIFY changed)
+    Q_PROPERTY(bool loop READ loop NOTIFY changed)
+    Q_PROPERTY(double volume READ volume NOTIFY changed)
 
 public:
     using QObject::QObject;
@@ -43,6 +46,9 @@ public:
     bool opaque() const;
     QVariantMap style() const { return m_content.style.toVariantMap(); }
     QString footer() const { return m_content.footer; }
+    QUrl video() const;
+    bool loop() const { return m_content.loop; }
+    double volume() const { return m_content.volume; }
 
 signals:
     void changed();
@@ -114,6 +120,8 @@ class SceneModel : public QObject
     Q_PROPERTY(QObject *logo READ logo CONSTANT)
     Q_PROPERTY(double logoLevel READ logoLevel NOTIFY levelsChanged)
     Q_PROPERTY(double blackLevel READ blackLevel NOTIFY levelsChanged)
+    // Videos opened ahead of use (the item in Preview), newest last.
+    Q_PROPERTY(QList<QUrl> preloads READ preloads NOTIFY preloadsChanged)
 
 public:
     explicit SceneModel(QObject *parent = nullptr);
@@ -127,8 +135,12 @@ public:
     void apply(const Scene &scene, qint64 nowMs);
     void update(qint64 nowMs);
 
+    QList<QUrl> preloads() const { return m_preloads; }
+    void preload(const QString &path);
+
 signals:
     void levelsChanged();
+    void preloadsChanged();
 
 private:
     Scene m_scene;
@@ -136,6 +148,7 @@ private:
     ContentModel m_logo;
     Fader m_logoFader;
     Fader m_blackFader;
+    QList<QUrl> m_preloads;
 };
 
 } // namespace lumen::render

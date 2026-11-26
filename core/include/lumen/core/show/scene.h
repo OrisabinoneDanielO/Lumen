@@ -35,32 +35,39 @@ struct Transition
     bool operator==(const Transition &) const = default;
 };
 
-// What one layer shows. Batch 4 supports a colour fill, text and a still
-// image; video arrives in batch 9. Text may carry a theme style (batch 8,
-// see textstyle.h) and a footer such as "Romans 8:28 (WEB)"; without a
-// style the layer's default placement is used.
+// What one layer shows: a colour fill, text, a still image, or video
+// (batch 9; decoded and played by the render process itself). Text may carry
+// a theme style (batch 8, see textstyle.h) and a footer such as "Romans 8:28
+// (WEB)"; without a style the layer's default placement is used.
 struct Content
 {
-    enum class Kind { Empty, Colour, Text, Image };
+    enum class Kind { Empty, Colour, Text, Image, Video };
 
     Kind kind = Kind::Empty;
     QColor colour;     // fill for Colour, text colour for Text
     QString text;      // Text
-    QString imagePath; // Image: a local file
+    QString imagePath; // Image: a local file; Video: a poster picture (optional)
     QJsonObject style; // Text: TextStyle JSON plus "size" (fitted pixel size)
     QString footer;    // Text: reference, copyright, ...
+    QString videoPath; // Video: a local file
+    bool loop = false; // Video: start again at the end (motion backgrounds)
+    double volume = 1.0; // Video: 0 silent .. 1 full
 
     static Content empty() { return {}; }
-    static Content fill(const QColor &colour) { return {Kind::Colour, colour, {}, {}, {}, {}}; }
+    static Content fill(const QColor &colour) { return {Kind::Colour, colour, {}, {}, {}, {}, {}, false, 1.0}; }
     static Content textContent(const QString &text, const QColor &colour = Qt::white)
     {
-        return {Kind::Text, colour, text, {}, {}, {}};
+        return {Kind::Text, colour, text, {}, {}, {}, {}, false, 1.0};
     }
     static Content styledText(const QString &text, const QJsonObject &style, const QString &footer = {})
     {
-        return {Kind::Text, Qt::white, text, {}, style, footer};
+        return {Kind::Text, Qt::white, text, {}, style, footer, {}, false, 1.0};
     }
-    static Content image(const QString &path) { return {Kind::Image, {}, {}, path, {}, {}}; }
+    static Content image(const QString &path) { return {Kind::Image, {}, {}, path, {}, {}, {}, false, 1.0}; }
+    static Content video(const QString &path, bool loop, double volume, const QString &poster = {})
+    {
+        return {Kind::Video, {}, {}, poster, {}, {}, path, loop, volume};
+    }
 
     bool isEmpty() const { return kind == Kind::Empty; }
     bool operator==(const Content &) const = default;
