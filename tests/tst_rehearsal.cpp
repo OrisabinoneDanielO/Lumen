@@ -1,3 +1,4 @@
+#include "support/timing.h"
 #include "operatorharness.h"
 
 #include "lumen/core/render/renderlink.h"
@@ -113,6 +114,7 @@ private slots:
 
     void serviceRunsWithoutOutputFailures()
     {
+        LUMEN_TIMING_CHECK();
         const int seconds = qEnvironmentVariableIntValue("LUMEN_REHEARSAL_SECONDS") > 0
                                 ? qEnvironmentVariableIntValue("LUMEN_REHEARSAL_SECONDS") : 90;
         OperatorController &op = *m_ui->controller;

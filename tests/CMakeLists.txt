@@ -235,3 +235,7 @@ endif()
 lumen_add_test(tst_timecode tst_timecode.cpp operatorharness.h)
 target_link_libraries(tst_timecode PRIVATE lumen_render_lib lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
 set_tests_properties(tst_timecode PROPERTIES TIMEOUT 120)
+
+# Speed checks against the reference hardware (support/timing.h): CI's macOS
+# job runs these separately, as advisory.
+set_tests_properties(tst_render_scene tst_video_start tst_rehearsal tst_timecode PROPERTIES LABELS timing)

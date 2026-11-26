@@ -59,8 +59,18 @@ jobs:
       - name: Build
         run: cmake --build --preset release
 
+      # macOS runners are virtual machines without a GPU, far slower than any
+      # operator PC: speed checks (tests/support/timing.h) are skipped here and
+      # run in the advisory step below. Linux and Windows run them strictly.
       - name: Test
         run: ctest --preset release
+        env:
+          LUMEN_SKIP_TIMING: ${{ runner.os == 'macOS' && '1' || '0' }}
+
+      - name: Speed checks (advisory on macOS)
+        if: runner.os == 'macOS' && !cancelled()
+        continue-on-error: true
+        run: ctest --preset release -L timing --output-on-failure
 
       # A test that crashes loses its buffered output (on Windows
       # especially); run the failed ones again writing to a file as they go.
