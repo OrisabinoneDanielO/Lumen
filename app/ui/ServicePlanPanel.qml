@@ -245,7 +245,7 @@ Rectangle {
                                     return
                                 }
                                 root.itemMenuFor = -1
-                                root.controller.selectItem(planRow.index)
+                                root.controller.chooseItem(planRow.index)
                                 root.itemClicked(planRow.index)
                             }
                         }

@@ -211,16 +211,21 @@ private slots:
         QVERIFY(card && card->isVisible());
         QVERIFY(h.item(QStringLiteral("mediaCard-1")));
 
-        // Clicking a card shows it in the slide grid with its thumbnail.
+        // Clicking a card puts it on the screen at once (a video plays), and
+        // shows it in the slide grid with its thumbnail. (Before, a click
+        // only showed it; changed at the user's request: "once a video is
+        // chosen to be displayed it starts displaying immediately".)
         const int loop = mediaRow(*h.controller, QStringLiteral("loop-1080p-vp9"));
         QVERIFY(h.click(QStringLiteral("mediaCard-%1").arg(loop)));
         QCOMPARE(h.controller->selectedMedia(), loop);
+        QCOMPARE(h.show.scene().layer(Layer::Media).content.kind, Content::Kind::Video);
+        QVERIFY(h.show.scene().layer(Layer::Media).content.videoPath.endsWith(QLatin1String("loop-1080p-vp9.webm")));
         h.settle();
         QQuickItem *thumb = h.item(QStringLiteral("slide-0"));
         QVERIFY(thumb);
         QVERIFY(thumb->property("thumbnail").toUrl().isLocalFile());
-        QQuickItem *poster = h.item(QStringLiteral("previewFrame"));
-        QVERIFY(poster->property("poster").toUrl().isLocalFile());
+        QQuickItem *live = h.item(QStringLiteral("liveFrame"));
+        QVERIFY(live && live->property("poster").toUrl().isLocalFile());
 
         // Use as background puts it on the Background layer, looping.
         QVERIFY(h.click(QStringLiteral("useAsBackground")));
@@ -231,6 +236,21 @@ private slots:
         QVERIFY(h.click(QStringLiteral("libraryTab-0")));
         h.settle();
         QVERIFY(h.item(QStringLiteral("importSongs"))->isVisible());
+
+        // In the service plan too: clicking a video item puts it on the
+        // screen at once; clicking a song only shows its slides.
+        QVERIFY(h.controller->addMediaToPlan(loop));
+        h.controller->clearLayer(QStringLiteral("media"));
+        h.settle();
+        const int videoItem = h.controller->plan()->property("count").toInt() - 1;
+        QVERIFY(h.click(QStringLiteral("planItem-%1").arg(videoItem)));
+        QCOMPARE(h.show.scene().layer(Layer::Media).content.kind, Content::Kind::Video);
+        h.controller->clearLayer(QStringLiteral("media"));
+        const auto slideBefore = h.show.scene().layer(Layer::Slide).content.kind;
+        QVERIFY(h.click(QStringLiteral("planItem-2"))); // a song
+        QCOMPARE(h.controller->currentItem(), 2);
+        QCOMPARE(h.show.scene().layer(Layer::Slide).content.kind, slideBefore);
+        QVERIFY(h.show.scene().layer(Layer::Media).content.isEmpty());
     }
 };
 

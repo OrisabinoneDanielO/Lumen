@@ -275,6 +275,14 @@ private slots:
         const QString file = QDir(dir).filePath(sampleService ? QStringLiteral("main-preview.png")
                                                               : QStringLiteral("main-default.png"));
         QVERIFY(image.save(file));
+        // LUMEN_SCREENSHOT_SIZES=1280x720,1366x768: the window at other sizes.
+        for (const QString &size : qEnvironmentVariable("LUMEN_SCREENSHOT_SIZES").split(u',', Qt::SkipEmptyParts)) {
+            const QStringList wh = size.split(u'x');
+            m_window->resize(wh.value(0).toInt(), wh.value(1).toInt());
+            QTest::qWait(150);
+            QVERIFY(m_window->grabWindow().save(QDir(dir).filePath(
+                QStringLiteral("main-%1-%2.png").arg(sampleService ? QStringLiteral("preview") : QStringLiteral("default"), size))));
+        }
     }
 };
 
