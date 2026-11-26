@@ -10,6 +10,7 @@
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QMediaPlayer>
+#include <QSettings>
 
 namespace lumen::app {
 
@@ -99,6 +100,20 @@ void CueController::setTimecodeStart(const QString &start)
     m_timeline.insert("mtcStart", start.trimmed());
     m_message.clear();
     save();
+}
+
+int CueController::soundDelayMs() const
+{
+    return std::clamp(QSettings().value(QStringLiteral("cues/soundDelayMs"), 0).toInt(), 0, 2000);
+}
+
+void CueController::setSoundDelayMs(int ms)
+{
+    ms = std::clamp(ms, 0, 2000);
+    if (ms == soundDelayMs())
+        return;
+    QSettings().setValue(QStringLiteral("cues/soundDelayMs"), ms);
+    emit changed();
 }
 
 bool CueController::timecodeAvailable()
@@ -333,7 +348,7 @@ QJsonObject CueController::liveTimeline() const
                 {"mtcStart", timecodeStart()},
                 {"cues", m_timeline.value("cues").toArray()}};
     }
-    return {{"audio", m_trackPath}, {"cues", m_timeline.value("cues").toArray()}};
+    return {{"audio", m_trackPath}, {"delayMs", soundDelayMs()}, {"cues", m_timeline.value("cues").toArray()}};
 }
 
 bool CueController::play()
