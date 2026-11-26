@@ -25,7 +25,7 @@ On Fedora, the tools can live in a toolbox container instead of the host:
 ```sh
 toolbox create lumen
 toolbox run -c lumen sudo dnf install -y cmake ninja-build gcc-c++ \
-    qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtmultimedia-devel qt6-qtpdf-devel qt6-qtbase-private-devel mesa-libGL-devel
+    qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtmultimedia-devel qt6-qtpdf-devel qt6-qtbase-private-devel alsa-lib-devel mesa-libGL-devel
 toolbox run -c lumen cmake --preset debug   # and so on
 ```
 
@@ -56,6 +56,8 @@ Stage display: click **Stage** in the toolbar to turn on a confidence monitor fo
 Stream output: click **Stream** in the toolbar for an output with only the slide text and props, on transparency, for streaming software and video switchers. It shows as key and fill (the picture over black and its transparency as grey, in two windows, or fullscreen on two spare screens) for switchers that take key and fill over HDMI. NDI is experimental (setting `experimental/ndi`): with the free NDI Runtime installed (from ndi.video) the stream is sent as an NDI source with its transparency. Nothing from NDI ships with Lumen. SDI cards (DeckLink) are not supported yet.
 
 Sharing between computers (no internet needed): **Plan ▾ → Share with other computers…**. On the computer to share, press **Share this computer**; it shows a six-digit code and its address. On the other, pick it from the list (computers on the same network find each other) or type its address, enter the code, and copy its plans or songs, or send it the open plan. Media come along. Sharing is off until turned on; a firewall must allow Lumen (TCP on the port shown, and UDP 45459 for finding each other).
+
+Remote control: **Plan ▾ → Remote control and MIDI…**. The phone and tablet remote is a web page Lumen serves on the local network: turn it on, open the address it shows on a phone on the same Wi-Fi, enter the code, and use Next, Previous, Clear, Logo, Black, the plan and the slides (no app, no internet). OSC (UDP, port 8000) takes `/lumen/next`, `/lumen/previous`, `/lumen/slide 3`, `/lumen/clear/slide`, `/lumen/black` and more, for show-control software and tablet apps. MIDI controllers (pads, keyboards, foot switches) drive the slides too: by default C4 is Next, B3 Previous, G4 Black, A4 Logo, and a program change picks a plan item; **Learn** gives any action the next key, pad or pedal pressed. The same commands are an HTTP API: `GET /api/state`, `POST /api/next` and so on, with the code in an `X-Lumen-Code` header. All of these are off until turned on.
 
 Offline: Lumen makes no internet connections (sharing, when turned on, talks only to computers on the local network). `tests/offline_check.sh` checks this on Linux by tracing the app and its output, and by running them with no network at all.
 

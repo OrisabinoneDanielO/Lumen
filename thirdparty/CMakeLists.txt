@@ -1,0 +1,28 @@
+# Third-party code built into Lumen.
+
+# RtMidi (MIT): MIDI input for MIDI control. Linux needs the ALSA headers
+# (alsa-lib-devel / libasound2-dev); without them Lumen builds without MIDI.
+set(LUMEN_MIDI OFF PARENT_SCOPE)
+if(WIN32)
+    set(rtmidi_api __WINDOWS_MM__)
+    set(rtmidi_libs winmm)
+elseif(APPLE)
+    set(rtmidi_api __MACOSX_CORE__)
+    set(rtmidi_libs "-framework CoreMIDI" "-framework CoreAudio" "-framework CoreFoundation")
+else()
+    find_package(ALSA)
+    if(ALSA_FOUND)
+        set(rtmidi_api __LINUX_ALSA__)
+        set(rtmidi_libs ALSA::ALSA pthread)
+    endif()
+endif()
+if(rtmidi_api)
+    add_library(lumen_rtmidi STATIC rtmidi/RtMidi.cpp rtmidi/RtMidi.h)
+    target_include_directories(lumen_rtmidi SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rtmidi)
+    target_compile_definitions(lumen_rtmidi PRIVATE ${rtmidi_api})
+    target_link_libraries(lumen_rtmidi PUBLIC ${rtmidi_libs})
+    set_target_properties(lumen_rtmidi PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    set(LUMEN_MIDI ON PARENT_SCOPE)
+else()
+    message(WARNING "No MIDI backend (on Linux, install the ALSA headers): Lumen is built without MIDI control")
+endif()

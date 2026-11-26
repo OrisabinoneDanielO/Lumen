@@ -219,3 +219,21 @@ A `.lumen` file (batch 11): a plan with its songs, slides and media, or chosen s
 ### Two PCs, no internet
 
 `tst_sharing` runs a second process with its own library as the other PC: a plan is copied from it, songs are copied, and a plan is sent to it, over TCP. CTest also runs it as `tst_sharing_offline`, inside a network namespace with nothing but loopback (`tests/no_network.sh`), where the exchange works and only multicast discovery is skipped. On the real network the discovery test found the other computer. Two physical PCs have not been tried yet.
+
+## Batch 19: phone remote, OSC, MIDI and the HTTP API
+
+### One set of commands
+
+The phone remote, the HTTP API, OSC and MIDI all go through `LiveControl`, which calls the same operator actions as the keyboard and the window. So they behave the same, and, like the keyboard, never send anything live in Edit mode.
+
+### The phone remote is a web page
+
+Lumen serves one self-contained page (`app/operator/remote/remote.html`, built in) from a small HTTP server of its own on the local network: no app to install, nothing from the internet. The page polls `/api/state` and posts commands. Off by default; when on, it shows a six-digit code (as with sharing; five wrong codes and a minute's wait), which the phone gives once (`?code=` in the link works too, for a QR code later). A small built-in server was chosen over Qt HttpServer to add no module for CI and the installers to carry.
+
+### OSC
+
+UDP (port 8000 by default), messages and bundles, int/float/string/bool arguments. Numbers are 1-based (`/lumen/slide 1` is the first slide), as people count; the HTTP API is 0-based like JSON arrays. A button that sends 1 on press and 0 on release acts once. No code: OSC tools have no way to send one, so it is off by default and should be turned on only on a trusted network.
+
+### MIDI
+
+RtMidi 6.0.0 (MIT, `thirdparty/rtmidi`, unchanged) gives MIDI input on Linux (ALSA), Windows (Windows Multimedia) and macOS (CoreMIDI); without ALSA headers Linux builds without MIDI and the popover says so. Every MIDI input is listened to, and new devices are picked up within three seconds. Default notes (C4 next, B3 previous, D4/A3 next/previous item, E4 clear slide, F4 clear all, G4 black, A4 logo; program change N selects item N); a note acts on press, a control change on its rise past 64 (foot pedals). Learn gives an action the next message and takes that message from any other action. The test drives Lumen from a virtual MIDI device (an ALSA virtual port); no hardware controller has been tried.
