@@ -8,12 +8,19 @@ Rectangle {
     id: root
 
     required property QtObject controller
-    property string transition: qsTr("Cut")
+    readonly property string transitionName: {
+        const list = root.controller.transitions
+        for (let i = 0; i < list.length; ++i)
+            if (list[i].key === root.controller.transition)
+                return list[i].name
+        return qsTr("Cut")
+    }
 
-    // Preview, Live and the Previous / Next buttons always fit: the two
-    // frames shrink to the room left (about 150 px of labels, gaps and
-    // buttons); the layers and the rest scroll below them.
-    readonly property real frameWidth: Math.max(160, Math.min(flick.width, (root.height - 32 - 150) / 2 * 16 / 9))
+    // Preview, Live, the Previous / Next buttons and the Transition row always
+    // fit: the two frames shrink to the room left (about 210 px of labels,
+    // gaps, buttons and the transition row); the layers scroll below them.
+    readonly property real frameWidth: Math.max(160, Math.min(flick.width, (root.height - 32 - 210) / 2 * 16 / 9))
+    signal messageRequested()
 
     color: Theme.panel
 
@@ -121,6 +128,65 @@ Rectangle {
                     }
                 }
             }
+            RowLayout {
+                width: parent.width
+                spacing: 8
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    spacing: 4
+
+                    LText {
+                        text: qsTr("Transition")
+                        font.pixelSize: 12
+                        color: Theme.textMuted
+                    }
+                    Rectangle {
+                        objectName: "transitionBox"
+                        Layout.fillWidth: true
+                        implicitHeight: 36
+                        radius: 6
+                        color: transitionArea.containsMouse ? Theme.selected : Theme.raised
+                        border.color: transitionMenu.visible ? Theme.live : Theme.border
+                        Accessible.role: Accessible.ComboBox
+                        Accessible.name: qsTr("Transition: %1").arg(root.transitionName)
+
+                        LText {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 8
+                            anchors.right: arrow.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.controller.transition === "cut" ? root.transitionName
+                                  : qsTr("%1 · %2 s").arg(root.transitionName).arg((root.controller.transitionMs / 1000).toFixed(1))
+                        }
+                        LText {
+                            id: arrow
+                            anchors.right: parent.right
+                            anchors.rightMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "▾"
+                            color: Theme.textMuted
+                        }
+                        MouseArea {
+                            id: transitionArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: transitionMenu.visible = !transitionMenu.visible
+                        }
+                    }
+                }
+                LButton {
+                    objectName: "showMessageButton"
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    Layout.alignment: Qt.AlignBottom
+                    radius: 6
+                    text: qsTr("Show message…")
+                    onClicked: root.messageRequested()
+                }
+            }
 
             Column {
                 width: parent.width
@@ -161,50 +227,79 @@ Rectangle {
                 }
             }
 
-            RowLayout {
-                width: parent.width
-                spacing: 8
+        }
+    }
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: 1
-                    spacing: 4
+    // The transitions, and how long they take (opens from the Transition box).
+    Rectangle {
+        id: transitionMenu
+        objectName: "transitionMenu"
+        visible: false
+        z: 20
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: 16
+        height: menuColumn.implicitHeight + 16
+        radius: 8
+        color: Theme.window
+        border.color: Theme.border
 
+        Column {
+            id: menuColumn
+            anchors.fill: parent
+            anchors.margins: 8
+            spacing: 2
+
+            Repeater {
+                model: root.controller.transitions
+                delegate: Rectangle {
+                    required property var modelData
+                    objectName: "transition-" + modelData.key
+                    width: menuColumn.width
+                    height: 30
+                    radius: 6
+                    color: modelData.key === root.controller.transition ? Theme.selected
+                           : optionArea.containsMouse ? Theme.raised : "transparent"
                     LText {
-                        text: qsTr("Transition")
-                        font.pixelSize: 12
-                        color: Theme.textMuted
+                        anchors.left: parent.left
+                        anchors.leftMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: parent.modelData.name
+                        font.weight: parent.modelData.key === root.controller.transition ? Font.DemiBold : Font.Normal
                     }
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: 36
-                        radius: 6
-                        color: Theme.raised
-                        border.color: Theme.border
-                        Accessible.role: Accessible.ComboBox
-                        Accessible.name: qsTr("Transition: %1").arg(root.transition)
-
-                        LText {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 8
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: root.transition
-                        }
-                        LText {
-                            anchors.right: parent.right
-                            anchors.rightMargin: 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "▾"
-                            color: Theme.textMuted
+                    MouseArea {
+                        id: optionArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.controller.transition = parent.modelData.key
+                            if (parent.modelData.key === "cut")
+                                transitionMenu.visible = false
                         }
                     }
                 }
-                LButton {
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: 1
-                    Layout.alignment: Qt.AlignBottom
-                    radius: 6
-                    text: qsTr("Show message…")
+            }
+            Row {
+                visible: root.controller.transition !== "cut"
+                spacing: 4
+                topPadding: 6
+                Repeater {
+                    model: [{ ms: 300, name: qsTr("Fast") }, { ms: 600, name: qsTr("Normal") }, { ms: 1000, name: qsTr("Slow") }]
+                    delegate: LButton {
+                        required property var modelData
+                        objectName: "transitionSpeed-" + modelData.ms
+                        text: modelData.name
+                        implicitHeight: 28
+                        radius: 6
+                        fontSize: 11
+                        variant: root.controller.transitionMs === modelData.ms ? "primary" : "default"
+                        onClicked: {
+                            root.controller.transitionMs = modelData.ms
+                            transitionMenu.visible = false
+                        }
+                    }
                 }
             }
         }

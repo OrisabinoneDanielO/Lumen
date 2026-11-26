@@ -12,6 +12,7 @@
 #include <QFileInfo>
 #include <QLocale>
 #include <QJsonArray>
+#include <QSettings>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSaveFile>
@@ -36,6 +37,13 @@ OperatorController::OperatorController(ShowController &show, bool editAvailable,
         emit stateChanged();
     });
     connect(this, &OperatorController::stateChanged, this, &OperatorController::updatePreviewVideo);
+    // The transition chosen last time.
+    const QSettings settings;
+    const QString kind = settings.value(QStringLiteral("show/transition"), QStringLiteral("cut")).toString();
+    if (core::show::transitionKindFromName(kind))
+        m_transition = kind;
+    m_transitionMs = std::clamp(settings.value(QStringLiteral("show/transitionMs"), 600).toInt(), 100, 3000);
+    applyTransition();
     m_verseTimeout.setSingleShot(true);
     m_verseTimeout.setInterval(1500);
     connect(&m_verseTimeout, &QTimer::timeout, this, [this] { m_versePending = false; });
@@ -266,6 +274,49 @@ void OperatorController::setShownVideoLoops(bool loops)
         m_show.setContent(Layer::Media, changed);
     }
     emit stateChanged();
+}
+
+QVariantList OperatorController::transitions() const
+{
+    return {QVariantMap{{"key", "cut"}, {"name", tr("Cut")}},
+            QVariantMap{{"key", "fade"}, {"name", tr("Fade")}},
+            QVariantMap{{"key", "push"}, {"name", tr("Push")}},
+            QVariantMap{{"key", "pushUp"}, {"name", tr("Push up")}},
+            QVariantMap{{"key", "wipe"}, {"name", tr("Wipe")}},
+            QVariantMap{{"key", "zoom"}, {"name", tr("Zoom")}}};
+}
+
+void OperatorController::setTransition(const QString &kind)
+{
+    if (kind == m_transition || !core::show::transitionKindFromName(kind))
+        return;
+    m_transition = kind;
+    QSettings().setValue(QStringLiteral("show/transition"), kind);
+    applyTransition();
+    emit transitionChanged();
+}
+
+void OperatorController::setTransitionMs(int ms)
+{
+    ms = std::clamp(ms, 100, 3000);
+    if (ms == m_transitionMs)
+        return;
+    m_transitionMs = ms;
+    QSettings().setValue(QStringLiteral("show/transitionMs"), ms);
+    applyTransition();
+    emit transitionChanged();
+}
+
+void OperatorController::applyTransition()
+{
+    // Only a real change is a change of scene (a cut at start sends nothing).
+    const auto kind = *core::show::transitionKindFromName(m_transition);
+    const auto transition = kind == core::show::TransitionKind::Cut ? core::show::Transition::cut()
+                                                                    : core::show::Transition::of(kind, m_transitionMs);
+    for (const Layer layer : {Layer::Slide, Layer::Media}) {
+        if (m_show.scene().layer(layer).transition != transition)
+            m_show.setTransition(layer, transition);
+    }
 }
 
 bool OperatorController::playItem(int index)

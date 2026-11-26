@@ -119,6 +119,33 @@ private slots:
         QVERIFY(onAir().startsWith(QLatin1String("Amazing grace!")));
     }
 
+    // The Transition box: pick how slides change and how long it takes;
+    // the next slide sent live changes that way (and the choice is kept).
+    void transitionPicker()
+    {
+        open();
+        QVERIFY(m_ui->click("transitionBox"));
+        QTRY_VERIFY(m_ui->item("transitionMenu")->isVisible());
+        QVERIFY(m_ui->click("transition-push"));
+        QCOMPARE(m_ui->controller->transition(), QStringLiteral("push"));
+        QVERIFY(m_ui->click("transitionSpeed-1000"));
+        QTRY_VERIFY(!m_ui->item("transitionMenu")->isVisible());
+        QCOMPARE(m_ui->controller->transitionMs(), 1000);
+        m_ui->controller->selectItem(2);
+        QVERIFY(m_ui->controller->goLive(1));
+        QCOMPARE(m_ui->show.scene().layer(Layer::Slide).transition, Transition::of(TransitionKind::Push, 1000));
+        QCOMPARE(m_ui->show.scene().layer(Layer::Media).transition, Transition::of(TransitionKind::Push, 1000));
+        // Back to a cut (kept for the next start, so leave it as found).
+        QVERIFY(m_ui->click("transitionBox"));
+        QVERIFY(m_ui->click("transition-cut"));
+        QCOMPARE(m_ui->show.scene().layer(Layer::Slide).transition, Transition::cut());
+        QTRY_VERIFY(!m_ui->item("transitionMenu")->isVisible());
+
+        // Show message… beside it opens the message panel.
+        QVERIFY(m_ui->click("showMessageButton"));
+        QTRY_VERIFY(m_ui->item("messagePopover")->isVisible());
+    }
+
     void editModeSwitchAndLockout()
     {
         open(true);

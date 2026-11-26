@@ -71,6 +71,11 @@ class OperatorController : public QObject
     Q_PROPERTY(QVariantList arrangement READ arrangement NOTIFY stateChanged)
     Q_PROPERTY(int liveItem READ liveItem NOTIFY stateChanged)
     Q_PROPERTY(bool shownIsVideo READ shownIsVideo NOTIFY stateChanged)
+    // How slides and full-screen media change: "cut", "fade", "push",
+    // "pushUp", "wipe", "zoom", over transitionMs (remembered).
+    Q_PROPERTY(QString transition READ transition WRITE setTransition NOTIFY transitionChanged)
+    Q_PROPERTY(int transitionMs READ transitionMs WRITE setTransitionMs NOTIFY transitionChanged)
+    Q_PROPERTY(QVariantList transitions READ transitions CONSTANT) // {key, name}
     Q_PROPERTY(bool shownVideoLoops READ shownVideoLoops WRITE setShownVideoLoops NOTIFY stateChanged)
     Q_PROPERTY(int liveSlide READ liveSlide NOTIFY stateChanged)       // in the grid, or -1
     Q_PROPERTY(int previewSlide READ previewSlide NOTIFY stateChanged) // in the grid, or -1
@@ -183,6 +188,12 @@ public:
     bool shownIsVideo() const;
     bool shownVideoLoops() const;
     Q_INVOKABLE void setShownVideoLoops(bool loops);
+
+    QString transition() const { return m_transition; }
+    void setTransition(const QString &kind);
+    int transitionMs() const { return m_transitionMs; }
+    void setTransitionMs(int ms);
+    QVariantList transitions() const;
     // A library song double-clicked: its first slide live at once.
     Q_INVOKABLE bool playSong(int row);
     Q_INVOKABLE bool useAsBackground(int row); // a looping, silent motion background
@@ -297,6 +308,7 @@ public:
     Q_INVOKABLE bool handleKey(int key, int modifiers);
 
 signals:
+    void transitionChanged();
     void stateChanged();
     void scriptureRequested(); // Ctrl+B
     void previewVideoChanged(const QString &path);
@@ -330,6 +342,9 @@ private:
     QString m_importSummary;
     QString m_importDetails;
     std::optional<ItemView> m_librarySong;
+    QString m_transition = QStringLiteral("cut");
+    int m_transitionMs = 600;
+    void applyTransition();
 
     std::optional<PlanView> m_plan;
     int m_current = -1;

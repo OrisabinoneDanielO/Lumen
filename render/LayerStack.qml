@@ -23,11 +23,23 @@ Item {
             visible: stack.include.length === 0 || stack.include.indexOf(modelData.name) >= 0
             z: modelData.index
 
+            // The transition in progress (scene.h): Fade crossfades; Push
+            // slides the new content in from the right (Push up: from below)
+            // as the old slides out; Wipe uncovers the new from left to right
+            // over the old; Zoom grows the new in as the old fades.
+            readonly property string kind: modelData.transition
+            readonly property real p: modelData.progress
+
             // Outgoing content: stays fully up under an opaque fill fading in
-            // (an exact crossfade), otherwise fades out.
+            // (an exact crossfade), otherwise fades out; pushed out, or left
+            // under a wipe.
             SlideContent {
                 readonly property QtObject content: layer.modelData.previous
-                anchors.fill: parent
+                objectName: "layerPrevious-" + layer.modelData.name
+                width: layer.width
+                height: layer.height
+                x: layer.kind === "push" ? -layer.width * layer.p : 0
+                y: layer.kind === "pushUp" ? -layer.height * layer.p : 0
                 kind: content.kind
                 colour: content.colour
                 text: content.text
@@ -43,12 +55,25 @@ Item {
                 elements: content.elements
                 wallMs: stack.scene.wallMs
                 layerName: layer.modelData.name
-                opacity: layer.modelData.current.opaque ? 1.0 : 1.0 - layer.modelData.progress
-                visible: opacity > 0 && layer.modelData.progress < 1.0
+                opacity: layer.kind === "push" || layer.kind === "pushUp" || layer.kind === "wipe" ? 1.0
+                         : layer.kind === "fade" && layer.modelData.current.opaque ? 1.0
+                         : 1.0 - layer.p
+                visible: opacity > 0 && layer.p < 1.0
             }
+            // Incoming content (in a clip for the wipe).
+            Item {
+                objectName: "layerClip-" + layer.modelData.name
+                height: layer.height
+                width: layer.kind === "wipe" ? layer.width * layer.p : layer.width
+                clip: layer.kind === "wipe" && layer.p < 1.0
             SlideContent {
                 readonly property QtObject content: layer.modelData.current
-                anchors.fill: parent
+                objectName: "layerCurrent-" + layer.modelData.name
+                width: layer.width
+                height: layer.height
+                x: layer.kind === "push" ? layer.width * (1.0 - layer.p) : 0
+                y: layer.kind === "pushUp" ? layer.height * (1.0 - layer.p) : 0
+                scale: layer.kind === "zoom" ? 0.8 + 0.2 * layer.p : 1.0
                 kind: content.kind
                 colour: content.colour
                 text: content.text
@@ -64,7 +89,8 @@ Item {
                 elements: content.elements
                 wallMs: stack.scene.wallMs
                 layerName: layer.modelData.name
-                opacity: layer.modelData.progress
+                opacity: layer.kind === "push" || layer.kind === "pushUp" || layer.kind === "wipe" ? 1.0 : layer.p
+            }
             }
         }
     }

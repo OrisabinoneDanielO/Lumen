@@ -151,22 +151,45 @@ QJsonObject transitionJson(const Transition &transition)
 {
     if (transition.kind == TransitionKind::Cut)
         return {{QStringLiteral("kind"), QStringLiteral("cut")}};
-    return {{QStringLiteral("kind"), QStringLiteral("fade")},
+    return {{QStringLiteral("kind"), transitionKindName(transition.kind)},
             {QStringLiteral("ms"), transition.durationMs}};
 }
 
 std::optional<Transition> transitionFrom(const QJsonValue &value)
 {
     const QJsonObject json = value.toObject();
-    const QString kind = json.value(QStringLiteral("kind")).toString(QStringLiteral("cut"));
-    if (kind == QLatin1String("cut"))
+    const auto kind = transitionKindFromName(json.value(QStringLiteral("kind")).toString(QStringLiteral("cut")));
+    if (!kind)
+        return std::nullopt;
+    if (*kind == TransitionKind::Cut)
         return Transition::cut();
-    if (kind == QLatin1String("fade"))
-        return Transition::fade(qMax(0, json.value(QStringLiteral("ms")).toInt()));
-    return std::nullopt;
+    return Transition::of(*kind, qMax(0, json.value(QStringLiteral("ms")).toInt()));
 }
 
 } // namespace
+
+QString transitionKindName(TransitionKind kind)
+{
+    switch (kind) {
+    case TransitionKind::Cut: return QStringLiteral("cut");
+    case TransitionKind::Fade: return QStringLiteral("fade");
+    case TransitionKind::Push: return QStringLiteral("push");
+    case TransitionKind::PushUp: return QStringLiteral("pushUp");
+    case TransitionKind::Wipe: return QStringLiteral("wipe");
+    case TransitionKind::Zoom: return QStringLiteral("zoom");
+    }
+    return QStringLiteral("cut");
+}
+
+std::optional<TransitionKind> transitionKindFromName(const QString &name)
+{
+    for (const TransitionKind kind : {TransitionKind::Cut, TransitionKind::Fade, TransitionKind::Push,
+                                      TransitionKind::PushUp, TransitionKind::Wipe, TransitionKind::Zoom}) {
+        if (name == transitionKindName(kind))
+            return kind;
+    }
+    return std::nullopt;
+}
 
 QString layerName(Layer layer)
 {

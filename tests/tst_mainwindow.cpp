@@ -294,7 +294,8 @@ private slots:
         }
         const QRectF column = rectOf(QStringLiteral("previewLive"));
         for (const QString &name : {QStringLiteral("previewFrame"), QStringLiteral("liveFrame"),
-                                    QStringLiteral("previousSlide"), QStringLiteral("nextSlide")}) {
+                                    QStringLiteral("previousSlide"), QStringLiteral("nextSlide"),
+                                    QStringLiteral("transitionBox"), QStringLiteral("showMessageButton")}) {
             const QRectF r = rectOf(name);
             QVERIFY2(!r.isEmpty() && column.contains(r) && window.contains(r), qPrintable(name + QStringLiteral(" is out of view")));
         }

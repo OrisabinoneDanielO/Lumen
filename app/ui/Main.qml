@@ -182,6 +182,10 @@ Window {
                     objectName: "previewLive"
                     visible: window.controller.mode !== "edit"
                     Layout.preferredWidth: window.previewWidth
+                    onMessageRequested: {
+                        messagePopover.visible = true
+                        messagePopover.focusInput()
+                    }
                     Layout.fillHeight: true
                     controller: window.controller
                 }

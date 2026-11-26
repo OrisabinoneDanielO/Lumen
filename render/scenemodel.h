@@ -77,9 +77,13 @@ class LayerModel : public QObject
     Q_PROPERTY(QObject *previous READ previous CONSTANT)
     Q_PROPERTY(QObject *current READ current CONSTANT)
     Q_PROPERTY(double progress READ progress NOTIFY progressChanged)
+    // How the change in progress looks: "cut", "fade", "push", "pushUp",
+    // "wipe" or "zoom" (see scene.h).
+    Q_PROPERTY(QString transition READ transition NOTIFY progressChanged)
 
 public:
     LayerModel(int index, QObject *parent = nullptr);
+    QString transition() const { return m_transition; }
 
     int index() const { return m_index; }
     QString name() const;
@@ -103,6 +107,7 @@ private:
     qint64 m_startMs = 0;
     int m_durationMs = 0;
     double m_progress = 1.0;
+    QString m_transition = QStringLiteral("cut");
 };
 
 // A level that moves linearly from one value to a target over a duration.

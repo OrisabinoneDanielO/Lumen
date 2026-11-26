@@ -69,6 +69,7 @@ void LayerModel::show(const Content &content, const Transition &transition, qint
     m_current.set(content);
     m_startMs = nowMs;
     m_durationMs = transition.effectiveMs();
+    m_transition = core::show::transitionKindName(transition.kind);
     if (m_durationMs == 0) {
         m_previous.set(Content::empty());
         setProgress(1.0);
