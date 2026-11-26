@@ -60,6 +60,12 @@ QString titleFromFileName(const QString &fileName);
 // "Ending". Returns an empty string if the line is not a header.
 QString sectionLabelFromHeader(const QString &line);
 
+// Lyrics where a blank line inside a section starts a new slide (the slide
+// editor's rule, and EasyWorship's): turns those blank lines into the
+// explicit slide breaks ("---") plain-text import understands. A blank line
+// before a section header still ends the section.
+QString slideBreaksFromBlankLines(const QString &text);
+
 // Plain-text lyrics. See songimport.cpp for the accepted layouts.
 Result<ParsedSong> parseTextSong(const QString &text, const QString &fallbackTitle);
 

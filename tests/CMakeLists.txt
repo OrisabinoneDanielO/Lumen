@@ -203,3 +203,9 @@ add_dependencies(tst_stream lumen-render)
 lumen_add_test(tst_editor tst_editor.cpp operatorharness.h rendercheck.h)
 target_link_libraries(tst_editor PRIVATE lumen_render_lib lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
 target_compile_definitions(tst_editor PRIVATE LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
+
+# Importing from EasyWorship, ProPresenter and OpenLP (batch 17). Done when:
+# libraries from each import without errors.
+lumen_add_test(tst_foreign_import tst_foreign_import.cpp)
+target_link_libraries(tst_foreign_import PRIVATE Lumen::Songs)
+target_compile_definitions(tst_foreign_import PRIVATE LUMEN_LIBRARIES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/libraries")

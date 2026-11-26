@@ -182,6 +182,22 @@ Slides presentations made or changed in the editor hold positioned elements (tex
 
 Songs are edited as lyrics text, as in the mockup: a blank line starts a slide within a group and a line like [Verse 2] starts a group. The editor turns that into the song importer's terms ("---" between slides) and saves through the same parsing and auto-split rules as importing, then rebuilds the default arrangement and the search entry. Song slides keep their theme's look; the Insert tools are for slides presentations.
 
-### Still behind the setting
+### On by default
 
-The editor stays behind `experimental/editor` (off by default), as chosen in batch 5, until the user decides to show it.
+After batch 16 the user chose to show Edit mode by default; `experimental/editor` set to false hides it again.
+
+## Batch 17: songs from EasyWorship, ProPresenter and OpenLP
+
+### Test libraries, not real ones
+
+No real libraries were available, so (as the user chose) the tests use libraries written by `tests/data/libraries/make_libraries.py` in each program's layout: OpenLP's `songs.sqlite` (songs, authors, authors_songs; lyrics as OpenLP's verse XML with a verse order), EasyWorship 6/7's `Songs.db` and `SongWords.db` (lyrics as RTF), and ProPresenter 6 and 5 XML documents. They show the importers read those layouts; real libraries may hold things the test files do not (other RTF, older or newer schema versions). The first real libraries should be tried as soon as there are any, and their quirks added to the test files.
+
+### What is read
+
+- OpenLP: title, authors (display names), copyright, CCLI number, verses by type (v, c, b, p, i, e, o) with OpenLP's [---] slide breaks, and the verse order.
+- EasyWorship: title, authors (split at ; , / and "and"), copyright with the administrator, the reference number as the CCLI number, and the lyrics: RTF turned into text (Windows-1252 and \u characters decoded), section names on their own line, a blank line between slides (the editor's rule, now shared in `slideBreaksFromBlankLines`).
+- ProPresenter 5 and 6: the CCLI fields, each group as a section (common names such as "Verse 1" or "Chorus" become Lumen's labels), each slide's text (plain text where stored, else the RTF), and the first arrangement as the play order.
+
+### ProPresenter 7 and SongSelect
+
+ProPresenter 7 stores documents as protocol buffers with no published schema; a reader built from guesses could only be tested against files built from the same guesses. The importer says so and points to ProPresenter's text export. SongSelect waits for the CCLI partner agreement, as the design doc says.

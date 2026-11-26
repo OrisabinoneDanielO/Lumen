@@ -511,7 +511,9 @@ Rectangle {
         sourceComponent: FileDialog {
             title: qsTr("Import songs")
             fileMode: FileDialog.OpenFiles
-            nameFilters: [qsTr("Song files (*.txt *.xml)"), qsTr("All files (*)")]
+            nameFilters: [qsTr("Songs and libraries (*.txt *.xml *.pro6 *.pro5 songs.sqlite Songs.db)"),
+                          qsTr("OpenLP library (songs.sqlite)"), qsTr("EasyWorship library (Songs.db)"),
+                          qsTr("ProPresenter 5 and 6 (*.pro6 *.pro5)"), qsTr("All files (*)")]
             Component.onCompleted: open()
             onAccepted: {
                 root.controller.importSongs(selectedFiles)
