@@ -5,15 +5,17 @@ add_library(lumen_core STATIC
     include/lumen/core/buildinfo.h
     include/lumen/core/result.h
     include/lumen/core/render/protocol.h
+    include/lumen/core/show/scene.h
     src/buildinfo.cpp
     src/render/protocol.cpp
+    src/show/scene.cpp
 )
 add_library(Lumen::Core ALIAS lumen_core)
 
 target_include_directories(lumen_core PUBLIC include)
 target_compile_definitions(lumen_core PRIVATE LUMEN_VERSION="${PROJECT_VERSION}")
 target_link_libraries(lumen_core
-    PUBLIC Qt6::Core
+    PUBLIC Qt6::Core Qt6::Gui
     PRIVATE lumen_warnings)
 
 # Data layer: SQLite schema, migrations and repositories.
@@ -40,6 +42,18 @@ add_library(lumen_renderlink STATIC
 add_library(Lumen::RenderLink ALIAS lumen_renderlink)
 target_link_libraries(lumen_renderlink
     PUBLIC lumen_core Qt6::Gui Qt6::Network
+    PRIVATE lumen_warnings)
+
+# Show controller: what is on air, and the bridge that sends it to a renderer.
+add_library(lumen_show STATIC
+    include/lumen/core/show/showcontroller.h
+    include/lumen/core/show/outputbridge.h
+    src/show/showcontroller.cpp
+    src/show/outputbridge.cpp
+)
+add_library(Lumen::Show ALIAS lumen_show)
+target_link_libraries(lumen_show
+    PUBLIC lumen_core lumen_renderlink
     PRIVATE lumen_warnings)
 
 # Migrations are numbered SQL files compiled in as resources.

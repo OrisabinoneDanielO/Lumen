@@ -1,29 +1,69 @@
 import QtQuick
 import QtQuick.Window
 
-// The audience output: a background colour and centred text. Qt Quick draws
-// it on the GPU through Qt RHI, with distance-field glyphs for the text.
-// Batch 4 replaces this with the layer stack.
+// The audience output: six layers (bottom to top: Background, Media, Slide,
+// Props, Messages, Masks) and the Logo and Black overrides above them. Qt
+// Quick draws it on the GPU through Qt RHI. Fades are driven by the
+// SceneModel's clock, not by the operator UI.
 Window {
     id: output
 
-    property color background: "#000000" // an output starts black
-    property string text: ""
+    required property QtObject scene
 
     visible: false // the C++ side places it on a screen, then shows it
     title: "Lumen Output"
-    color: background
+    color: "#000000" // an output starts black
 
-    Text {
+    Repeater {
+        model: output.scene.layers
+
+        delegate: Item {
+            id: layer
+
+            required property QtObject modelData
+
+            anchors.fill: parent
+            z: modelData.index
+
+            // Outgoing content: stays fully up under an opaque fill fading in
+            // (an exact crossfade), otherwise fades out.
+            ContentView {
+                anchors.fill: parent
+                content: layer.modelData.previous
+                layerName: layer.modelData.name
+                opacity: layer.modelData.current.opaque ? 1.0 : 1.0 - layer.modelData.progress
+                visible: opacity > 0 && layer.modelData.progress < 1.0
+            }
+            ContentView {
+                anchors.fill: parent
+                content: layer.modelData.current
+                layerName: layer.modelData.name
+                opacity: layer.modelData.progress
+            }
+        }
+    }
+
+    // Logo: the logo content on black, above every layer.
+    Rectangle {
+        z: 100
         anchors.fill: parent
-        anchors.margins: Math.round(parent.width * 0.06)
-        text: output.text
-        color: "#FFFFFF"
-        wrapMode: Text.WordWrap
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        font.pixelSize: Math.max(12, Math.round(output.height * 0.07))
-        font.weight: Font.DemiBold
-        lineHeight: 1.2
+        color: "#000000"
+        opacity: output.scene.logoLevel
+        visible: opacity > 0
+
+        ContentView {
+            anchors.fill: parent
+            content: output.scene.logo
+            layerName: "logo"
+        }
+    }
+
+    // Black: above everything, including Logo.
+    Rectangle {
+        z: 101
+        anchors.fill: parent
+        color: "#000000"
+        opacity: output.scene.blackLevel
+        visible: opacity > 0
     }
 }

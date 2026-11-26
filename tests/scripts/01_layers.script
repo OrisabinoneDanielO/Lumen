@@ -1,0 +1,18 @@
+# Each layer draws in its place, bottom to top.
+set background colour #14213D
+set slide text "Amazing grace! How sweet the sound"
+set props text "Pastor Ade Johnson"
+set messages text "Parent of 42, please come to the nursery"
+expect colour #14213D at 0.01 0.5
+expect text in middle
+expect text in bottom
+expect text in top
+
+# Masks is the top layer: an opaque fill hides everything below it.
+set masks colour #FF0000
+expect colour #FF0000 at 0.5 0.5
+expect colour #FF0000 at 0.5 0.05
+expect no text in anywhere
+clear masks
+expect text in middle
+expect colour #14213D at 0.01 0.5

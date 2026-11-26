@@ -18,12 +18,17 @@ Error linkError(const QString &message)
 
 } // namespace
 
-RenderLink::RenderLink(Options options) : m_options(std::move(options)) {}
+RenderLink::RenderLink(Options options, QObject *parent)
+    : QObject(parent), m_options(std::move(options))
+{
+    connect(&m_socket, &QLocalSocket::readyRead, this, &RenderLink::drain);
+}
 
 RenderLink::~RenderLink()
 {
     // Disconnecting without "quit" leaves the output up, which is what a crash
     // does too. A normal exit calls quit() first.
+    disconnect(&m_socket, nullptr, this, nullptr);
     m_socket.abort();
 }
 
@@ -54,6 +59,7 @@ Status RenderLink::connectToRunning(int timeoutMs)
     if (isConnected())
         return success();
     m_buffer.clear();
+    m_replies.clear();
     m_socket.abort();
     m_socket.connectToServer(m_options.serverName);
     if (!m_socket.waitForConnected(timeoutMs)) {
@@ -97,46 +103,70 @@ Status RenderLink::start()
                          .arg(log));
 }
 
+void RenderLink::drain()
+{
+    m_buffer += m_socket.readAll();
+    qsizetype end;
+    while ((end = m_buffer.indexOf('\n')) >= 0) {
+        const QByteArray line = m_buffer.left(end);
+        m_buffer.remove(0, end + 1);
+        const auto reply = decode(line);
+        if (!reply) {
+            emit replyFailed(QStringLiteral("Unreadable reply from the renderer"));
+            continue;
+        }
+        const QString id = reply->value(QStringLiteral("id")).toString();
+        if (m_waiting.contains(id)) {
+            m_replies.insert(id, *reply);
+        } else if (!reply->value(QStringLiteral("ok")).toBool()) {
+            emit replyFailed(reply->value(QStringLiteral("error")).toString());
+        }
+    }
+    if (m_buffer.size() > maxLineBytes) {
+        m_buffer.clear();
+        emit replyFailed(QStringLiteral("Reply from the renderer is too long"));
+    }
+}
+
+Status RenderLink::send(const QJsonObject &message)
+{
+    if (!isConnected())
+        return linkError(QStringLiteral("Not connected to the renderer"));
+    QJsonObject numbered = message;
+    numbered.insert(QStringLiteral("id"), QString::number(m_nextId++));
+    if (m_socket.write(encode(numbered)) < 0)
+        return linkError(m_socket.errorString());
+    m_socket.flush();
+    return success();
+}
+
 Result<QJsonObject> RenderLink::request(const QJsonObject &message, int timeoutMs)
 {
     if (!isConnected())
         return linkError(QStringLiteral("Not connected to the renderer"));
 
-    m_socket.write(encode(message));
-    if (!m_socket.waitForBytesWritten(timeoutMs) && m_socket.bytesToWrite() > 0)
-        return linkError(QStringLiteral("Sending to the renderer timed out"));
+    const QString id = QString::number(m_nextId++);
+    QJsonObject numbered = message;
+    numbered.insert(QStringLiteral("id"), id);
+    m_waiting.insert(id);
+    m_socket.write(encode(numbered));
+    m_socket.flush();
 
     QDeadlineTimer deadline(timeoutMs);
-    while (!m_buffer.contains('\n')) {
-        if (deadline.hasExpired() || !isConnected())
+    while (!m_replies.contains(id)) {
+        if (deadline.hasExpired() || !isConnected()) {
+            m_waiting.remove(id);
             return linkError(QStringLiteral("No reply from the renderer"));
+        }
         if (m_socket.bytesAvailable() == 0)
             m_socket.waitForReadyRead(int(qMax<qint64>(1, deadline.remainingTime())));
-        m_buffer += m_socket.readAll();
-        if (m_buffer.size() > maxLineBytes)
-            return linkError(QStringLiteral("Reply from the renderer is too long"));
+        drain();
     }
-
-    const qsizetype end = m_buffer.indexOf('\n');
-    const QByteArray line = m_buffer.left(end);
-    m_buffer.remove(0, end + 1);
-
-    const auto reply = decode(line);
-    if (!reply)
-        return linkError(QStringLiteral("Unreadable reply from the renderer"));
-    if (!reply->value(QStringLiteral("ok")).toBool())
-        return linkError(reply->value(QStringLiteral("error")).toString());
-    return *reply;
-}
-
-Status RenderLink::show(const QColor &background, const QString &text)
-{
-    auto reply = request({{QStringLiteral("cmd"), QStringLiteral("show")},
-                          {QStringLiteral("colour"), background.name(QColor::HexRgb)},
-                          {QStringLiteral("text"), text}});
-    if (!reply.ok())
-        return reply.error();
-    return success();
+    m_waiting.remove(id);
+    const QJsonObject reply = m_replies.take(id);
+    if (!reply.value(QStringLiteral("ok")).toBool())
+        return linkError(reply.value(QStringLiteral("error")).toString());
+    return reply;
 }
 
 Status RenderLink::quit()

@@ -1,0 +1,25 @@
+# Clear removes one layer and leaves the rest; Clear All empties every layer.
+set background colour #14213D
+set slide text "Verse 1"
+set props text "Pastor Ade Johnson"
+set messages text "Welcome to Grace Church"
+expect text in middle
+expect text in bottom
+expect text in top
+
+clear props
+expect no text in bottom
+expect text in middle
+expect text in top
+
+clear messages
+expect no text in top
+expect text in middle
+
+clear slide
+expect no text in anywhere
+expect colour #14213D at 0.5 0.5
+
+set slide text "Verse 2"
+clear all
+expect black
