@@ -24,6 +24,22 @@ qt_standard_project_setup(REQUIRES 6.5)
 # Every executable in one folder, so lumen finds lumen-render beside it.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+# Where an install puts things (packaging/README.md). Windows: everything in
+# one folder, as windeployqt expects. macOS: everything inside the app
+# bundle. Linux: the usual bin/ and share/ folders.
+include(GNUInstallDirs)
+set(LUMEN_BUNDLE_NAME "Lumen Presenter")
+if(WIN32)
+    set(LUMEN_INSTALL_BINDIR .)
+    set(LUMEN_INSTALL_DATADIR .)
+elseif(APPLE)
+    set(LUMEN_INSTALL_BINDIR "${LUMEN_BUNDLE_NAME}.app/Contents/MacOS")
+    set(LUMEN_INSTALL_DATADIR "${LUMEN_BUNDLE_NAME}.app/Contents/Resources")
+else()
+    set(LUMEN_INSTALL_BINDIR ${CMAKE_INSTALL_BINDIR})
+    set(LUMEN_INSTALL_DATADIR ${CMAKE_INSTALL_DATADIR}/lumen)
+endif()
+
 # Shared warning settings for every Lumen target.
 add_library(lumen_warnings INTERFACE)
 if(MSVC)
@@ -38,8 +54,9 @@ add_subdirectory(tools)
 add_subdirectory(app)
 add_subdirectory(render)
 
-include(GNUInstallDirs)
 add_subdirectory(bibles)
+# Last, so its install steps (bundling Qt) run after everything is installed.
+add_subdirectory(packaging)
 
 if(LUMEN_BUILD_TESTS)
     enable_testing()

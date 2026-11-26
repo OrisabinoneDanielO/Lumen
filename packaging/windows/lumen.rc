@@ -1,0 +1,2 @@
+// The program icon shown by Explorer, the taskbar and the Start menu.
+IDI_ICON1 ICON "../icons/lumen-presenter.ico"

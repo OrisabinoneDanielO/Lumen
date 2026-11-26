@@ -240,3 +240,10 @@ endif()
 lumen_add_test(tst_timecode tst_timecode.cpp operatorharness.h)
 target_link_libraries(tst_timecode PRIVATE lumen_render_lib lumen_ui lumen_uiplugin Lumen::Operator lumen_test_support Qt6::Quick Qt6::QuickTest)
 set_tests_properties(tst_timecode PROPERTIES TIMEOUT 120)
+
+# The installed-layout check (lumen --check-install) from the build folder,
+# where lumen-render and bibles.db sit beside lumen as in an install.
+add_test(NAME lumen_check_install COMMAND lumen --check-install)
+set_tests_properties(lumen_check_install PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+    TIMEOUT 60)

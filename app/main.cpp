@@ -27,6 +27,7 @@
 #include "lumen/core/songs/songlibrary.h"
 
 #include <QCommandLineParser>
+#include <QDeadlineTimer>
 #include <QDir>
 #include <QFileInfo>
 #include <QGuiApplication>
@@ -42,6 +43,8 @@
 #include <QFile>
 #include <QtQml/qqmlextensionplugin.h>
 
+#include <cstdio>
+#include <functional>
 #include <memory>
 
 Q_IMPORT_QML_PLUGIN(Lumen_UiPlugin)
@@ -189,6 +192,49 @@ QString bundledBibles()
     return {};
 }
 
+// --check-install: whether the operator window loaded, the bundled Bibles
+// open, and the renderer starts and draws. Prints one line per check.
+int checkInstallation(QQmlApplicationEngine &engine, scripture::BibleStore *bibles,
+                      const std::function<render::RenderLink *()> &startOutput)
+{
+    int failures = 0;
+    const auto report = [&failures](bool ok, const QString &what) {
+        std::printf("%s %s\n", ok ? "ok  " : "FAIL", qPrintable(what));
+        std::fflush(stdout);
+        if (!ok)
+            ++failures;
+    };
+    report(!engine.rootObjects().isEmpty(), QStringLiteral("operator window loaded"));
+
+    std::size_t translations = 0;
+    if (bibles) {
+        if (auto list = bibles->translations(); list.ok())
+            translations = list.value().size();
+    }
+    report(translations > 0, QStringLiteral("bundled Bibles: %1 translations (%2)")
+                                  .arg(translations)
+                                  .arg(bundledBibles().isEmpty() ? QStringLiteral("bibles.db not found")
+                                                                 : QDir::toNativeSeparators(bundledBibles())));
+
+    const QString renderer = render::RenderLink::findExecutable();
+    report(!renderer.isEmpty(), QStringLiteral("renderer: %1").arg(renderer.isEmpty() ? QStringLiteral("not found")
+                                                                                      : QDir::toNativeSeparators(renderer)));
+    render::RenderLink *link = renderer.isEmpty() ? nullptr : startOutput();
+    report(link != nullptr, QStringLiteral("audience output started"));
+    qint64 frames = 0;
+    if (link) {
+        QDeadlineTimer deadline(15000);
+        while (frames == 0 && !deadline.hasExpired()) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+            if (auto status = link->request({{QStringLiteral("cmd"), QStringLiteral("status")}}, 2000); status.ok())
+                frames = status.value().value(QStringLiteral("frames")).toInteger();
+        }
+        (void)link->quit();
+    }
+    report(frames > 0, QStringLiteral("audience output drew %1 frames").arg(frames));
+    return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
 } // namespace
 
 int main(int argc, char *argv[])
@@ -225,8 +271,20 @@ int main(int argc, char *argv[])
     const QCommandLineOption quitAfter(QStringLiteral("quit-after"),
                                        QStringLiteral("Quit after <ms> milliseconds (for tests)."),
                                        QStringLiteral("ms"));
-    parser.addOptions({outputOption, noOutputOption, renderServer, renderExecutable, renderOption, quitAfter});
+    // For installers: checks the install works (window, Bibles, renderer and
+    // a first output frame), prints what it found and exits.
+    const QCommandLineOption checkInstall(QStringLiteral("check-install"),
+                                          QStringLiteral("Check that this installation works, then exit."));
+    parser.addOptions({outputOption, noOutputOption, renderServer, renderExecutable, renderOption, quitAfter, checkInstall});
     parser.process(app);
+    const bool checking = parser.isSet(checkInstall);
+    // A check uses Qt's test folders, never the user's library or settings.
+    if (checking)
+        QStandardPaths::setTestModeEnabled(true);
+    // A check never connects to the output of a Lumen that is already running.
+    const QString outputServer = checking && !parser.isSet(renderServer)
+                                     ? QStringLiteral("lumen-check-%1").arg(QCoreApplication::applicationPid())
+                                     : parser.value(renderServer);
 
     const QSettings settings;
     show::ShowController show;
@@ -360,7 +418,7 @@ int main(int argc, char *argv[])
     const auto turnOutputOn = [&] {
         if (output)
             return;
-        output = startOutput(show, parser.value(renderServer), parser.value(renderExecutable),
+        output = startOutput(show, outputServer, parser.value(renderExecutable),
                              parser.values(renderOption));
         controller.setOutputConnected(output != nullptr);
         // The video Space would send next is opened ahead of time, so it
@@ -519,6 +577,12 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("midi"), QVariant::fromValue<QObject *>(&midi)},
                                  {QStringLiteral("cues"), QVariant::fromValue<QObject *>(&cueController)}});
     engine.loadFromModule("Lumen.Ui", "Main");
+
+    if (checking)
+        return checkInstallation(engine, bundledBibleStore.get(), [&]() -> render::RenderLink * {
+            turnOutputOn();
+            return output ? output->link.get() : nullptr;
+        });
 
     if (parser.isSet(quitAfter))
         QTimer::singleShot(parser.value(quitAfter).toInt(), &app, &QCoreApplication::quit);

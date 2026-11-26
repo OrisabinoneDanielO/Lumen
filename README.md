@@ -29,6 +29,18 @@ See the [user guide](docs/user-guide.md) for how to use each part.
 | ![Theme editor](docs/images/theme-editor.png) | ![Phone remote](docs/images/phone-remote.png) |
 | The theme editor | The phone remote |
 
+## Installing
+
+Installers are built by the [Packages workflow](.github/workflows/packages.yml) for every change to `main`; download them from the run's artifacts (and, once releases start, from the Releases page):
+
+| System | Installer |
+| --- | --- |
+| Windows 10 and 11 (64-bit) | `.msi`: Start menu and desktop shortcuts; uninstall from Settings → Apps |
+| macOS 12 or newer | `.dmg`: drag Lumen Presenter to Applications |
+| Linux | AppImage (any distribution), Flatpak, `.deb` (Debian 13, Ubuntu 25.04 and newer), `.rpm` (Fedora) |
+
+The Windows and macOS installers are not code-signed yet, so Windows SmartScreen and macOS Gatekeeper warn on the first start: on Windows choose **More info → Run anyway**; on macOS right-click the app and choose **Open**. See [packaging/README.md](packaging/README.md).
+
 ## Status
 
 All 20 batches of the design doc's build plan are built, each with tests for its "Done when" condition; 39 test programs run on every build. Some things have only been tested on the developer's Fedora laptop or with stand-ins (virtual MIDI, generated song libraries, two processes instead of two PCs): [docs/status.md](docs/status.md) lists exactly what has been tested how, and what has not. The MVP gate in the design doc (10 pilot churches, 4 Sundays) has not started.
@@ -55,7 +67,7 @@ render/     lumen-render: the output process (audience, stage and stream)
 tools/      build-time tools (lumen-bible-build)
 bibles/     bundled Bible translations and their licences
 tests/      unit and integration tests (Qt Test), test data and scripts
-packaging/  installers (Linux AppImage so far)
+packaging/  installers: Windows .msi, macOS .dmg, Linux AppImage, Flatpak, .deb, .rpm
 thirdparty/ RtMidi (MIT), for MIDI input
 docs/       user guide, architecture, decisions, design doc
 design/     UI mockups (open design/mockups/index.html)

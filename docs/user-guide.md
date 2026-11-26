@@ -2,7 +2,17 @@
 
 How to use each part of Lumen. For building and contributing, see the [README](../README.md) and [CONTRIBUTING](../CONTRIBUTING.md).
 
-Start Lumen with `lumen`. The first time, the library is empty: import songs (from files or another program), add media and decks, and make a plan for the service. The bundled Bibles are there from the start.
+## Installing
+
+- **Windows:** run the `.msi`. Lumen Presenter is added to the Start menu and the desktop. The installer is not signed yet: if SmartScreen stops it, choose **More info → Run anyway**.
+- **macOS:** open the `.dmg` and drag Lumen Presenter to Applications. The first time, right-click it and choose **Open** (it is not notarised yet).
+- **Linux:** the AppImage runs on any distribution (make it executable and double-click it). There are also a Flatpak, a `.deb` for Debian 13 and Ubuntu 25.04 or newer, and an `.rpm` for Fedora.
+
+Everything Lumen needs is included, the Bibles too, and it never needs the internet. To check an installation, run `lumen --check-install` (on Windows, `lumen.exe --check-install > check.txt`); every line should start with `ok`.
+
+## Starting
+
+Start Lumen from the Start menu, Applications or your desktop's app list (or `lumen` in a terminal). The first time, the library is empty: import songs (from files or another program), add media and decks, and make a plan for the service. The bundled Bibles are there from the start.
 
 ## The audience output
 
