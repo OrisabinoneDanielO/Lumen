@@ -11,6 +11,7 @@ Rectangle {
     property var slideStyle: ({})
     property string footer
     property url poster // a picture of the video or image shown
+    property string timerText // a countdown slide's timer, e.g. "4:59"
     property color background: Theme.slideBackground
     property color frameColor: Theme.border
     property int frameWidth: 2
@@ -61,5 +62,19 @@ Rectangle {
         elide: Text.ElideNone
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
+    }
+
+    // A countdown slide: its time, large, under the text.
+    LText {
+        objectName: "frameTimer"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Math.round(parent.height * 0.08)
+        visible: root.timerText !== ""
+        text: root.timerText
+        color: "#FFFFFF"
+        font.pixelSize: Math.round(parent.height * 0.22)
+        font.weight: Font.Bold
+        font.features: { "tnum": 1 }
     }
 }

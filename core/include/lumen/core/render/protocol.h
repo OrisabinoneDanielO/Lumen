@@ -24,6 +24,7 @@
 //   {"v":2,"cmd":"grab","path":"/tmp/f.png"}
 //   {"v":2,"cmd":"clock","mode":"manual"|"real"}
 //   {"v":2,"cmd":"clock","advanceMs":250}   (manual clock only)
+//   {"v":5,"cmd":"clock","wallMs":1795440000000}  sets the wall clock timers use (test mode)
 //
 // Failures reply {"v":2,"ok":false,"error":"..."}. If the UI disconnects
 // without "quit" (for example it crashed), the renderer keeps showing the
@@ -39,7 +40,8 @@ namespace lumen::core::render {
 
 // v3 (batch 8): text content may carry a theme style and a footer.
 // v4 (batch 9): video content; "preload"; video statistics in "status".
-inline constexpr int protocolVersion = 4;
+// v5 (batch 12): timer content; "clock" takes "wallMs".
+inline constexpr int protocolVersion = 5;
 
 // Longest line either side accepts, to bound memory use.
 inline constexpr qsizetype maxLineBytes = 1024 * 1024;

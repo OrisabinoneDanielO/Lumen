@@ -32,6 +32,7 @@ class ContentModel : public QObject
     Q_PROPERTY(QUrl video READ video NOTIFY changed)
     Q_PROPERTY(bool loop READ loop NOTIFY changed)
     Q_PROPERTY(double volume READ volume NOTIFY changed)
+    Q_PROPERTY(QVariantMap timer READ timer NOTIFY changed)
 
 public:
     using QObject::QObject;
@@ -49,6 +50,7 @@ public:
     QUrl video() const;
     bool loop() const { return m_content.loop; }
     double volume() const { return m_content.volume; }
+    QVariantMap timer() const { return m_content.timer.toVariantMap(); }
 
 signals:
     void changed();
@@ -122,6 +124,9 @@ class SceneModel : public QObject
     Q_PROPERTY(double blackLevel READ blackLevel NOTIFY levelsChanged)
     // Videos opened ahead of use (the item in Preview), newest last.
     Q_PROPERTY(QList<QUrl> preloads READ preloads NOTIFY preloadsChanged)
+    // Wall-clock time for timers (ms since 1970 UTC), from this process's own
+    // clock; changes every 100 ms.
+    Q_PROPERTY(qint64 wallMs READ wallMs NOTIFY wallChanged)
 
 public:
     explicit SceneModel(QObject *parent = nullptr);
@@ -138,9 +143,15 @@ public:
     QList<QUrl> preloads() const { return m_preloads; }
     void preload(const QString &path);
 
+    qint64 wallMs() const { return m_wallShownMs; }
+    // Tests: makes the wall clock read wallMs at clock time nowMs.
+    void setWallClock(qint64 wallMs, qint64 nowMs);
+    Q_INVOKABLE QString timerText(const QVariantMap &timer, qint64 wallMs) const;
+
 signals:
     void levelsChanged();
     void preloadsChanged();
+    void wallChanged();
 
 private:
     Scene m_scene;
@@ -149,6 +160,8 @@ private:
     Fader m_logoFader;
     Fader m_blackFader;
     QList<QUrl> m_preloads;
+    qint64 m_wallBaseMs = -1; // wall clock minus render clock
+    qint64 m_wallShownMs = 0;
 };
 
 } // namespace lumen::render

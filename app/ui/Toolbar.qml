@@ -1,12 +1,17 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Top toolbar: logo, Show/Edit switch, plan name, Clear buttons, Logo, Black
-// and output status lights.
+// Top toolbar: logo, Show/Edit switch, plan name, Timers and Message
+// (batch 12), Clear buttons, Logo, Black and output status lights (click
+// Main to turn the output on or off).
 Rectangle {
     id: root
 
     required property QtObject controller
+    // The running timer, e.g. "Sermon 24:13" (empty when none runs).
+    property string timerSummary
+    signal timersRequested()
+    signal messageRequested()
 
     implicitHeight: 58
     color: Theme.panel
@@ -115,6 +120,18 @@ Rectangle {
         Row {
             spacing: 6
             LButton {
+                objectName: "timersButton"
+                text: root.timerSummary !== "" ? root.timerSummary : qsTr("Timers")
+                onClicked: root.timersRequested()
+            }
+            LButton {
+                objectName: "messageButton"
+                text: qsTr("Message")
+                variant: root.controller.messageShown !== "" ? "primary" : "default"
+                onClicked: root.messageRequested()
+            }
+            Item { width: 6; height: 1 }
+            LButton {
                 objectName: "clearBackground"
                 text: qsTr("Clear BG"); hint: "F1"
                 onClicked: root.controller.clearLayer("background")
@@ -169,6 +186,8 @@ Rectangle {
                 delegate: Row {
                     id: output
                     required property var modelData
+                    required property int index
+                    objectName: "output-" + index
                     spacing: 6
                     Accessible.role: Accessible.StaticText
                     Accessible.name: modelData.name + (modelData.connected ? qsTr(" connected")
@@ -185,6 +204,15 @@ Rectangle {
                         text: output.modelData.name
                         font.pixelSize: 12
                         color: Theme.textMuted
+                    }
+                    // Main turns the output on and off.
+                    TapHandler {
+                        enabled: output.index === 0
+                        onTapped: root.controller.toggleOutput()
+                    }
+                    HoverHandler {
+                        enabled: output.index === 0
+                        cursorShape: Qt.PointingHandCursor
                     }
                 }
             }

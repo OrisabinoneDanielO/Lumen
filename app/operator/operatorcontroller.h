@@ -15,6 +15,9 @@
 #include <QTimer>
 #include <QVariantList>
 
+#include <functional>
+#include <optional>
+
 namespace lumen::app {
 
 // What the operator window shows and does. QML binds to its properties and
@@ -47,6 +50,12 @@ class OperatorController : public QObject
     Q_PROPERTY(QString planMessage READ planMessage NOTIFY stateChanged)
     Q_PROPERTY(QString lastBackup READ lastBackup NOTIFY stateChanged)
     Q_PROPERTY(bool backupsAvailable READ backupsAvailable NOTIFY stateChanged)
+    // Timers on Preview and Live (countdown slides), updated as they tick.
+    Q_PROPERTY(QString previewTimerText READ previewTimerText NOTIFY timersTicked)
+    Q_PROPERTY(QString liveTimerText READ liveTimerText NOTIFY timersTicked)
+    // Messages (batch 12): the banner on the Messages layer.
+    Q_PROPERTY(QString messageShown READ messageShown NOTIFY stateChanged)
+    Q_PROPERTY(QStringList recentMessages READ recentMessages NOTIFY stateChanged)
     // Pictures for the Preview and Live frames when they show media.
     Q_PROPERTY(QUrl previewPoster READ previewPoster NOTIFY stateChanged)
     Q_PROPERTY(QUrl livePoster READ livePoster NOTIFY stateChanged)
@@ -111,6 +120,20 @@ public:
     QString lastBackup() const;
     bool backupsAvailable() const { return m_backups != nullptr; }
     QString planId() const { return m_plan ? m_plan->id : QString(); }
+    QString previewTimerText() const;
+    QString liveTimerText() const;
+    QString messageShown() const;
+    QStringList recentMessages() const { return m_recentMessages; }
+
+    // Where countdown slides get their timer (set by the TimerController).
+    using TimerSource = std::function<std::optional<QJsonObject>(const QString &name)>;
+    void setTimerSource(TimerSource source) { m_timerSource = std::move(source); }
+
+    // Messages: a line of text in the banner, without touching the slide.
+    Q_INVOKABLE bool showMessage(const QString &text);
+    Q_INVOKABLE void hideMessage();
+    // The Main output light in the toolbar turns the output on and off.
+    Q_INVOKABLE void toggleOutput() { emit outputToggleRequested(!m_outputConnected); }
     QUrl previewPoster() const;
     QUrl livePoster() const;
 
@@ -235,6 +258,8 @@ signals:
     void previewVideoChanged(const QString &path);
     void decksImported(const QString &summary);
     void restartRequested();
+    void timersTicked();
+    void outputToggleRequested(bool on);
 
 private:
     static constexpr int libraryItem = -2; // m_current when showing a library song
@@ -283,6 +308,9 @@ private:
     bool planFailed(const core::Status &status, const QString &what);
 
     QString m_planMessage;
+    TimerSource m_timerSource;
+    QTimer m_timerTick;
+    QStringList m_recentMessages;
     Backups *m_backups = nullptr;
     QString m_libraryPath;
     QString m_importFolder;
