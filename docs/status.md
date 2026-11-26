@@ -60,6 +60,10 @@ Everything has run on the developer's laptop (Fedora 45, Intel Iris Xe, Wayland)
 - Translations of the interface (texts are marked with `qsTr`; no translations yet).
 - The MVP gate in the design doc: 10 pilot churches for 4 Sundays.
 
+## Quality
+
+The latest full check is [qa/2026-11-26.md](qa/2026-11-26.md): what was tested, what was fixed, and a ranked list of what is still to do.
+
 ## Good places to help
 
 - **Try it in a real service** (or a rehearsal) and report what goes wrong.

@@ -13,6 +13,8 @@ Rectangle {
     required property QtObject controller
     readonly property bool searchHasFocus: search.inputFocused
     signal searchDone()
+    signal picked() // a row or card clicked: the live keys work again
+    onPicked: search.leave()
     signal themesRequested()
     // 0: Songs, 2: Media, 3: Presentations (Scripture and Themes open their
     // own panels).
@@ -228,7 +230,7 @@ Rectangle {
                 implicitHeight: 32
                 radius: 6
                 text: qsTr("Add to plan")
-                opacity: root.controller.selectedMedia >= 0 ? 1.0 : 0.5
+                enabled: root.controller.selectedMedia >= 0
                 onClicked: root.controller.addMediaToPlan(root.controller.selectedMedia)
             }
             LButton {
@@ -237,7 +239,7 @@ Rectangle {
                 implicitHeight: 32
                 radius: 6
                 text: qsTr("Use as background")
-                opacity: root.controller.selectedMedia >= 0 ? 1.0 : 0.5
+                enabled: root.controller.selectedMedia >= 0
                 onClicked: root.controller.useAsBackground(root.controller.selectedMedia)
             }
             LButton {
@@ -268,7 +270,7 @@ Rectangle {
                 implicitHeight: 32
                 radius: 6
                 text: qsTr("Add to plan")
-                opacity: root.controller.selectedDeck >= 0 ? 1.0 : 0.5
+                enabled: root.controller.selectedDeck >= 0
                 onClicked: root.controller.addDeckToPlan(root.controller.selectedDeck)
             }
             LButton {
@@ -286,7 +288,7 @@ Rectangle {
                 implicitHeight: 32
                 radius: 6
                 text: qsTr("Add to plan")
-                opacity: root.controller.selectedSong >= 0 ? 1.0 : 0.5
+                enabled: root.controller.selectedSong >= 0
                 onClicked: root.controller.addSongToPlan(root.controller.selectedSong)
             }
             LButton {
@@ -317,6 +319,13 @@ Rectangle {
                 objectName: "librarySearch"
                 visible: root.page === 0
                 onEscaped: root.searchDone()
+                // Return: the first song found, in Preview; the keyboard goes back to the show.
+                onAccepted: {
+                    if (root.controller.songs.count > 0) {
+                        root.controller.showSong(0)
+                        root.picked()
+                    }
+                }
                 onTextChanged: root.controller.searchSongs(text)
                 Layout.preferredWidth: 240
                 placeholder: qsTr("Title, lyrics or author")
@@ -357,7 +366,7 @@ Rectangle {
                         objectName: "songRow-" + index
                         cells: [title, author, copyright, key]
                         selected: index === root.controller.selectedSong
-                        onClicked: root.controller.showSong(index)
+                        onClicked: { root.picked(); root.controller.showSong(index) }
                         onDoubleClicked: root.controller.playSong(index)
                     }
                 }
@@ -394,7 +403,7 @@ Rectangle {
                         // Click: in Preview. Double-click: on the screen now.
                         // Pointed at: the output opens it already, so it
                         // starts at once when it goes live.
-                        onClicked: root.controller.showMedia(index)
+                        onClicked: { root.picked(); root.controller.showMedia(index) }
                         onDoubleClicked: root.controller.playMedia(index)
                         onHovered: root.controller.preloadMedia(index)
                     }
@@ -427,7 +436,7 @@ Rectangle {
                         objectName: "deckCard-" + index
                         badge: slides === 1 ? qsTr("1 slide") : qsTr("%1 slides").arg(slides)
                         selected: index === root.controller.selectedDeck
-                        onClicked: root.controller.showDeck(index)
+                        onClicked: { root.picked(); root.controller.showDeck(index) }
                     }
                 }
             }

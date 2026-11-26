@@ -14,6 +14,8 @@ Rectangle {
     signal accepted()
 
     function focusInput() { input.forceActiveFocus() }
+    // Lets go of the keyboard (the text stays).
+    function leave() { input.focus = false }
 
     implicitWidth: 240
     implicitHeight: 32

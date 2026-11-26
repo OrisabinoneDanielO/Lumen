@@ -204,14 +204,19 @@ private slots:
             }
         }
 
-        // While the setup is open, the live shortcuts do nothing.
+        // While the setup is open, Space and the other show keys do nothing,
+        // but the safety keys work (F7 Black): a screen plugged in during a
+        // service must not take them away. (Before the QA pass of 2026-11-26
+        // F7 was blocked here too.)
         ui.controller->selectItem(2);
         const QString live = ui.controller->property("liveText").toString();
         const int liveSlide = ui.controller->property("liveSlide").toInt();
         QTest::keyClick(ui.window, Qt::Key_Space);
-        QTest::keyClick(ui.window, Qt::Key_F7);
         QCOMPARE(ui.controller->property("liveText").toString(), live);
         QCOMPARE(ui.controller->property("liveSlide").toInt(), liveSlide);
+        QTest::keyClick(ui.window, Qt::Key_F7);
+        QVERIFY(ui.controller->property("blackOn").toBool());
+        QTest::keyClick(ui.window, Qt::Key_F7);
         QVERIFY(!ui.controller->property("blackOn").toBool());
         QVERIFY(ui.screens->isOpen());
 

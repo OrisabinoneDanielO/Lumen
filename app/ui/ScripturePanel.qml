@@ -421,20 +421,20 @@ Window {
                 LButton {
                     objectName: "scriptureAddToPlan"
                     text: qsTr("Add to plan")
-                    opacity: root.scripture.label !== "" ? 1 : 0.5
+                    enabled: root.scripture.label !== ""
                     onClicked: root.scripture.addToPlan()
                 }
                 LButton {
                     objectName: "scripturePreviewButton"
                     text: qsTr("Preview (Enter)")
-                    opacity: root.scripture.label !== "" ? 1 : 0.5
+                    enabled: root.scripture.label !== ""
                     onClicked: root.scripture.preview()
                 }
                 LButton {
                     objectName: "scriptureShowNow"
                     text: qsTr("Show now (Shift+Enter)")
                     variant: "primary"
-                    opacity: root.scripture.label !== "" ? 1 : 0.5
+                    enabled: root.scripture.label !== ""
                     onClicked: root.scripture.showNow()
                 }
             }

@@ -297,3 +297,9 @@ A second round of the user's testing:
 - Each video plays once (stopping on its last frame) or loops until cleared. The choice is the presentation's `videoLoop`, Play once by default; the import's own "short clip" flag still marks motion backgrounds.
 - Transitions: Fade, Push, Push up, Wipe and Zoom, drawn by the renderer from each layer's progress, chosen in the Transition box (which only showed "Cut" before) and remembered. Only a real change of transition changes the scene, so a cut at start sends nothing.
 
+## The safety keys always work (QA pass, 2026-11-26)
+
+F1 to F7 (Clear background, slide, props, messages, all; Logo; Black) are application-wide shortcuts: they work while the library search, a popover, the scripture window or the Screens setup has the keyboard. Before, batch 5 blocked every shortcut while typing in the search box, and the Screens setup blocked all keys. Characters (letters, numbers, Space) still never change the screen while typing, but a key that blacks the screen must never sometimes do nothing. `tst_operator_window::shortcutsPauseWhileSearching` and `tst_screens::panelInTheWindow` were updated to say so.
+
+Page Down and Page Up skip headers (no slides, so Space would do nothing there) and return to the plan from a library song or scripture; batch 5's `pageDownSelectsTheNextItemWithoutGoingLive` expected Page Up to land on a header and was updated. The full report is [qa/2026-11-26.md](qa/2026-11-26.md).
+

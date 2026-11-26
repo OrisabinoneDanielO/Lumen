@@ -247,6 +247,12 @@ private slots:
         QTest::keyClick(window, Qt::Key_Return);
         QVERIFY(ui.controller->previewText().startsWith(QStringLiteral("For God so loved")));
 
+        // The safety keys work from the scripture window too: F7 is Black.
+        QTest::keyClick(window, Qt::Key_F7);
+        QVERIFY(ui.show.scene().black);
+        QTest::keyClick(window, Qt::Key_F7);
+        QVERIFY(!ui.show.scene().black);
+
         // "j" and Enter: John 1:1.
         input->setProperty("text", QString());
         QTest::keyClick(window, 'j');
