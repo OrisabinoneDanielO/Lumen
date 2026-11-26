@@ -139,11 +139,18 @@ private slots:
         QString error;
         QVERIFY2(ui.load(false, &error), qPrintable(error));
         QTest::keyClick(ui.window, Qt::Key_B, Qt::ControlModifier);
+        QTRY_VERIFY(ui.item("scriptureDialog"));
+        QQuickWindow *window = ui.item("scriptureDialog")->window(); // its own window
         for (const char c : QByteArray("rom 8 28-30"))
-            QTest::keyClick(ui.window, c);
+            QTest::keyClick(window, c);
         ui.settle();
         QTest::qWait(100);
-        QVERIFY(ui.window->grabWindow().save(dir + QStringLiteral("/scripture.png")));
+        QVERIFY(window->grabWindow().save(dir + QStringLiteral("/scripture.png")));
+        // Typing ahead: "j" and the suggestion in grey.
+        ui.item("scriptureReference")->setProperty("text", QString());
+        QTest::keyClick(window, 'j');
+        QTest::qWait(100);
+        QVERIFY(window->grabWindow().save(dir + QStringLiteral("/scripture-typing.png")));
     }
 
     // The same through the operator window, for every translation.
@@ -239,6 +246,12 @@ private slots:
         QCOMPARE(typed(), QStringLiteral("John 3:16 "));
         QTest::keyClick(window, Qt::Key_Return);
         QVERIFY(ui.controller->previewText().startsWith(QStringLiteral("For God so loved")));
+
+        // The safety keys work from the scripture window too: F7 is Black.
+        QTest::keyClick(window, Qt::Key_F7);
+        QVERIFY(ui.show.scene().black);
+        QTest::keyClick(window, Qt::Key_F7);
+        QVERIFY(!ui.show.scene().black);
 
         // "j" and Enter: John 1:1.
         input->setProperty("text", QString());

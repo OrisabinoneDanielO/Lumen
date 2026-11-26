@@ -76,6 +76,7 @@ target_link_libraries(tst_operator PRIVATE Lumen::Operator lumen_test_support)
 
 lumen_add_test(tst_operator_window tst_operator_window.cpp operatorharness.h)
 target_link_libraries(tst_operator_window PRIVATE lumen_ui lumen_uiplugin Lumen::Operator lumen_test_support Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(tst_operator_window PRIVATE LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
 
 # Done when: clicking or pressing Space sends a slide live in under 50 ms.
 lumen_add_test(tst_send_live_latency tst_send_live_latency.cpp operatorharness.h)

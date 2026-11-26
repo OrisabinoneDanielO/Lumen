@@ -22,6 +22,7 @@ Rectangle {
     // The plan menu's page: "" (closed), "main", "open", "restore", or
     // "input" (a name, header or notes, for inputAction).
     property string menuPage: ""
+    property int restoreRow: -1 // the backup waiting for confirmation
     property string inputAction: ""
     property int inputItem: -1
     // The item whose menu is open (right-click), or -1.
@@ -405,6 +406,13 @@ Rectangle {
                         }
                     }
                     MenuEntry {
+                        objectName: "planDelete"
+                        visible: root.controller.planId !== ""
+                        text: qsTr("Delete this plan…")
+                        danger: true
+                        onTriggered: root.menuPage = "confirmDelete"
+                    }
+                    MenuEntry {
                         objectName: "planRestore"
                         visible: root.controller.backupsAvailable
                         text: qsTr("Restore a backup")
@@ -474,11 +482,94 @@ Rectangle {
                             required property int index
                             required property string made
                             required property string size
+                            required property string contents
                             objectName: "backup-" + index
                             text: made
-                            detail: size
-                            danger: true
-                            onTriggered: root.controller.restoreBackup(index)
+                            detail: contents !== "" ? contents : size
+                            onTriggered: {
+                                // Never at once: say what it holds, then confirm.
+                                root.restoreRow = index
+                                root.menuPage = "confirmRestore"
+                            }
+                        }
+                    }
+                }
+
+                // Confirm deleting the open plan.
+                Column {
+                    width: parent.width
+                    visible: root.menuPage === "confirmDelete"
+                    spacing: 8
+                    LText {
+                        width: parent.width
+                        text: qsTr("Delete the plan \"%1\"? This cannot be undone. Its songs, media and presentations stay in the library.")
+                              .arg(root.controller.planName)
+                        wrapMode: Text.WordWrap
+                        elide: Text.ElideNone
+                        font.pixelSize: 12
+                    }
+                    Row {
+                        spacing: 6
+                        LButton {
+                            objectName: "confirmDeletePlan"
+                            text: qsTr("Delete plan")
+                            variant: "warn"
+                            implicitHeight: 30
+                            radius: 6
+                            onClicked: {
+                                root.menuPage = ""
+                                root.controller.deleteCurrentPlan()
+                            }
+                        }
+                        LButton {
+                            objectName: "cancelDeletePlan"
+                            text: qsTr("Cancel")
+                            implicitHeight: 30
+                            radius: 6
+                            onClicked: root.menuPage = ""
+                        }
+                    }
+                }
+
+                // Confirm a restore: what the backup holds against the library now.
+                Column {
+                    width: parent.width
+                    visible: root.menuPage === "confirmRestore"
+                    spacing: 8
+                    LText {
+                        width: parent.width
+                        readonly property var backup: root.restoreRow >= 0 ? root.controller.backups.get(root.restoreRow) : ({})
+                        text: qsTr("Restore the backup from %1 (%2)? It replaces the library you have now (%3) and restarts Lumen. The library you have now is kept beside it.")
+                              .arg(backup.made || "").arg(backup.contents || backup.size || "")
+                              .arg(root.menuPage === "confirmRestore" ? root.controller.currentLibraryContents() : "")
+                        wrapMode: Text.WordWrap
+                        elide: Text.ElideNone
+                        font.pixelSize: 12
+                    }
+                    Row {
+                        spacing: 6
+                        LButton {
+                            objectName: "confirmRestore"
+                            text: qsTr("Restore and restart")
+                            variant: "warn"
+                            implicitHeight: 30
+                            radius: 6
+                            onClicked: {
+                                const row = root.restoreRow
+                                root.restoreRow = -1
+                                root.menuPage = ""
+                                root.controller.restoreBackup(row)
+                            }
+                        }
+                        LButton {
+                            objectName: "cancelRestore"
+                            text: qsTr("Cancel")
+                            implicitHeight: 30
+                            radius: 6
+                            onClicked: {
+                                root.restoreRow = -1
+                                root.menuPage = ""
+                            }
                         }
                     }
                 }

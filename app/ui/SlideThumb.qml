@@ -68,6 +68,8 @@ Rectangle {
         height: Math.round(width * 9 / 16)
         radius: 8
         color: Theme.slideBackground
+        // Long lyrics or scripture stay inside the card.
+        clip: true
 
         // Square off the top corners so only the card's bottom corners round.
         Rectangle {

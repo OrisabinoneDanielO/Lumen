@@ -104,6 +104,39 @@ Rectangle {
                     frameWidth: 3
                     fontSize: 15
                     bold: true
+
+                    // What the audience really sees over the slide: Black,
+                    // the Logo, or nothing at all when the output is off.
+                    Rectangle {
+                        objectName: "liveOverride"
+                        anchors.fill: parent
+                        anchors.margins: 3
+                        visible: root.controller.blackOn || root.controller.logoOn
+                        color: "#000000"
+                        LText {
+                            anchors.centerIn: parent
+                            text: root.controller.blackOn ? qsTr("Black (F7)") : qsTr("Logo (F6)")
+                            color: Theme.textMuted
+                            font.pixelSize: 14
+                            font.weight: Font.DemiBold
+                        }
+                    }
+                    Rectangle {
+                        objectName: "liveOutputOff"
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        anchors.margins: 3
+                        height: 24
+                        visible: !root.controller.outputConnected
+                        color: Theme.warnBackground
+                        LText {
+                            anchors.centerIn: parent
+                            text: qsTr("Output off: the audience sees nothing")
+                            color: Theme.warnText
+                            font.pixelSize: 11
+                        }
+                    }
                 }
                 Row {
                     width: parent.width
@@ -114,7 +147,7 @@ Rectangle {
                         width: (parent.width - parent.spacing) / 3
                         implicitHeight: 44
                         fontSize: 13
-                        text: qsTr("Previous")
+                        text: qsTr("Previous (←)")
                         onClicked: root.controller.previous()
                     }
                     LButton {

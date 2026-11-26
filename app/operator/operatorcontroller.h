@@ -213,6 +213,7 @@ public:
     Q_INVOKABLE bool duplicatePlan();         // the open plan, dated today
     Q_INVOKABLE bool renamePlan(const QString &name);
     Q_INVOKABLE bool deletePlan(int row);     // in savedPlans
+    Q_INVOKABLE bool deleteCurrentPlan();     // the open plan (its songs stay in the library)
     Q_INVOKABLE bool addHeader(const QString &text); // after the selected item
     Q_INVOKABLE bool removeItem(int index);
     Q_INVOKABLE bool moveItem(int from, int to);
@@ -226,6 +227,10 @@ public:
     void refreshBackups();
     // Records the restore and asks the app to restart (restartRequested).
     Q_INVOKABLE bool restoreBackup(int row);
+    // What the open library holds now ("12 items · 2 plans"), to compare
+    // with a backup before restoring it.
+    Q_INVOKABLE QString currentLibraryContents() const;
+    static QString libraryContents(const QString &path);
 
     // Which plan and item are open, saved every 30 seconds and on each
     // change of plan (in "<library>.session.json"), so a restart after a
@@ -294,8 +299,11 @@ public:
     Q_INVOKABLE bool goLive(int index);
     Q_INVOKABLE bool next();
     Q_INVOKABLE bool previous();
-    Q_INVOKABLE void nextItem() { selectItem(m_current + 1); }
-    Q_INVOKABLE void previousItem() { selectItem(m_current - 1); }
+    // Page Down / Page Up: the next or previous plan item with slides
+    // (headers are skipped). From a library song, scripture or deck: back to
+    // the plan, after (or before) the item that was live.
+    Q_INVOKABLE void nextItem() { stepItem(1); }
+    Q_INVOKABLE void previousItem() { stepItem(-1); }
     Q_INVOKABLE bool jumpToGroup(const QString &labelPrefix);
     Q_INVOKABLE bool jumpToVerse(int number);
     Q_INVOKABLE bool jumpToSection(int number);
@@ -319,6 +327,7 @@ signals:
     void outputToggleRequested(bool on);
 
 private:
+    void stepItem(int direction);
     static constexpr int libraryItem = -2; // m_current when showing a library song
 
     const ItemView *item(int index) const;
@@ -376,7 +385,7 @@ private:
     QString m_importFolder;
     QTimer m_sessionTimer;
     RowModel m_savedPlansModel{{"planId", "name", "date", "items", "open"}};
-    RowModel m_backupModel{{"path", "made", "size"}};
+    RowModel m_backupModel{{"path", "made", "size", "contents"}};
 
     PresentationLibrary *m_decks = nullptr;
     DeckImporter::Options m_deckOptions;

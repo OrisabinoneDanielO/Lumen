@@ -81,7 +81,7 @@ The main window is one screen with five fixed regions, so the operator never hun
 
 1. *Build a service:* New plan → search library → drag songs, scripture and media in → set arrangement per song → save. Target: under 10 minutes for a typical 8-item service.
 2. *Run live:* Click the first slide or press Space; arrow keys step; letter keys jump to sections (C = Chorus, B = Bridge, V then a number = verse); Esc-style Clear keys per layer.
-3. *Quick scripture:* Press the Scripture shortcut, type "rom 8 28", press Enter → verse goes live in the scripture theme in about 2 seconds.
+3. *Quick scripture:* Press the Scripture shortcut, type "rom 8 28" (or just "r" and Space to complete the book), press Enter → the verse is in Preview; Shift+Enter (or Space on the operator window) → it goes live in the scripture theme, all in about 2 seconds. (Changed 2026-11-26 at the user's request: chosen content goes to Preview first.)
 4. *Ad-hoc message:* Messages button → pick template → fill the field → Show; it overlays without touching the slide layer.
 
 **Keyboard map (defaults, all remappable)**

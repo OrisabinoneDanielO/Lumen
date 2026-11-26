@@ -12,6 +12,8 @@
 #include <QFileInfo>
 #include <QLocale>
 #include <QJsonArray>
+#include <QSqlDatabase>
+#include <QSqlQuery>
 #include <QSettings>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -319,6 +321,21 @@ void OperatorController::applyTransition()
     }
 }
 
+void OperatorController::stepItem(int direction)
+{
+    if (!m_plan || m_plan->items.empty())
+        return;
+    // Where to step from: the plan item shown, else (a library song or
+    // scripture is shown) the one that was live, else the start.
+    int from = m_current >= 0 ? m_current : m_positionItem >= 0 ? m_positionItem : (direction > 0 ? -1 : int(m_plan->items.size()));
+    for (int index = from + direction; index >= 0 && index < int(m_plan->items.size()); index += direction) {
+        if (!m_plan->items[std::size_t(index)].slides.empty()) {
+            selectItem(index);
+            return;
+        }
+    }
+}
+
 bool OperatorController::playItem(int index)
 {
     selectItem(index);
@@ -337,6 +354,9 @@ bool OperatorController::playSong(int row)
 
 bool OperatorController::useAsBackground(int row)
 {
+    // Edit mode never changes the screen.
+    if (m_editMode)
+        return false;
     const QVariantMap media = m_mediaModel.get(row);
     if (media.isEmpty())
         return false;
@@ -768,7 +788,14 @@ void OperatorController::setMode(const QString &mode)
 
 void OperatorController::selectItem(int index)
 {
-    if (!item(index) || index == m_current)
+    if (!item(index)) {
+        // Nothing to select (a new or emptied plan): the slide grid empties
+        // too, rather than keep the last item's slides.
+        if (m_current == -1)
+            showSelected();
+        return;
+    }
+    if (index == m_current)
         return;
     m_current = index;
     showSelected();
@@ -1127,6 +1154,17 @@ bool OperatorController::deletePlan(int row)
     return true;
 }
 
+bool OperatorController::deleteCurrentPlan()
+{
+    if (!m_plan)
+        return false;
+    for (int row = 0; row < m_savedPlansModel.count(); ++row) {
+        if (m_savedPlansModel.get(row).value(QStringLiteral("planId")).toString() == m_plan->id)
+            return deletePlan(row);
+    }
+    return false;
+}
+
 bool OperatorController::addHeader(const QString &text)
 {
     if (!m_db)
@@ -1222,6 +1260,34 @@ void OperatorController::attachBackups(Backups &backups, const QString &libraryP
     refreshBackups();
 }
 
+// What a library file holds, read without changing it: "12 items · 2 plans".
+QString OperatorController::libraryContents(const QString &path)
+{
+    const QString name = QStringLiteral("lumen-peek-%1").arg(quintptr(&path));
+    QString text;
+    {
+        QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), name);
+        db.setDatabaseName(path);
+        db.setConnectOptions(QStringLiteral("QSQLITE_OPEN_READONLY"));
+        if (db.open()) {
+            QSqlQuery q(db);
+            const auto count = [&q](const QString &table) {
+                return q.exec(QStringLiteral("SELECT COUNT(*) FROM ") + table) && q.next() ? q.value(0).toInt() : 0;
+            };
+            text = tr("%n items", nullptr, count(QStringLiteral("presentations"))) + QStringLiteral(" · ")
+                   + tr("%n plans", nullptr, count(QStringLiteral("plans")));
+            db.close();
+        }
+    }
+    QSqlDatabase::removeDatabase(name);
+    return text;
+}
+
+QString OperatorController::currentLibraryContents() const
+{
+    return m_db ? libraryContents(m_db->path()) : QString();
+}
+
 void OperatorController::refreshBackups()
 {
     QList<QVariantMap> rows;
@@ -1229,7 +1295,8 @@ void OperatorController::refreshBackups()
         for (const Backups::Entry &entry : m_backups->list()) {
             rows << QVariantMap{{"path", entry.path},
                                 {"made", QLocale().toString(entry.made.toLocalTime(), QLocale::ShortFormat)},
-                                {"size", QLocale().formattedDataSize(entry.bytes)}};
+                                {"size", QLocale().formattedDataSize(entry.bytes)},
+                                {"contents", libraryContents(entry.path)}};
         }
     }
     m_backupModel.setRows(rows);

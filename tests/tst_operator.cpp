@@ -274,11 +274,13 @@ private slots:
         QCOMPARE(m_op->liveItem(), 2);
         key(Qt::Key_PageDown); // already the last item
         QCOMPARE(m_op->currentItem(), 2);
+        // Page Up stops on items with slides: item 0 is a header (no slides,
+        // so Space would do nothing there). Until the QA pass of 2026-11-26
+        // Page Up landed on it.
         key(Qt::Key_PageUp);
+        QCOMPARE(m_op->currentItem(), 1);
         key(Qt::Key_PageUp);
-        QCOMPARE(m_op->currentItem(), 0);
-        key(Qt::Key_PageUp);
-        QCOMPARE(m_op->currentItem(), 0);
+        QCOMPARE(m_op->currentItem(), 1);
     }
 
     void letterKeysJumpToSections()

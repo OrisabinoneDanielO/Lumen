@@ -15,6 +15,8 @@ Rectangle {
     signal stageRequested()
     signal propsRequested()
     signal streamRequested()
+    // Main clicked while the output is on: the window asks before turning it off.
+    signal outputOffRequested()
     property bool streamConnected: false
     // Whether the stage display is up (batch 13).
     property bool stageConnected: false
@@ -233,7 +235,8 @@ Rectangle {
                     // Main turns the output on and off; Stage opens the stage
                     // display's settings.
                     TapHandler {
-                        onTapped: output.index === 0 ? root.controller.toggleOutput()
+                        onTapped: output.index === 0 ? (root.controller.outputConnected ? root.outputOffRequested()
+                                                                                        : root.controller.toggleOutput())
                                   : output.index === 1 ? root.stageRequested() : root.streamRequested()
                     }
                     HoverHandler {

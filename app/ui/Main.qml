@@ -53,6 +53,43 @@ Window {
     title: qsTr("Lumen Presenter")
     color: Theme.window
 
+    // The safety keys work from anywhere in Lumen: a search box, a popover,
+    // the scripture window, the Screens setup (F1-F5 clear, F6 Logo, F7 Black).
+    component LiveKey: Shortcut {
+        required property int key
+        context: Qt.ApplicationShortcut
+        enabled: !(themePanel.item && themePanel.item.visible)
+        onActivated: window.controller.handleKey(key, Qt.NoModifier)
+    }
+    LiveKey { sequence: "F1"; key: Qt.Key_F1 }
+    LiveKey { sequence: "F2"; key: Qt.Key_F2 }
+    LiveKey { sequence: "F3"; key: Qt.Key_F3 }
+    LiveKey { sequence: "F4"; key: Qt.Key_F4 }
+    LiveKey { sequence: "F5"; key: Qt.Key_F5 }
+    LiveKey { sequence: "F6"; key: Qt.Key_F6 }
+    LiveKey { sequence: "F7"; key: Qt.Key_F7 }
+
+    // Escape closes whichever popover is open (true if one was).
+    function closePopovers() {
+        let closed = false
+        for (const loader of [timersPopover, cuesPopover, updatePopover, remotePopover, sharePopover,
+                              streamPopover, propsPopover, stagePopover]) {
+            if (loader.active) {
+                loader.active = false
+                closed = true
+            }
+        }
+        if (messagePopover.visible) {
+            messagePopover.visible = false
+            closed = true
+        }
+        if (outputConfirm.visible) {
+            outputConfirm.visible = false
+            closed = true
+        }
+        return closed
+    }
+
     FocusScope {
         id: keyRoot
         objectName: "keyRoot"
@@ -65,6 +102,10 @@ Window {
             if (window.screenSetup && window.screenSetup.open) {
                 if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
                     window.screenSetup.close()
+                event.accepted = true
+                return;
+            }
+            if (event.key === Qt.Key_Escape && window.closePopovers()) {
                 event.accepted = true
                 return;
             }
@@ -85,6 +126,7 @@ Window {
                 timerSummary: window.timerController ? window.timerController.summary : ""
                 stageConnected: window.stageController ? window.stageController.connected : false
                 streamConnected: window.streamController ? window.streamController.connected : false
+                onOutputOffRequested: outputConfirm.visible = true
                 onStreamRequested: {
                     timersPopover.active = false
                     messagePopover.visible = false
@@ -205,6 +247,8 @@ Window {
                 Layout.preferredHeight: window.libraryHeight
                 controller: window.controller
                 onSearchDone: keyRoot.forceActiveFocus()
+                // A row or card clicked: the keyboard goes back to the show.
+                onPicked: keyRoot.forceActiveFocus()
                 onThemesRequested: {
                     if (themePanel.item)
                         themePanel.item.show()
@@ -244,6 +288,7 @@ Window {
     // Toolbar popovers (batch 12), under the toolbar on the right.
     Loader {
         id: timersPopover
+        onActiveChanged: if (!active) keyRoot.forceActiveFocus()
         objectName: "timersPopover"
         active: false
         x: window.width - width - 16
@@ -258,6 +303,7 @@ Window {
     // Cues stay open while recording, beside the slides (not over them).
     Loader {
         id: cuesPopover
+        onActiveChanged: if (!active) keyRoot.forceActiveFocus()
         objectName: "cuesPopover"
         active: false
         x: window.width - width - 16
@@ -268,6 +314,57 @@ Window {
             onCloseRequested: cuesPopover.active = false
         }
     }
+    // Turning the audience output off takes a second click: the projector
+    // then shows the desktop.
+    Rectangle {
+        id: outputConfirm
+        objectName: "outputConfirm"
+        visible: false
+        z: 70
+        x: window.width - width - 16
+        y: 62
+        width: 340
+        height: confirmColumn.implicitHeight + 24
+        radius: 10
+        color: Theme.window
+        border.color: Theme.warnBorder
+        onVisibleChanged: if (!visible) keyRoot.forceActiveFocus()
+        Column {
+            id: confirmColumn
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 10
+            LText {
+                width: parent.width
+                text: qsTr("Turn the audience output off? The screen goes to the computer's desktop until you turn it on again.")
+                wrapMode: Text.WordWrap
+                elide: Text.ElideNone
+                font.pixelSize: 12
+            }
+            Row {
+                spacing: 6
+                LButton {
+                    objectName: "outputOffConfirm"
+                    text: qsTr("Turn off")
+                    variant: "warn"
+                    implicitHeight: 30
+                    radius: 6
+                    onClicked: {
+                        outputConfirm.visible = false
+                        window.controller.toggleOutput()
+                    }
+                }
+                LButton {
+                    objectName: "outputOffCancel"
+                    text: qsTr("Keep it on")
+                    implicitHeight: 30
+                    radius: 6
+                    onClicked: outputConfirm.visible = false
+                }
+            }
+        }
+    }
+
     // The Screens setup, in the middle of the window: it opens by itself the
     // first time a set of screens is connected.
     // Behind the Screens setup: the window dims and ignores clicks.
@@ -348,6 +445,7 @@ Window {
     }
     Loader {
         id: updatePopover
+        onActiveChanged: if (!active) keyRoot.forceActiveFocus()
         objectName: "updatePopover"
         active: false
         x: 16
@@ -360,6 +458,7 @@ Window {
     }
     Loader {
         id: remotePopover
+        onActiveChanged: if (!active) keyRoot.forceActiveFocus()
         objectName: "remotePopover"
         active: false
         x: 16
@@ -374,6 +473,7 @@ Window {
     }
     Loader {
         id: sharePopover
+        onActiveChanged: if (!active) keyRoot.forceActiveFocus()
         objectName: "sharePopover"
         active: false
         x: 16
@@ -387,6 +487,7 @@ Window {
     }
     Loader {
         id: streamPopover
+        onActiveChanged: if (!active) keyRoot.forceActiveFocus()
         objectName: "streamPopover"
         active: false
         x: window.width - width - 16
@@ -399,6 +500,7 @@ Window {
     }
     Loader {
         id: propsPopover
+        onActiveChanged: if (!active) keyRoot.forceActiveFocus()
         objectName: "propsPopover"
         active: false
         x: window.width - width - 16
@@ -411,6 +513,7 @@ Window {
     }
     Loader {
         id: stagePopover
+        onActiveChanged: if (!active) keyRoot.forceActiveFocus()
         objectName: "stagePopover"
         active: false
         x: window.width - width - 16
@@ -423,6 +526,7 @@ Window {
     }
     MessagePopover {
         id: messagePopover
+        onVisibleChanged: if (!visible) keyRoot.forceActiveFocus()
         objectName: "messagePopover"
         visible: false
         x: window.width - width - 16
