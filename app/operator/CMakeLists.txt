@@ -31,6 +31,8 @@ add_library(lumen_operator STATIC
     lumenfile.cpp
     timercontroller.h
     timercontroller.cpp
+    updatechecker.h
+    updatechecker.cpp
     screensetup.h
     screensetup.cpp
     stagecontroller.h

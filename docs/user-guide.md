@@ -25,6 +25,10 @@ The first time Lumen starts with more than one screen connected (and whenever a 
 
 Open it again any time with **Plan ▾ → Screens…**.
 
+## Updates
+
+Lumen never looks for updates or installs anything unless you ask. **Plan ▾ → Check for updates…** asks GitHub, where Lumen is published, whether a newer version exists; if there is one, **Download** opens its page in your browser, and you install it as you installed Lumen (your library is kept). Turn on **Check when Lumen starts** to check once a little after each start; the Plan menu then says when a newer version is available. A check sends nothing about you or the computer.
+
 ## The audience output
 
 The audience output runs in its own process, `lumen-render`, so a crash in the operator UI never freezes the screen. It starts with the app, fullscreen on the screen chosen in **Screens** (at first, the first screen that is not the operator's); with one screen it opens as a window. `--render-option=--screen=N` overrides the choice. Click **Main** in the toolbar to turn it off or on (remembered), or start with `--no-output`.

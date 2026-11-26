@@ -12,6 +12,7 @@ qt_add_qml_module(lumen_ui
     QML_FILES
         Main.qml
         ScreensPopover.qml
+        UpdatePopover.qml
         Theme.qml
         LText.qml
         SectionLabel.qml

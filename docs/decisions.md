@@ -268,3 +268,7 @@ Which screen shows the main output and which the stage display used to follow a 
 - A running output moves with the protocol's "screen" command instead of restarting, so the picture is kept. Showing windows do not move between screens reliably on every platform, so the renderer hides, moves and shows the window again: a blink, only during setup.
 - The operator window stays on the primary screen; choosing the operator's screen is left to the system's display settings.
 
+## Update checks
+
+The design doc makes update checks optional and forbids updating during a service. Lumen's check is off by default (so a fresh install makes no network connection: `offline_check` still passes) and runs only when the operator asks or turns on "Check when Lumen starts". It reads GitHub's "latest release" for the repository (drafts and pre-releases are left out) and compares versions. It never downloads or installs: "Download" opens the release page in the browser, and the operator installs the new version when it suits them, never in the middle of a service. The request carries only a `LumenPresenter/<version>` user agent. Rolling back is installing the previous release from the Releases page.
+

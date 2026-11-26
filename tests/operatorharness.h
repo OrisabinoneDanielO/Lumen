@@ -13,6 +13,7 @@
 #include "scripturecontroller.h"
 #include "sampleservice.h"
 #include "screensetup.h"
+#include "updatechecker.h"
 #include "servicedata.h"
 #include "themecontroller.h"
 #include "themes.h"
@@ -54,6 +55,7 @@ public:
     ~OperatorHarness()
     {
         engine.reset();
+        updates.reset();
         screens.reset();
         cues.reset();
         midi.reset();
@@ -126,6 +128,7 @@ public:
         midi = std::make_unique<app::MidiInput>(*live);
         cues = std::make_unique<app::CueController>(*controller);
         screens = std::make_unique<app::ScreenSetup>();
+        updates = std::make_unique<app::UpdateChecker>(updateOptions);
         cues->attach(*m_db);
         media = std::make_unique<app::MediaLibrary>(*m_db, thumbnails.path());
         controller->attachMedia(*media);
@@ -149,7 +152,8 @@ public:
              {QStringLiteral("osc"), QVariant::fromValue<QObject *>(osc.get())},
              {QStringLiteral("midi"), QVariant::fromValue<QObject *>(midi.get())},
              {QStringLiteral("cues"), QVariant::fromValue<QObject *>(cues.get())},
-             {QStringLiteral("screenSetup"), QVariant::fromValue<QObject *>(screens.get())}});
+             {QStringLiteral("screenSetup"), QVariant::fromValue<QObject *>(screens.get())},
+             {QStringLiteral("updates"), QVariant::fromValue<QObject *>(updates.get())}});
         engine->loadFromModule("Lumen.Ui", "Main");
         if (engine->rootObjects().isEmpty()) {
             *error = QStringLiteral("Main.qml did not load");
@@ -239,6 +243,9 @@ public:
     std::unique_ptr<app::OscServer> osc;
     std::unique_ptr<app::MidiInput> midi;
     std::unique_ptr<app::ScreenSetup> screens;
+    // Where update checks go (tests point it at a local server before load()).
+    app::UpdateChecker::Options updateOptions;
+    std::unique_ptr<app::UpdateChecker> updates;
     std::unique_ptr<app::CueController> cues;
     std::unique_ptr<app::OperatorController> controller;
     std::unique_ptr<QQmlApplicationEngine> engine;

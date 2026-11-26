@@ -34,6 +34,7 @@ Lumen was built in the 20 batches of the design doc's build plan, each with test
 | CI on Windows, macOS and Linux | Every test on all three for each change to `main`. On CI's macOS virtual machines (no GPU) the four speed checks against the reference hardware run as advisory; everywhere else they are strict (`tests/support/timing.h`) |
 | Installers: `.msi`, `.dmg` (Apple Silicon and Intel), AppImage, Flatpak, `.deb`, `.rpm` | Each built, installed on a clean machine or container, and checked with `lumen --check-install` (window, Bibles, renderer, first output frame); the `.msi` is also uninstalled (`.github/workflows/packages.yml`) |
 | No sample content in the app | The mockup's sample service is test data only (`tests/support/sampleservice.cpp`) |
+| Optional update checks (off by default; never install anything) | `tst_updates` against a local stand-in for GitHub: newer, same, older, no release, nonsense, no answer; the Plan menu and panel |
 | Screens setup: which screen is the main output, which the stage | `tst_screens` on three virtual screens: roles, memory, labels, the panel, the renderer moving, and the app restoring a setup |
 
 ## Tested only on one machine, or with stand-ins
