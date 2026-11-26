@@ -6,7 +6,9 @@ Rectangle {
     id: root
 
     // Each song: { title, author, copyright, key }
-    property var songs: []
+    required property QtObject controller
+    readonly property bool searchHasFocus: search.inputFocused
+    signal searchDone()
     property int selectedIndex: -1
 
     // Relative column widths: Title, Author, Copyright, Default key.
@@ -106,6 +108,9 @@ Rectangle {
                 color: Theme.textMuted
             }
             SearchField {
+                id: search
+                objectName: "librarySearch"
+                onEscaped: root.searchDone()
                 Layout.preferredWidth: 240
                 placeholder: qsTr("Title, lyrics or author")
             }
@@ -139,11 +144,14 @@ Rectangle {
                     cells: [qsTr("Title"), qsTr("Author"), qsTr("Copyright"), qsTr("Default key")]
                 }
                 Repeater {
-                    model: root.songs
+                    model: root.controller.songs
                     delegate: TableRow {
-                        required property var modelData
                         required property int index
-                        cells: [modelData.title, modelData.author, modelData.copyright, modelData.key]
+                        required property string title
+                        required property string author
+                        required property string copyright
+                        required property string key
+                        cells: [title, author, copyright, key]
                         selected: index === root.selectedIndex
                     }
                 }
@@ -154,7 +162,7 @@ Rectangle {
     LText {
         anchors.horizontalCenter: parent.horizontalCenter
         y: 120
-        visible: root.songs.length === 0
+        visible: root.controller.songs.count === 0
         text: qsTr("No songs yet. Import songs to build your library.")
         color: Theme.textMuted
     }

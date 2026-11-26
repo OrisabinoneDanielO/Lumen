@@ -1,17 +1,14 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Right column: Preview (next) and Live frames, transport, layer stack,
-// transition and message controls.
+// Right column: Preview (what Space sends next) and Live (what is on the
+// Slide layer), transport buttons, the layer stack, and transition and
+// message controls.
 Rectangle {
     id: root
 
-    property string nextText
-    property string liveText
-    property string liveLabel
-    // Top to bottom, as in the mockup. Each: { name, value, active }
-    property var layers: []
-    property string transition: qsTr("Fade, 0.5 s")
+    required property QtObject controller
+    property string transition: qsTr("Cut")
 
     color: Theme.panel
 
@@ -45,7 +42,7 @@ Rectangle {
                 SlideFrame {
                     objectName: "previewFrame"
                     width: parent.width
-                    text: root.nextText
+                    text: root.controller.previewText
                     frameColor: Theme.next
                 }
             }
@@ -67,7 +64,7 @@ Rectangle {
                     LText {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root.liveLabel
+                        text: root.controller.liveLabel
                         font.pixelSize: 12
                         color: Theme.textMuted
                     }
@@ -75,7 +72,7 @@ Rectangle {
                 SlideFrame {
                     objectName: "liveFrame"
                     width: parent.width
-                    text: root.liveText
+                    text: root.controller.liveText
                     frameColor: Theme.live
                     frameWidth: 3
                     fontSize: 15
@@ -86,17 +83,21 @@ Rectangle {
                     spacing: 8
 
                     LButton {
+                        objectName: "previousSlide"
                         width: (parent.width - parent.spacing) / 3
                         implicitHeight: 44
                         fontSize: 13
                         text: qsTr("Previous")
+                        onClicked: root.controller.previous()
                     }
                     LButton {
+                        objectName: "nextSlide"
                         width: (parent.width - parent.spacing) * 2 / 3
                         implicitHeight: 44
                         fontSize: 13
                         variant: "primary"
                         text: qsTr("Next slide (Space)")
+                        onClicked: root.controller.next()
                     }
                 }
             }
@@ -110,7 +111,7 @@ Rectangle {
                     bottomPadding: 4
                 }
                 Repeater {
-                    model: root.layers
+                    model: root.controller.layers
                     delegate: Rectangle {
                         id: layerRow
                         required property var modelData
