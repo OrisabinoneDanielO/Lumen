@@ -197,3 +197,9 @@ target_compile_definitions(tst_stream PRIVATE
     LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>"
     LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
 add_dependencies(tst_stream lumen-render)
+
+# The slide editor (batch 16). Done when: every element type can be added,
+# styled and saved.
+lumen_add_test(tst_editor tst_editor.cpp operatorharness.h rendercheck.h)
+target_link_libraries(tst_editor PRIVATE lumen_render_lib lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(tst_editor PRIVATE LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")

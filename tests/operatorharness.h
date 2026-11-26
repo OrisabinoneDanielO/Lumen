@@ -14,6 +14,7 @@
 #include "servicedata.h"
 #include "themecontroller.h"
 #include "themes.h"
+#include "editorcontroller.h"
 #include "messagetemplates.h"
 #include "propscontroller.h"
 #include "stagecontroller.h"
@@ -45,6 +46,7 @@ public:
     ~OperatorHarness()
     {
         engine.reset();
+        editor.reset();
         templates.reset();
         props.reset();
         stage.reset();
@@ -100,6 +102,8 @@ public:
         props->attach(*m_db);
         templates = std::make_unique<app::MessageTemplates>(*controller);
         templates->attach(*m_db);
+        editor = std::make_unique<app::EditorController>(*controller);
+        editor->attach(*m_db, songs.get());
         media = std::make_unique<app::MediaLibrary>(*m_db, thumbnails.path());
         controller->attachMedia(*media);
         decks = std::make_unique<app::PresentationLibrary>(*m_db, slidePictures.path());
@@ -115,7 +119,8 @@ public:
              {QStringLiteral("timerController"), QVariant::fromValue<QObject *>(timers.get())},
              {QStringLiteral("stageController"), QVariant::fromValue<QObject *>(stage.get())},
              {QStringLiteral("propsController"), QVariant::fromValue<QObject *>(props.get())},
-             {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(templates.get())}});
+             {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(templates.get())},
+             {QStringLiteral("editorController"), QVariant::fromValue<QObject *>(editor.get())}});
         engine->loadFromModule("Lumen.Ui", "Main");
         if (engine->rootObjects().isEmpty()) {
             *error = QStringLiteral("Main.qml did not load");
@@ -198,6 +203,7 @@ public:
     std::unique_ptr<app::StageController> stage;
     std::unique_ptr<app::PropsController> props;
     std::unique_ptr<app::MessageTemplates> templates;
+    std::unique_ptr<app::EditorController> editor;
     std::unique_ptr<app::OperatorController> controller;
     std::unique_ptr<QQmlApplicationEngine> engine;
     QQuickWindow *window = nullptr;

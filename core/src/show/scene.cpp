@@ -20,6 +20,7 @@ QString kindName(Content::Kind kind)
     case Content::Kind::Video: return QStringLiteral("video");
     case Content::Kind::Timer: return QStringLiteral("timer");
     case Content::Kind::Prop: return QStringLiteral("prop");
+    case Content::Kind::Composed: return QStringLiteral("composed");
     case Content::Kind::Empty: break;
     }
     return QStringLiteral("empty");
@@ -41,6 +42,8 @@ std::optional<Content::Kind> kindFromName(const QString &name)
         return Content::Kind::Timer;
     if (name == QLatin1String("prop"))
         return Content::Kind::Prop;
+    if (name == QLatin1String("composed"))
+        return Content::Kind::Composed;
     return std::nullopt;
 }
 
@@ -60,6 +63,8 @@ QJsonObject contentJson(const Content &content)
         json.insert(QStringLiteral("image"), content.imagePath);
     if (content.kind == Content::Kind::Prop)
         json.insert(QStringLiteral("prop"), content.prop);
+    if (content.kind == Content::Kind::Composed)
+        json.insert(QStringLiteral("elements"), content.elements);
     if (content.kind == Content::Kind::Timer) {
         json.insert(QStringLiteral("timer"), content.timer);
         if (!content.text.isEmpty())
@@ -97,6 +102,10 @@ std::optional<Content> contentFrom(const QJsonValue &value)
     }
     if (*kind == Content::Kind::Image)
         content.imagePath = json.value(QStringLiteral("image")).toString();
+    if (*kind == Content::Kind::Composed) {
+        content.colour = Qt::white;
+        content.elements = json.value(QStringLiteral("elements")).toArray();
+    }
     if (*kind == Content::Kind::Prop) {
         content.colour = Qt::white;
         content.prop = json.value(QStringLiteral("prop")).toObject();

@@ -12,6 +12,8 @@ Rectangle {
     property string footer
     property url poster // a picture of the video or image shown
     property string timerText // a countdown slide's timer, e.g. "4:59"
+    property var elements: [] // a slide made in the editor (batch 16)
+    readonly property bool composed: elements !== null && elements !== undefined && elements.length > 0
     property color background: Theme.slideBackground
     property color frameColor: Theme.border
     property int frameWidth: 2
@@ -21,7 +23,7 @@ Rectangle {
     implicitHeight: Math.round(width * 9 / 16)
     radius: 8
     readonly property bool hasPoster: poster.toString() !== ""
-    color: text !== "" && !hasPoster ? background : "#000000"
+    color: (text !== "" || composed) && !hasPoster ? background : "#000000"
     border.color: frameColor
     border.width: frameWidth
     clip: true
@@ -38,10 +40,29 @@ Rectangle {
         asynchronous: true
     }
 
+    // A slide made in the editor: drawn as on the output (videos as a play
+    // sign; clocks and timers ticking).
+    SlideContent {
+        id: composedView
+        anchors.fill: parent
+        anchors.margins: root.frameWidth
+        visible: root.composed
+        kind: root.composed ? "composed" : "empty"
+        elements: root.composed ? root.elements : []
+        playVideo: false
+        layerName: "slide"
+        Timer {
+            interval: 250
+            running: root.composed
+            repeat: true
+            onTriggered: composedView.wallMs = Date.now()
+        }
+    }
+
     SlideContent {
         anchors.fill: parent
         anchors.margins: root.frameWidth
-        visible: root.themed
+        visible: root.themed && !root.composed
         kind: root.text !== "" ? "text" : "empty"
         text: root.text
         style: root.slideStyle
@@ -52,7 +73,7 @@ Rectangle {
     LText {
         anchors.fill: parent
         anchors.margins: 12 + root.frameWidth
-        visible: !root.themed
+        visible: !root.themed && !root.composed
         text: root.text
         color: "#FFFFFF"
         font.pixelSize: root.fontSize

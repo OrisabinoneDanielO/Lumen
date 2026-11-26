@@ -28,6 +28,7 @@ QString ContentModel::kind() const
     case Content::Kind::Video: return QStringLiteral("video");
     case Content::Kind::Timer: return QStringLiteral("timer");
     case Content::Kind::Prop: return QStringLiteral("prop");
+    case Content::Kind::Composed: return QStringLiteral("composed");
     case Content::Kind::Empty: break;
     }
     return QStringLiteral("empty");

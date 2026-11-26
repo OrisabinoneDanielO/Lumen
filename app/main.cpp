@@ -3,6 +3,7 @@
 #include "servicedata.h"
 #include "themecontroller.h"
 #include "themes.h"
+#include "editorcontroller.h"
 #include "messagetemplates.h"
 #include "propscontroller.h"
 #include "stagecontroller.h"
@@ -299,6 +300,8 @@ int main(int argc, char *argv[])
     propsController.attach(*library);
     app::MessageTemplates messageTemplates(controller);
     messageTemplates.attach(*library);
+    app::EditorController editorController(controller);
+    editorController.attach(*library, &songLibrary);
     themeController.attach(*library);
 
     // Media: thumbnails go beside the library (a temporary folder for the
@@ -481,7 +484,8 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("stageController"), QVariant::fromValue<QObject *>(&stageController)},
                                  {QStringLiteral("propsController"), QVariant::fromValue<QObject *>(&propsController)},
                                  {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(&messageTemplates)},
-                                 {QStringLiteral("streamController"), QVariant::fromValue<QObject *>(&streamController)}});
+                                 {QStringLiteral("streamController"), QVariant::fromValue<QObject *>(&streamController)},
+                                 {QStringLiteral("editorController"), QVariant::fromValue<QObject *>(&editorController)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     if (parser.isSet(quitAfter))

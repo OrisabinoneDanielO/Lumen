@@ -7,5 +7,7 @@ qt_add_qml_module(lumen_slides
     OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml/Lumen/Slides
     QML_FILES
         SlideContent.qml
+        ComposedSlide.qml
+        timertext.js
 )
 target_link_libraries(lumen_slides PUBLIC Qt6::Quick Qt6::Multimedia PRIVATE lumen_warnings)

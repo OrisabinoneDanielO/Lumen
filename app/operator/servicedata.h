@@ -5,11 +5,13 @@
 // song list.
 
 #include "lumen/core/data/database.h"
+#include "lumen/core/data/entities.h"
 #include "lumen/core/result.h"
 #include "lumen/core/show/textstyle.h"
 
 #include <QColor>
 #include <QDate>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QString>
 
@@ -34,7 +36,19 @@ struct SlideView
     // picks the timer; empty means the first countdown to a time of day.
     bool hasTimer = false;
     QString timerName;
+    // A slide made in the editor (batch 16): its elements, positioned, as
+    // composed content (see scene.h; timers carry "timerName" until they go
+    // live). Empty for every other slide.
+    QJsonArray elements;
 };
+
+// The JSON for composed content from a slide's stored elements, bottom
+// first. Pictures and videos become file:// URLs.
+QJsonArray composedElements(core::data::Database &db, const std::vector<core::data::Element> &elements);
+// True if a slide is drawn as composed content: one of its elements was
+// styled in the editor.
+bool isComposed(const std::vector<core::data::Element> &elements);
+QString elementTypeName(core::data::ElementType type);
 
 struct ArrangementChip
 {

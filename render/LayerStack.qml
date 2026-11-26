@@ -40,6 +40,8 @@ Item {
                 playVideo: layer.visible // a layer the output leaves out decodes nothing
                 timerText: content.kind === "timer" ? stack.scene.timerText(content.timer, stack.scene.wallMs) : ""
                 prop: content.prop
+                elements: content.elements
+                wallMs: stack.scene.wallMs
                 layerName: layer.modelData.name
                 opacity: layer.modelData.current.opaque ? 1.0 : 1.0 - layer.modelData.progress
                 visible: opacity > 0 && layer.modelData.progress < 1.0
@@ -59,6 +61,8 @@ Item {
                 playVideo: layer.visible // a layer the output leaves out decodes nothing
                 timerText: content.kind === "timer" ? stack.scene.timerText(content.timer, stack.scene.wallMs) : ""
                 prop: content.prop
+                elements: content.elements
+                wallMs: stack.scene.wallMs
                 layerName: layer.modelData.name
                 opacity: layer.modelData.progress
             }
