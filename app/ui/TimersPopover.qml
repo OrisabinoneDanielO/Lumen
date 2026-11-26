@@ -119,11 +119,9 @@ Rectangle {
                             variant: row.shown ? "primary" : "default"
                             onClicked: row.shown ? root.timers.hide() : root.timers.show(row.index)
                         }
-                        Small {
+                        RemoveButton {
                             objectName: "timerRemove-" + row.index
-                            text: "🗑"
-                            variant: "ghost"
-                            onClicked: root.timers.remove(row.index)
+                            onConfirmed: root.timers.remove(row.index)
                         }
                     }
                 }
@@ -161,6 +159,8 @@ Rectangle {
                     inputName: "timerNameText"
                     Layout.fillWidth: true
                     placeholder: qsTr("Name, e.g. Announcements")
+                    // Enter: on to the time, or (count up) add it.
+                    onAccepted: valueField.visible ? valueField.focusInput() : addButton.clicked()
                 }
                 SearchField {
                     id: valueField

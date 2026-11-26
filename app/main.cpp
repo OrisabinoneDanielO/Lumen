@@ -380,6 +380,7 @@ int main(int argc, char *argv[])
     timerController.attach(*library);
     app::PropsController propsController(show);
     propsController.attach(*library);
+    propsController.setPictureFolder(QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).filePath(QStringLiteral("props")));
     app::MessageTemplates messageTemplates(controller);
     messageTemplates.attach(*library);
     app::EditorController editorController(controller);

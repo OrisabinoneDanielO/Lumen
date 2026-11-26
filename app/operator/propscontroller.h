@@ -34,6 +34,9 @@ public:
     explicit PropsController(core::show::ShowController &show, QObject *parent = nullptr);
 
     void attach(core::data::Database &db);
+    // Where corner pictures are copied when added, so moving or deleting
+    // the original does not break a prop; empty: the original is used.
+    void setPictureFolder(const QString &folder) { m_pictureFolder = folder; }
     QObject *props() { return &m_model; }
 
     Q_INVOKABLE bool show(int row);
@@ -42,8 +45,8 @@ public:
     // A lower third; returns false if line1 is empty.
     Q_INVOKABLE bool addLowerThird(const QString &line1, const QString &line2);
     QString message() const { return m_message; }
-    // A bug from a picture file; corner: topLeft, topRight, bottomLeft,
-    // bottomRight.
+    // A corner picture ("bug": a logo in a corner) from a picture file;
+    // corner: topLeft, topRight, bottomLeft, bottomRight.
     Q_INVOKABLE bool addBug(const QUrl &image, const QString &corner);
     Q_INVOKABLE bool remove(int row);
 
@@ -58,6 +61,7 @@ private:
 
     core::show::ShowController &m_show;
     core::data::Database *m_db = nullptr;
+    QString m_pictureFolder;
     std::vector<core::data::Prop> m_props;
     RowModel m_model{{"name", "kind", "summary", "shown"}};
     QString m_message;

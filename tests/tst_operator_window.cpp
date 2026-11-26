@@ -78,6 +78,8 @@ private slots:
         m_ui->key(Qt::Key_V);
         m_ui->key(Qt::Key_3);
         QVERIFY(onAir().startsWith(QLatin1String("Through many dangers")));
+        m_ui->key(Qt::Key_T); // the Tag
+        QCOMPARE(onAir(), QStringLiteral("Was blind, but now I see."));
         m_ui->key(Qt::Key_F7);
         QVERIFY(m_ui->controller->blackOn());
         m_ui->key(Qt::Key_F7);

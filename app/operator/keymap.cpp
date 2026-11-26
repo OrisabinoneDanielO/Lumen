@@ -21,6 +21,7 @@ KeyMap::KeyMap()
         {Qt::Key_B, KeyAction::JumpToGroup, QStringLiteral("Bridge"), 0},
         {Qt::Key_P, KeyAction::JumpToGroup, QStringLiteral("Pre-chorus"), 0},
         {Qt::Key_E, KeyAction::JumpToGroup, QStringLiteral("Ending"), 0},
+        {Qt::Key_T, KeyAction::JumpToGroup, QStringLiteral("Tag"), 0},
         {Qt::Key_V, KeyAction::VersePrefix, {}, 0},
     };
     for (int n = 1; n <= 9; ++n)

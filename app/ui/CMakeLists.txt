@@ -13,6 +13,7 @@ qt_add_qml_module(lumen_ui
         Main.qml
         DragHandle.qml
         DragGhost.qml
+        RemoveButton.qml
         ScreensPopover.qml
         UpdatePopover.qml
         Theme.qml

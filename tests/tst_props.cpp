@@ -2,6 +2,8 @@
 #include "outputwindow.h"
 #include "rendercheck.h"
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QUrl>
 
 #include <functional>
@@ -226,6 +228,43 @@ private slots:
         QVERIFY(ui.props->message().isEmpty());
     }
 
+    // A corner picture is a copy, so moving or deleting the original does
+    // not break it in the middle of a service.
+    void cornerPicturesAreCopied()
+    {
+        test::OperatorHarness ui;
+        QString error;
+        QVERIFY2(ui.load(false, &error), qPrintable(error));
+        QTemporaryDir data;
+        QVERIFY(data.isValid());
+        const QString folder = data.filePath(QStringLiteral("props"));
+        ui.props->setPictureFolder(folder);
+        QVERIFY(ui.props->addBug(QUrl::fromLocalFile(logo), QStringLiteral("bottomLeft")));
+        const int bug = rowOf(ui.props->props(), "bars-720p");
+        QVERIFY(bug >= 0);
+        QVERIFY(ui.props->show(bug));
+        const QString image = QUrl(ui.show.scene().layer(Layer::Props).content.prop.value("bug").toObject().value("image").toString()).toLocalFile();
+        QVERIFY2(image.startsWith(folder + u'/'), qPrintable(image));
+        QVERIFY(QFileInfo(image).isFile());
+        QCOMPARE(QFileInfo(image).size(), QFileInfo(logo).size());
+    }
+
+    // Remove asks once more ("Sure?") before a prop goes.
+    void removeAsksOnce()
+    {
+        test::OperatorHarness ui;
+        QString error;
+        QVERIFY2(ui.load(false, &error), qPrintable(error));
+        QVERIFY(ui.props->addLowerThird(QStringLiteral("Ade Johnson"), QStringLiteral("Lead pastor")));
+        QVERIFY(ui.click("propsButton"));
+        QTRY_VERIFY(ui.item("propRemove-0"));
+        QVERIFY(ui.click("propRemove-0"));
+        QCOMPARE(ui.props->props()->property("count").toInt(), 1); // armed, not gone
+        QCOMPARE(ui.item("propRemove-0")->property("text").toString(), QStringLiteral("Sure?"));
+        QVERIFY(ui.click("propRemove-0"));
+        QTRY_COMPARE(ui.props->props()->property("count").toInt(), 0);
+    }
+
     void propsPopover()
     {
         test::OperatorHarness ui;
@@ -248,6 +287,16 @@ private slots:
                  QStringLiteral("Choir director"));
         QVERIFY(ui.click(QStringLiteral("propRow-%1").arg(row))); // and down again
         QVERIFY(ui.show.scene().layer(Layer::Props).content.isEmpty());
+
+        // Keyboard only: Enter in the name goes on to the title, Enter adds.
+        QVERIFY(ui.click("propLine1"));
+        for (const char c : QByteArrayLiteral("Brother Tunde"))
+            QTest::keyClick(ui.window, c);
+        QTest::keyClick(ui.window, Qt::Key_Return);
+        for (const char c : QByteArrayLiteral("Usher"))
+            QTest::keyClick(ui.window, c);
+        QTest::keyClick(ui.window, Qt::Key_Return);
+        QTRY_VERIFY(rowOf(ui.props->props(), "Brother Tunde") >= 0);
     }
 };
 

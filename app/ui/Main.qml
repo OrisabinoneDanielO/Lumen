@@ -182,12 +182,24 @@ Window {
                     Layout.fillHeight: true
                     controller: window.controller
                     onItemClicked: keyRoot.forceActiveFocus()
-                    onShareRequested: sharePopover.active = window.sharing !== null
-                    onRemoteRequested: remotePopover.active = window.remote !== null
+                    // One of Share, Remote and Updates at a time (they open
+                    // in the same place).
+                    onShareRequested: {
+                        remotePopover.active = updatePopover.active = false
+                        sharePopover.active = window.sharing !== null
+                    }
+                    onRemoteRequested: {
+                        sharePopover.active = updatePopover.active = false
+                        remotePopover.active = window.remote !== null
+                    }
                     onScreensRequested: if (window.screenSetup) window.screenSetup.openSetup()
-                    onUpdatesRequested: updatePopover.active = window.updates !== null
+                    onUpdatesRequested: {
+                        sharePopover.active = remotePopover.active = false
+                        updatePopover.active = window.updates !== null
+                    }
                     updateVersion: window.updates && window.updates.available ? window.updates.latestVersion : ""
                     dragGhost: dragGhost
+                    scriptureAvailable: window.scripture !== null
                     onAddRequested: what => {
                         if (what === "scripture")
                             window.controller.scriptureRequested()
@@ -261,6 +273,8 @@ Window {
                 Layout.preferredHeight: window.libraryHeight
                 controller: window.controller
                 dragGhost: dragGhost
+                scriptureAvailable: window.scripture !== null
+                themesAvailable: window.themes !== null
                 onSearchDone: keyRoot.forceActiveFocus()
                 // A row or card clicked: the keyboard goes back to the show.
                 onPicked: keyRoot.forceActiveFocus()
