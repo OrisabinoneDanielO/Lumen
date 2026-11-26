@@ -280,3 +280,11 @@ Production teams run backing tracks and lights from one timecode, so timecode cu
 - Cue time 0 is a timecode the operator gives (usually 01:00:00:00, the convention for program start). Pieces arriving out of order, as when the sender plays backwards, are ignored until a clean run.
 - LTC (timecode as audio) is not read yet.
 
+## One click for media; cues out of the way; a window that fits
+
+After trying 0.1.0 the user asked that a chosen video start at once, found timecode cues confusing, and found the window not responsive.
+
+- A video or picture clicked in the Media tab, or a media item clicked in the plan, now goes live at once; other items still only show their slides until one is clicked (a song's slides are many, a video is one). Edit mode never goes live. Pointing at a video card has the output open it ahead of time.
+- The Cues button is hidden unless `experimental/timecodeCues` is on; the feature, its timecode following (MIDI) and tests are kept. LTC following was built on a branch (`ltc-follow`) and is parked there, not merged.
+- Panel sizes follow the window, and the borders between panels drag (double-click: default). The toolbar drops its F-key hints below 1500 px and shortens the Clear buttons below 1250 px, so all buttons and the output lights fit down to the 1024 x 640 minimum (they used to hide the output lights below 1360 px). Preview and Live shrink so the Previous / Next buttons always show. Buttons and slide thumbnails react to the pointer. `tst_mainwindow` checks the layout at five sizes.
+

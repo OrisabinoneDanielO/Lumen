@@ -14,6 +14,10 @@ Step-by-step instructions for each system are in the [README](../README.md#insta
 
 Start Lumen from the Start menu, Applications or your desktop's app list (or `lumen` in a terminal). The first time, the library is empty: import songs (from files or another program), add media and decks, and make a plan for the service. The bundled Bibles are there from the start.
 
+## The window
+
+Drag the borders between the service plan, the slides, the Preview and Live column and the library to give each the room you want; double-click a border for the default. On smaller windows the toolbar shortens its labels (the F-key shortcuts still work), and Preview, Live and the Previous / Next buttons always stay in view; the layers and controls below them scroll.
+
 ## Screens
 
 The first time Lumen starts with more than one screen connected (and whenever a new screen is plugged in), each screen shows its number, name and role in large type, and the **Screens** panel opens:
@@ -55,7 +59,7 @@ Press **Ctrl+B** (Cmd+B on macOS), type a reference such as `jn 3 16-18`, `rom 8
 
 ## Media
 
-The **Media** tab in the library imports videos (`.mp4`, `.mov`, `.webm`, `.mkv` and more) and pictures. Each gets a thumbnail; videos of a minute or less are marked as loops. Click a card to show it in the slide grid and send it live like a slide (it fills the screen; Clear Slide stops it), or press **Use as background** to play it as a silent motion loop under songs and scripture. Videos are decoded in the render process with hardware decoding where the system offers it. The video in Preview is opened ahead of time, so it starts at once when it goes live.
+The **Media** tab in the library imports videos (`.mp4`, `.mov`, `.webm`, `.mkv` and more) and pictures. Each gets a thumbnail; videos of a minute or less are marked as loops. Click a card and it goes on the screen at once (a video starts playing; Clear Slide or F2 stops it); a media item in the service plan does the same when clicked. Pointing at a video card opens it on the output ahead of time, so it starts without a pause. Videos are decoded in the render process with hardware decoding where the system offers it. The video in Preview is opened ahead of time, so it starts at once when it goes live.
 
 ## Presentations
 
@@ -89,7 +93,9 @@ No internet needed: **Plan ▾ → Share with other computers…**. On the compu
 
 **Plan ▾ → Remote control and MIDI…**. The phone and tablet remote is a web page Lumen serves on the local network: turn it on, open the address it shows on a phone on the same Wi-Fi, enter the code, and use Next, Previous, Clear, Logo, Black, the plan and the slides (no app, no internet). OSC (UDP, port 8000) takes `/lumen/next`, `/lumen/previous`, `/lumen/slide 3`, `/lumen/clear/slide`, `/lumen/black` and more, for show-control software and tablet apps. MIDI controllers (pads, keyboards, foot switches) drive the slides too: by default C4 is Next, B3 Previous, G4 Black, A4 Logo, and a program change picks a plan item; **Learn** gives any action the next key, pad or pedal pressed. The same commands are an HTTP API: `GET /api/state`, `POST /api/next` and so on, with the code in an `X-Lumen-Code` header. All of these are off until turned on.
 
-## Timecode cues
+## Timecode cues (optional)
+
+Timecode cues are off by default. To use them, set `experimental/timecodeCues=true` in Lumen's settings file (`~/.config/Lumen/Lumen Presenter.conf` on Linux, under `[experimental]` as `timecodeCues=true`; the registry on Windows; `~/Library/Preferences` on macOS) and restart: a **Cues** button then appears above the slides.
 
 **Cues** above the slides gives the selected item a backing track (an audio file) and cues: times in the track, each with a slide. **Record** plays the track and turns each slide you send live into a cue at that moment; nudge any cue a frame earlier or later; **Play on output** has the output play the track and change slides on the frame. The cues and the track travel in `.lumen` files. If the track reaches the audience late (through a digital mixer or wireless in-ears), set **Sound delay** to that delay in milliseconds: the slides then follow the track as the audience hears it. It is one setting for the computer, not per song.
 

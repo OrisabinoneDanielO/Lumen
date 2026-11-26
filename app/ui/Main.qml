@@ -40,6 +40,15 @@ Window {
     height: 900
     minimumWidth: 1024
     minimumHeight: 640
+
+    // Panel sizes follow the window; dragging a border between panels sets
+    // the share it takes (double-click a border for the default).
+    property real planShare: 0.19
+    property real previewShare: 0.25
+    property real libraryShare: 0.26
+    readonly property int planWidth: Math.round(Math.max(200, Math.min(width * 0.32, width * planShare)))
+    readonly property int previewWidth: Math.round(Math.max(280, Math.min(width * 0.45, width * previewShare)))
+    readonly property int libraryHeight: Math.round(Math.max(130, Math.min(height * 0.5, height * libraryShare)))
     visible: true
     title: qsTr("Lumen Presenter")
     color: Theme.window
@@ -123,7 +132,7 @@ Window {
 
                 ServicePlanPanel {
                     objectName: "servicePlan"
-                    Layout.preferredWidth: Theme.planWidth
+                    Layout.preferredWidth: window.planWidth
                     Layout.fillHeight: true
                     controller: window.controller
                     onItemClicked: keyRoot.forceActiveFocus()
@@ -132,6 +141,12 @@ Window {
                     onScreensRequested: if (window.screenSetup) window.screenSetup.openSetup()
                     onUpdatesRequested: updatePopover.active = window.updates !== null
                     updateVersion: window.updates && window.updates.available ? window.updates.latestVersion : ""
+                }
+                DragHandle {
+                    objectName: "planHandle"
+                    Layout.fillHeight: true
+                    onMoved: delta => window.planShare = Math.max(0.12, Math.min(0.32, window.planShare + delta / window.width))
+                    onReset: window.planShare = 0.19
                 }
 
                 SlideGridPanel {
@@ -155,22 +170,36 @@ Window {
                     timers: window.timerController
                 }
 
+                DragHandle {
+                    objectName: "previewHandle"
+                    visible: window.controller.mode !== "edit"
+                    Layout.fillHeight: true
+                    onMoved: delta => window.previewShare = Math.max(0.18, Math.min(0.45, window.previewShare - delta / window.width))
+                    onReset: window.previewShare = 0.25
+                }
                 // Edit mode has the editor's own panels instead (as in
                 // design/mockups/Editor.html).
                 PreviewLivePanel {
                     objectName: "previewLive"
                     visible: window.controller.mode !== "edit"
-                    Layout.preferredWidth: Theme.previewWidth
+                    Layout.preferredWidth: window.previewWidth
                     Layout.fillHeight: true
                     controller: window.controller
                 }
             }
 
+            DragHandle {
+                objectName: "libraryHandle"
+                horizontal: true
+                Layout.fillWidth: true
+                onMoved: delta => window.libraryShare = Math.max(0.15, Math.min(0.5, window.libraryShare - delta / window.height))
+                onReset: window.libraryShare = 0.26
+            }
             LibraryPanel {
                 id: library
                 objectName: "library"
                 Layout.fillWidth: true
-                Layout.preferredHeight: Theme.libraryHeight
+                Layout.preferredHeight: window.libraryHeight
                 controller: window.controller
                 onSearchDone: keyRoot.forceActiveFocus()
                 onThemesRequested: {

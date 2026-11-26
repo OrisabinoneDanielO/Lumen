@@ -256,6 +256,83 @@ private slots:
         QVERIFY(textItems > 10);
     }
 
+    // The window fits from its smallest size up to full HD: the toolbar's
+    // buttons and the output lights side by side and on screen, and Preview,
+    // Live and the Previous / Next buttons in view (they used to fall off
+    // at laptop sizes).
+    void layoutFitsEachSize_data()
+    {
+        QTest::addColumn<QSize>("size");
+        for (const QSize size : {QSize(1024, 640), QSize(1280, 720), QSize(1366, 768), QSize(1440, 900), QSize(1920, 1080)})
+            QTest::newRow(qPrintable(QStringLiteral("%1x%2").arg(size.width()).arg(size.height()))) << size;
+    }
+    void layoutFitsEachSize()
+    {
+        QFETCH(QSize, size);
+        load(true);
+        m_window->resize(size);
+        QTRY_COMPARE(m_window->width(), size.width());
+        QTest::qWait(50);
+        const QRectF window(0, 0, m_window->width(), m_window->height());
+        const auto rectOf = [this](const QString &name) {
+            QQuickItem *item = findItem(m_window->contentItem(), name);
+            return item ? item->mapRectToScene(QRectF(0, 0, item->width(), item->height())) : QRectF();
+        };
+        const QStringList toolbar{"showMode", "timersButton", "propsButton", "messageButton", "clearBackground",
+                                  "clearSlide", "clearProps", "clearMessages", "clearAll", "logo", "black",
+                                  "output-0", "output-1", "output-2"};
+        QList<QRectF> placed;
+        for (const QString &name : toolbar) {
+            QQuickItem *item = findItem(m_window->contentItem(), name);
+            QVERIFY2(item && item->isVisible(), qPrintable(name));
+            const QRectF r = rectOf(name);
+            QVERIFY2(window.contains(r), qPrintable(QStringLiteral("%1 at %2,%3 %4x%5 is off the window")
+                                                        .arg(name).arg(r.x()).arg(r.y()).arg(r.width()).arg(r.height())));
+            for (const QRectF &other : placed)
+                QVERIFY2(!r.intersects(other), qPrintable(name + QStringLiteral(" overlaps another toolbar item")));
+            placed << r;
+        }
+        const QRectF column = rectOf(QStringLiteral("previewLive"));
+        for (const QString &name : {QStringLiteral("previewFrame"), QStringLiteral("liveFrame"),
+                                    QStringLiteral("previousSlide"), QStringLiteral("nextSlide")}) {
+            const QRectF r = rectOf(name);
+            QVERIFY2(!r.isEmpty() && column.contains(r) && window.contains(r), qPrintable(name + QStringLiteral(" is out of view")));
+        }
+        for (const QString &name : {QStringLiteral("planMenuButton"), QStringLiteral("libraryTab-0"), QStringLiteral("library")})
+            QVERIFY2(window.contains(rectOf(name)), qPrintable(name));
+    }
+
+    // Dragging the border between two panels resizes them; a double-click
+    // puts them back.
+    void bordersResizePanels()
+    {
+        load(true);
+        m_window->resize(1440, 900);
+        QTRY_COMPARE(m_window->width(), 1440);
+        QQuickItem *plan = findItem(m_window->contentItem(), QStringLiteral("servicePlan"));
+        QQuickItem *handle = findItem(m_window->contentItem(), QStringLiteral("planHandle"));
+        QVERIFY(plan && handle);
+        const qreal before = plan->width();
+        const QPointF start = handle->mapToScene(QPointF(handle->width() / 2, handle->height() / 2));
+        QTest::mousePress(m_window, Qt::LeftButton, {}, start.toPoint());
+        for (int step = 1; step <= 10; ++step)
+            QTest::mouseMove(m_window, (start + QPointF(10 * step, 0)).toPoint());
+        QTest::mouseRelease(m_window, Qt::LeftButton, {}, (start + QPointF(100, 0)).toPoint());
+        QTRY_VERIFY2(std::abs(plan->width() - (before + 100)) <= 2, qPrintable(QString::number(plan->width())));
+        QTest::mouseDClick(m_window, Qt::LeftButton, {}, handle->mapToScene(QPointF(handle->width() / 2, handle->height() / 2)).toPoint());
+        QTRY_VERIFY(std::abs(plan->width() - before) <= 2);
+
+        QQuickItem *library = findItem(m_window->contentItem(), QStringLiteral("library"));
+        QQuickItem *border = findItem(m_window->contentItem(), QStringLiteral("libraryHandle"));
+        const qreal tall = library->height();
+        const QPointF at = border->mapToScene(QPointF(border->width() / 2, border->height() / 2));
+        QTest::mousePress(m_window, Qt::LeftButton, {}, at.toPoint());
+        for (int step = 1; step <= 6; ++step)
+            QTest::mouseMove(m_window, (at - QPointF(0, 10 * step)).toPoint());
+        QTest::mouseRelease(m_window, Qt::LeftButton, {}, (at - QPointF(0, 60)).toPoint());
+        QTRY_VERIFY2(std::abs(library->height() - (tall + 60)) <= 2, qPrintable(QString::number(library->height())));
+    }
+
     void screenshots_data() { addModes(); }
     void screenshots()
     {
@@ -275,6 +352,14 @@ private slots:
         const QString file = QDir(dir).filePath(sampleService ? QStringLiteral("main-preview.png")
                                                               : QStringLiteral("main-default.png"));
         QVERIFY(image.save(file));
+        // LUMEN_SCREENSHOT_SIZES=1280x720,1366x768: the window at other sizes.
+        for (const QString &size : qEnvironmentVariable("LUMEN_SCREENSHOT_SIZES").split(u',', Qt::SkipEmptyParts)) {
+            const QStringList wh = size.split(u'x');
+            m_window->resize(wh.value(0).toInt(), wh.value(1).toInt());
+            QTest::qWait(150);
+            QVERIFY(m_window->grabWindow().save(QDir(dir).filePath(
+                QStringLiteral("main-%1-%2.png").arg(sampleService ? QStringLiteral("preview") : QStringLiteral("default"), size))));
+        }
     }
 };
 

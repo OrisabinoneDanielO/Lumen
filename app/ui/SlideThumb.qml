@@ -98,8 +98,17 @@ Rectangle {
         }
     }
 
-    MouseArea {
+    // Feedback: a light veil while pointed at, darker while pressed.
+    Rectangle {
         anchors.fill: parent
+        radius: root.radius
+        color: thumbArea.pressed ? "#33000000" : thumbArea.containsMouse ? "#14FFFFFF" : "transparent"
+    }
+
+    MouseArea {
+        id: thumbArea
+        anchors.fill: parent
+        hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: root.clicked()
     }

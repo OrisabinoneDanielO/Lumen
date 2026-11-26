@@ -18,7 +18,7 @@ Licensed under GPL-3.0 (see [LICENSE](LICENSE)). Built with C++20 and Qt 6 (QML)
 - **Outputs:** the audience screen in a separate process (a crashed or frozen operator window never freezes the screen); a stage display for musicians and the speaker; a stream output with transparency as key and fill (NDI experimental).
 - **Slide editor:** text boxes, shapes, pictures, videos, clocks and countdowns placed and styled on a canvas; songs edited as lyrics.
 - **On the local network (all off until turned on):** share plans and songs between computers; a phone and tablet remote in any browser; MIDI controllers (with learn); OSC; an HTTP API.
-- **Timecode cues:** slides that follow a backing track to the frame.
+- **Timecode cues** (optional, off by default): slides that follow a backing track to the frame.
 
 See the [user guide](docs/user-guide.md) for how to use each part.
 

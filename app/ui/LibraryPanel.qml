@@ -28,6 +28,7 @@ Rectangle {
         property url thumbnail
         property string badge
         property bool selected: false
+        signal hovered()
         signal clicked()
         width: 168
         height: 124
@@ -74,7 +75,9 @@ Rectangle {
         MouseArea {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
+            hoverEnabled: true
             onClicked: card.clicked()
+            onContainsMouseChanged: if (containsMouse) card.hovered()
         }
     }
 
@@ -383,7 +386,10 @@ Rectangle {
                         objectName: "mediaCard-" + index
                         badge: duration === "" ? "" : loop ? qsTr("Loop · %1").arg(duration) : duration
                         selected: index === root.controller.selectedMedia
-                        onClicked: root.controller.showMedia(index)
+                        // Chosen: on the screen at once. Pointed at: the
+                        // output opens it already, so it starts at once.
+                        onClicked: root.controller.playMedia(index)
+                        onHovered: root.controller.preloadMedia(index)
                     }
                 }
             }

@@ -10,6 +10,11 @@ Rectangle {
     required property QtObject controller
     property string transition: qsTr("Cut")
 
+    // Preview, Live and the Previous / Next buttons always fit: the two
+    // frames shrink to the room left (about 150 px of labels, gaps and
+    // buttons); the layers and the rest scroll below them.
+    readonly property real frameWidth: Math.max(160, Math.min(flick.width, (root.height - 32 - 150) / 2 * 16 / 9))
+
     color: Theme.panel
 
     Rectangle {
@@ -19,6 +24,7 @@ Rectangle {
     }
 
     Flickable {
+        id: flick
         anchors.fill: parent
         anchors.margins: 16
         anchors.leftMargin: 17
@@ -41,7 +47,8 @@ Rectangle {
                 }
                 SlideFrame {
                     objectName: "previewFrame"
-                    width: parent.width
+                    width: root.frameWidth
+                    anchors.horizontalCenter: parent.horizontalCenter
                     text: root.controller.previewText
                     slideStyle: root.controller.previewStyle
                     footer: root.controller.previewFooter
@@ -77,7 +84,8 @@ Rectangle {
                 }
                 SlideFrame {
                     objectName: "liveFrame"
-                    width: parent.width
+                    width: root.frameWidth
+                    anchors.horizontalCenter: parent.horizontalCenter
                     text: root.controller.liveText
                     slideStyle: root.controller.liveStyle
                     footer: root.controller.liveFooter
@@ -200,5 +208,18 @@ Rectangle {
                 }
             }
         }
+    }
+
+    // When the column is taller than the window: a thin bar shows it scrolls.
+    Rectangle {
+        objectName: "previewLiveScroll"
+        visible: flick.contentHeight > flick.height + 1
+        anchors.right: parent.right
+        anchors.rightMargin: 3
+        y: flick.y + flick.visibleArea.yPosition * flick.height
+        width: 4
+        height: Math.max(24, flick.visibleArea.heightRatio * flick.height)
+        radius: 2
+        color: Theme.border
     }
 }

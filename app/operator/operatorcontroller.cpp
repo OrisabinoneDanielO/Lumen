@@ -191,6 +191,29 @@ bool OperatorController::showMedia(int row)
     return true;
 }
 
+bool OperatorController::playMedia(int row)
+{
+    if (!showMedia(row))
+        return false;
+    return m_editMode || goLive(0);
+}
+
+void OperatorController::preloadMedia(int row)
+{
+    const QVariantMap media = m_mediaModel.get(row);
+    if (media.value(QStringLiteral("kind")) == QLatin1String("video"))
+        emit previewVideoChanged(media.value(QStringLiteral("path")).toString());
+}
+
+void OperatorController::chooseItem(int index)
+{
+    selectItem(index);
+    const ItemView *view = selected();
+    if (!m_editMode && m_current == index && view && view->kind == QLatin1String("MEDIA") && !view->slides.empty()
+        && liveItem() != index)
+        goLive(0);
+}
+
 bool OperatorController::useAsBackground(int row)
 {
     const QVariantMap media = m_mediaModel.get(row);

@@ -67,6 +67,9 @@ constexpr auto oscEnabledKey = "osc/enabled";
 constexpr auto oscPortKey = "osc/port";
 constexpr auto midiEnabledKey = "midi/enabled";
 constexpr auto midiMappingKey = "midi/mapping";
+// Timecode cues (batch 20): off by default, they confused operators who
+// only want slides and videos.
+constexpr auto timecodeCuesKey = "experimental/timecodeCues";
 constexpr auto streamEnabledKey = "stream/enabled";   // off by default
 constexpr auto streamKeyFillKey = "stream/keyFill";
 constexpr auto streamNdiKey = "stream/ndi";
@@ -651,7 +654,10 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("remote"), QVariant::fromValue<QObject *>(&remote)},
                                  {QStringLiteral("osc"), QVariant::fromValue<QObject *>(&osc)},
                                  {QStringLiteral("midi"), QVariant::fromValue<QObject *>(&midi)},
-                                 {QStringLiteral("cues"), QVariant::fromValue<QObject *>(&cueController)},
+                                 // Timecode cues: kept, but out of the way unless turned on.
+                                 {QStringLiteral("cues"), settings.value(QLatin1String(timecodeCuesKey), false).toBool()
+                                                              ? QVariant::fromValue<QObject *>(&cueController)
+                                                              : QVariant::fromValue<QObject *>(nullptr)},
                                  {QStringLiteral("screenSetup"), QVariant::fromValue<QObject *>(&screenSetup)},
                                  {QStringLiteral("updates"), QVariant::fromValue<QObject *>(&updates)}});
     engine.loadFromModule("Lumen.Ui", "Main");

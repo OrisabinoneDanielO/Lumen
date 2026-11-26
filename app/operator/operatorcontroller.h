@@ -168,6 +168,14 @@ public:
     void attachMedia(MediaLibrary &media);
     Q_INVOKABLE QString importMedia(const QList<QUrl> &urls);
     Q_INVOKABLE bool showMedia(int row);       // in the slide grid, ready to send live
+    // A video or picture from the library, live at once (a video starts
+    // playing); in Edit mode only shown, as everything there.
+    Q_INVOKABLE bool playMedia(int row);
+    // The output opens a library video ahead of a click (pointed at).
+    Q_INVOKABLE void preloadMedia(int row);
+    // A plan item clicked: shown in the slide grid; a video or picture item
+    // goes live at once.
+    Q_INVOKABLE void chooseItem(int index);
     Q_INVOKABLE bool useAsBackground(int row); // a looping, silent motion background
     Q_INVOKABLE bool addMediaToPlan(int row);
     // Turns on the Presentations tab (batch 10).
