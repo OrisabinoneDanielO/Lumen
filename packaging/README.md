@@ -19,9 +19,10 @@ lumen --check-install                                                # Linux
 ## Making a release
 
 1. Set the new version in `CMakeLists.txt` (`project(... VERSION x.y.z)`) and add a `<release>` line to `linux/lumen-presenter.metainfo.xml`.
-2. Commit, then tag and push: `git tag -a vX.Y.Z -m "Lumen Presenter X.Y.Z" && git push origin vX.Y.Z`.
-3. The Packages workflow builds, installs and checks every installer, then makes a **draft** release with all of them attached and notes from the merged changes.
-4. Read the draft on the Releases page, edit the notes, and click **Publish release**.
+2. Write the release notes in `docs/releases/vX.Y.Z.md` (for the people who download it: what is new, what to know). Without that file the release lists the merged changes.
+3. Commit, then tag and push: `git tag -a vX.Y.Z -m "Lumen Presenter X.Y.Z" && git push origin vX.Y.Z`.
+4. The Packages workflow builds, installs and checks every installer, then makes a **draft** release with all of them attached.
+5. Read the draft on the Releases page, edit the notes, and click **Publish release**.
 
 ## Where things go
 

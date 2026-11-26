@@ -271,14 +271,19 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v6
       - uses: actions/download-artifact@v7
         with:
           path: installers
           merge-multiple: true
+      # Notes from docs/releases/<tag>.md when there are some, else a list of
+      # the changes since the last release.
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -la installers
+          notes="docs/releases/$GITHUB_REF_NAME.md"
+          if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
           gh release create "$GITHUB_REF_NAME" installers/* --repo "$GITHUB_REPOSITORY" \
-            --title "Lumen Presenter ${GITHUB_REF_NAME#v}" --generate-notes --draft
+            --title "Lumen Presenter ${GITHUB_REF_NAME#v}" --draft "$@"
