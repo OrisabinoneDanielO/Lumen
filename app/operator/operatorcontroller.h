@@ -71,6 +71,7 @@ class OperatorController : public QObject
     Q_PROPERTY(QVariantList arrangement READ arrangement NOTIFY stateChanged)
     Q_PROPERTY(int liveItem READ liveItem NOTIFY stateChanged)
     Q_PROPERTY(bool shownIsVideo READ shownIsVideo NOTIFY stateChanged)
+    Q_PROPERTY(QString selectedPresentationId READ selectedPresentationId NOTIFY stateChanged)
     // How slides and full-screen media change: "cut", "fade", "push",
     // "pushUp", "wipe", "zoom", over transitionMs (remembered).
     Q_PROPERTY(QString transition READ transition WRITE setTransition NOTIFY transitionChanged)

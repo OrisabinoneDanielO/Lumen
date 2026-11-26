@@ -38,6 +38,7 @@ class EditorController : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool open READ isOpen NOTIFY changed)
+    Q_PROPERTY(QString presentationId READ presentationId NOTIFY changed)
     Q_PROPERTY(bool dirty READ dirty NOTIFY changed)
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY changed)
     Q_PROPERTY(bool isSong READ isSong NOTIFY changed)

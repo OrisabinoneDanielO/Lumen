@@ -20,10 +20,31 @@ Item {
         dialog.forceActiveFocus()
     }
     function close() {
-        if (root.themes.dirty)
+        leaveThen(function() {
+            root.visible = false
+            root.closed()
+        })
+    }
+
+    // Unsaved changes are never dropped without asking: Save, Discard, or
+    // keep editing.
+    property var pendingLeave: null
+    function leaveThen(action) {
+        if (!root.themes.dirty) {
+            action()
+            return
+        }
+        pendingLeave = action
+    }
+    function finishLeave(save) {
+        const action = pendingLeave
+        pendingLeave = null
+        if (save)
+            root.themes.save()
+        else
             root.themes.revert()
-        visible = false
-        root.closed()
+        if (action)
+            action()
     }
 
     readonly property var s: themes.style
@@ -116,9 +137,56 @@ Item {
         border.color: Theme.border
         Accessible.role: Accessible.Dialog
         Accessible.name: qsTr("Themes")
-        Keys.onEscapePressed: root.close()
+        Keys.onEscapePressed: root.pendingLeave !== null ? root.pendingLeave = null : root.close()
 
         MouseArea { anchors.fill: parent }
+
+        // Leaving with unsaved changes: ask.
+        Rectangle {
+            objectName: "themeUnsaved"
+            visible: root.pendingLeave !== null
+            z: 30
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 20
+            width: Math.min(parent.width - 40, unsavedRow.implicitWidth + 32)
+            height: unsavedRow.implicitHeight + 24
+            radius: 10
+            color: Theme.window
+            border.color: Theme.warnBorder
+            RowLayout {
+                id: unsavedRow
+                anchors.centerIn: parent
+                spacing: 8
+                LText {
+                    text: qsTr("Save the changes to \"%1\"?").arg(root.themes.name)
+                    font.pixelSize: 13
+                }
+                LButton {
+                    objectName: "themeUnsavedSave"
+                    text: qsTr("Save")
+                    variant: "primary"
+                    implicitHeight: 30
+                    radius: 6
+                    onClicked: root.finishLeave(true)
+                }
+                LButton {
+                    objectName: "themeUnsavedDiscard"
+                    text: qsTr("Discard")
+                    variant: "warn"
+                    implicitHeight: 30
+                    radius: 6
+                    onClicked: root.finishLeave(false)
+                }
+                LButton {
+                    objectName: "themeUnsavedKeep"
+                    text: qsTr("Keep editing")
+                    implicitHeight: 30
+                    radius: 6
+                    onClicked: root.pendingLeave = null
+                }
+            }
+        }
 
         ColumnLayout {
             anchors.fill: parent
@@ -191,7 +259,7 @@ Item {
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.themes.select(entry.index)
+                                onClicked: root.leaveThen(function() { root.themes.select(entry.index) })
                             }
                         }
                     }
@@ -200,7 +268,7 @@ Item {
                         objectName: "duplicateTheme"
                         text: qsTr("Duplicate theme")
                         radius: 6
-                        onClicked: root.themes.duplicate()
+                        onClicked: root.leaveThen(function() { root.themes.duplicate() })
                     }
                 }
                 Rectangle { x: 244; width: 1; height: parent.height; color: Theme.border }

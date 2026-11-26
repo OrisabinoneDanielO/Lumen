@@ -278,6 +278,31 @@ private slots:
         QTest::keyClick(ui.window, Qt::Key_Escape);
         QTRY_VERIFY(!dialog->isVisible());
 
+        // Unsaved changes are never dropped without asking: leaving asks
+        // Save / Discard / Keep editing.
+        QVERIFY(ui.click("libraryTab-4"));
+        QTRY_VERIFY(dialog->isVisible());
+        QVERIFY(ui.click("themeBold"));
+        QVERIFY(ui.themes->dirty());
+        QTest::keyClick(ui.window, Qt::Key_Escape);
+        QTRY_VERIFY(ui.item("themeUnsaved")->isVisible());
+        QVERIFY(dialog->isVisible());
+        QVERIFY(ui.click("themeUnsavedKeep"));
+        QVERIFY(dialog->isVisible());
+        QVERIFY(ui.themes->dirty()); // still there to save
+        QVERIFY(ui.click("theme-1")); // another theme: asks too
+        QTRY_VERIFY(ui.item("themeUnsaved")->isVisible());
+        QCOMPARE(ui.themes->current(), 0);
+        QVERIFY(ui.click("themeUnsavedDiscard"));
+        QCOMPARE(ui.themes->current(), 1);
+        QVERIFY(!ui.themes->dirty());
+        QVERIFY(ui.click("themeBold"));
+        QTest::keyClick(ui.window, Qt::Key_Escape);
+        QTRY_VERIFY(ui.item("themeUnsaved")->isVisible());
+        QVERIFY(ui.click("themeUnsavedSave"));
+        QTRY_VERIFY(!dialog->isVisible());
+        QVERIFY(!ui.themes->dirty());
+
         // The Scripture tab opens quick search.
         QVERIFY(ui.click("libraryTab-1"));
         QTRY_VERIFY(ui.item("scriptureDialog") && ui.item("scriptureDialog")->isVisible());

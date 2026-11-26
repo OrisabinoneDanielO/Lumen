@@ -250,6 +250,52 @@ private slots:
         QVERIFY(hits.ok() && !hits.value().empty());
     }
 
+    // Unsaved changes are never dropped without asking: choosing another item
+    // asks Save / Discard / Keep editing; the editor follows library songs too.
+    void unsavedChangesAreKept()
+    {
+        test::OperatorHarness ui;
+        QString error;
+        QVERIFY2(ui.load(true, &error), qPrintable(error));
+        ui.controller->selectItem(2); // Amazing Grace
+        QVERIFY(ui.click("editMode"));
+        QTRY_VERIFY(ui.item("editor")->isVisible());
+        QTRY_COMPARE(ui.editor->title(), QStringLiteral("Amazing Grace"));
+        const QString grace = ui.editor->presentationId();
+        ui.editor->setTitle(QStringLiteral("Amazing Grace (edited)"));
+        QVERIFY(ui.editor->dirty());
+
+        ui.controller->selectItem(3); // another item, while the draft is dirty
+        QTRY_VERIFY(ui.item("editorUnsaved")->isVisible());
+        QCOMPARE(ui.editor->presentationId(), grace); // nothing dropped
+        QVERIFY(ui.click("editorUnsavedKeep"));
+        QTRY_VERIFY(!ui.item("editorUnsaved")->isVisible());
+        QVERIFY(ui.editor->dirty());
+
+        ui.controller->selectItem(4);
+        QTRY_VERIFY(ui.item("editorUnsaved")->isVisible());
+        QVERIFY(ui.click("editorUnsavedDiscard"));
+        QTRY_VERIFY(!ui.editor->dirty());
+        QCOMPARE(ui.editor->presentationId(), ui.controller->selectedPresentationId());
+        QCOMPARE(Repository<Presentation>(ui.database()).get(grace).value().title, QStringLiteral("Amazing Grace"));
+
+        // Save: kept, then the new item opens.
+        ui.controller->selectItem(2);
+        QTRY_COMPARE(ui.editor->presentationId(), grace);
+        ui.editor->setTitle(QStringLiteral("Amazing Grace (saved)"));
+        ui.controller->selectItem(3);
+        QTRY_VERIFY(ui.item("editorUnsaved")->isVisible());
+        QVERIFY(ui.click("editorUnsavedSave"));
+        QTRY_COMPARE(ui.editor->presentationId(), ui.controller->selectedPresentationId());
+        QCOMPARE(Repository<Presentation>(ui.database()).get(grace).value().title, QStringLiteral("Amazing Grace (saved)"));
+
+        // Library songs one after another: the editor follows.
+        QVERIFY(ui.controller->showSong(0));
+        QTRY_COMPARE(ui.editor->presentationId(), ui.controller->selectedPresentationId());
+        QVERIFY(ui.controller->showSong(1));
+        QTRY_COMPARE(ui.editor->presentationId(), ui.controller->selectedPresentationId());
+    }
+
     void editorWindow()
     {
         test::OperatorHarness ui;

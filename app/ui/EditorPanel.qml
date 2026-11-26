@@ -23,19 +23,79 @@ Rectangle {
     readonly property var style: hasElement && element.style ? element.style : ({})
     readonly property string type: hasElement ? (element.type || "") : ""
     readonly property bool textLike: type === "text" || type === "clock" || type === "timer"
-    // The draft follows the item selected in the plan (unless it has unsaved
-    // changes).
-    readonly property int currentItem: controller.currentItem
+    // The draft follows the item chosen (in the plan or the library). With
+    // unsaved changes to another item, it asks: save, discard, or keep
+    // editing; it never drops them unasked.
+    readonly property string chosenId: controller.selectedPresentationId
+    property bool otherChosen: false
 
     function openDraft() {
-        if (editor && visible && !editor.dirty)
+        if (!editor || !visible)
+            return
+        if (!editor.dirty) {
             editor.openSelected()
+            otherChosen = false
+        } else {
+            otherChosen = editor.presentationId !== chosenId && chosenId !== ""
+        }
     }
     onVisibleChanged: openDraft()
-    onCurrentItemChanged: openDraft()
+    onChosenIdChanged: openDraft()
 
     color: Theme.window
     clip: true
+
+    Rectangle {
+        objectName: "editorUnsaved"
+        visible: root.otherChosen && root.editor !== null && root.editor.dirty
+        z: 40
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: 12
+        width: Math.min(parent.width - 32, unsavedRow.implicitWidth + 32)
+        height: unsavedRow.implicitHeight + 20
+        radius: 10
+        color: Theme.window
+        border.color: Theme.warnBorder
+        RowLayout {
+            id: unsavedRow
+            anchors.centerIn: parent
+            spacing: 8
+            LText {
+                text: qsTr("Unsaved changes to \"%1\".").arg(root.editor ? root.editor.title : "")
+                font.pixelSize: 12
+            }
+            LButton {
+                objectName: "editorUnsavedSave"
+                text: qsTr("Save, then edit the new item")
+                variant: "primary"
+                implicitHeight: 28
+                radius: 6
+                onClicked: {
+                    root.editor.save()
+                    root.openDraft()
+                }
+            }
+            LButton {
+                objectName: "editorUnsavedDiscard"
+                text: qsTr("Discard")
+                variant: "warn"
+                implicitHeight: 28
+                radius: 6
+                onClicked: {
+                    root.editor.openPresentation(root.editor.presentationId) // back as saved
+                    root.openDraft()
+                }
+            }
+            LButton {
+                objectName: "editorUnsavedKeep"
+                text: qsTr("Keep editing")
+                implicitHeight: 28
+                radius: 6
+                onClicked: root.otherChosen = false
+            }
+        }
+    }
 
     component Small: LButton {
         implicitHeight: 28
