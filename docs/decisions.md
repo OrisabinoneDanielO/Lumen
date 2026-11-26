@@ -315,3 +315,7 @@ Songs, media, scripture and plan items go to Preview on a click and live on a do
 ## Scripture side by side, fit and reference position
 
 From the Scripture mockup: a second translation side by side, Verses per slide "Fit to slide", and the reference below the text, above it, or with the text in the lower third (for a stream or camera picture). Side by side slides are composed content (two text columns and a footer, laid out in the theme's text areas, see `sideBySideElements`), so they need no new renderer support; added to the plan they are stored as styled text elements, so scripture presentations may now be composed like editor slides. The reference position is stored in the presentation's metadata (`referencePosition`) and applied over the scripture theme when the plan is loaded. "Lower third only" in the mockup is called "Lower third": it moves the text and its reference, not the reference alone.
+
+## A song's play order is its own
+
+The song editor shows each group once in the lyrics, so saving the lyrics used to rebuild the default arrangement from them and lose any repeats (Verse 1, Chorus, Verse 2, Chorus became Verse 1, Chorus, Verse 2). The editor now keeps the stored order apart from the lyrics: it follows the lyrics as written until the order is edited by hand (**Edit arrangement**), and an order set by hand survives lyrics changes (groups removed from the lyrics drop out of it). **As written** goes back to following the lyrics.

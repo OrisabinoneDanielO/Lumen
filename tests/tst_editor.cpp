@@ -250,6 +250,83 @@ private slots:
         QVERIFY(hits.ok() && !hits.value().empty());
     }
 
+    // design/mockups/Editor.html: Auto-split slides and Edit arrangement.
+    // The order set by hand is kept when the lyrics change (before, any
+    // lyrics save rebuilt it from the lyrics, dropping a repeated chorus).
+    void songArrangementAndAutoSplit()
+    {
+        test::OperatorHarness ui;
+        QString error;
+        QVERIFY2(ui.load(true, &error), qPrintable(error));
+        ui.controller->selectItem(2); // Amazing Grace
+        EditorController &editor = *ui.editor;
+        const QString id = ui.controller->selectedPresentationId();
+        Database &db = ui.database();
+        const auto storedOrder = [&] {
+            QHash<QString, QString> labels;
+            const auto groups = Repository<Group>(db).listChildren(id);
+            for (const Group &g : groups.value())
+                labels.insert(g.id, g.label);
+            QStringList order;
+            const auto arrangements = Repository<Arrangement>(db).listChildren(id);
+            for (const Arrangement &a : arrangements.value()) {
+                if (a.isDefault) {
+                    for (const QString &groupId : a.groupIds)
+                        order << labels.value(groupId);
+                }
+            }
+            return order;
+        };
+
+        // In the window: the buttons under the lyrics.
+        QVERIFY(ui.click("editMode"));
+        QTRY_VERIFY(ui.item("editor")->isVisible());
+        QTRY_VERIFY(editor.isOpen() && editor.isSong());
+        editor.setLyrics(QStringLiteral("[Verse 1]\nOne\nTwo\nThree\n\nFour\n\n[Chorus]\nFive"));
+        QVERIFY(ui.click("autoSplit"));
+        QCOMPARE(editor.lyrics(), QStringLiteral("[Verse 1]\nOne\nTwo\n\nThree\nFour\n\n[Chorus]\nFive"));
+        QCOMPARE(editor.arrangement(), (QStringList{"Verse 1", "Chorus"}));
+        QVERIFY(!editor.arrangementCustom());
+
+        QVERIFY(!ui.item("arrangementBox")->isVisible());
+        QVERIFY(ui.click("editArrangement"));
+        QTRY_VERIFY(ui.item("arrangementBox")->isVisible());
+        QVERIFY(ui.click("orderAdd-Chorus"));
+        QTRY_COMPARE(editor.arrangement(), (QStringList{"Verse 1", "Chorus", "Chorus"}));
+        QVERIFY(editor.arrangementCustom());
+        QTRY_VERIFY(ui.item("orderEarlier-1"));
+        QVERIFY(ui.click("orderEarlier-1"));
+        QTRY_COMPARE(editor.arrangement(), (QStringList{"Chorus", "Verse 1", "Chorus"}));
+        // LUMEN_SCREENSHOT_DIR: the editor with the play order open.
+        if (const QString dir = qEnvironmentVariable("LUMEN_SCREENSHOT_DIR"); !dir.isEmpty()) {
+            ui.settle();
+            QVERIFY(ui.window->grabWindow().save(dir + QStringLiteral("/editor-arrangement.png")));
+        }
+        QVERIFY(editor.save());
+        QCOMPARE(storedOrder(), (QStringList{"Chorus", "Verse 1", "Chorus"}));
+        QCOMPARE(ui.controller->slides()->property("count").toInt(), 4); // 1 + 2 + 1
+
+        // Reopened: the order is still set by hand; a lyrics change keeps it.
+        QVERIFY(editor.openSelected());
+        QCOMPARE(editor.arrangement(), (QStringList{"Chorus", "Verse 1", "Chorus"}));
+        QVERIFY(editor.arrangementCustom());
+        editor.setLyrics(editor.lyrics().replace(QStringLiteral("Five"), QStringLiteral("Five, six")));
+        QVERIFY(editor.save());
+        QCOMPARE(storedOrder(), (QStringList{"Chorus", "Verse 1", "Chorus"}));
+
+        // A group removed from the lyrics drops out; As written goes back.
+        editor.setLyrics(QStringLiteral("[Verse 1]\nOne\n\n[Bridge]\nSix"));
+        QCOMPARE(editor.arrangement(), (QStringList{"Verse 1"}));
+        editor.removeFromArrangement(0); // the last group stays
+        QCOMPARE(editor.arrangement().size(), 1);
+        QTRY_VERIFY(ui.item("orderReset")->isEnabled());
+        QVERIFY(ui.click("orderReset"));
+        QCOMPARE(editor.arrangement(), (QStringList{"Verse 1", "Bridge"}));
+        QVERIFY(!editor.arrangementCustom());
+        QVERIFY(editor.save());
+        QCOMPARE(storedOrder(), (QStringList{"Verse 1", "Bridge"}));
+    }
+
     // Unsaved changes are never dropped without asking: choosing another item
     // asks Save / Discard / Keep editing; the editor follows library songs too.
     void unsavedChangesAreKept()

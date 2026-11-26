@@ -108,6 +108,32 @@ void EditorController::load(const QString &presentationId)
     }
     m_lyrics = lyricsOf(groupTexts);
     m_lyricsChanged = false;
+    // The stored play order; set by hand if it is not the groups as written
+    // (a chorus repeated, a verse left out).
+    m_arrangement.clear();
+    m_arrangementChanged = false;
+    if (isSong()) {
+        QHash<QString, QString> labels;
+        QStringList written;
+        for (const Group &group : groups.ok() ? groups.value() : std::vector<Group>{}) {
+            labels.insert(group.id, group.label);
+            written << group.label;
+        }
+        auto arrangements = Repository<Arrangement>(*m_db).listChildren(presentationId);
+        if (arrangements.ok() && !arrangements.value().empty()) {
+            const auto &list = arrangements.value();
+            const auto chosen = std::find_if(list.begin(), list.end(), [](const Arrangement &a) { return a.isDefault; });
+            for (const QString &id : (chosen != list.end() ? *chosen : list.front()).groupIds) {
+                if (labels.contains(id))
+                    m_arrangement << labels.value(id);
+            }
+        }
+        m_arrangementCustom = !m_arrangement.isEmpty() && m_arrangement != written;
+        if (!m_arrangementCustom)
+            m_arrangement.clear();
+    } else {
+        m_arrangementCustom = false;
+    }
     m_dirty = false;
     m_slide = 0;
     m_element = -1;
@@ -253,6 +279,113 @@ void EditorController::setLyrics(const QString &lyrics)
     m_lyricsChanged = true;
     m_dirty = true;
     emit changed();
+}
+
+QStringList EditorController::writtenOrder() const
+{
+    auto parsed = songs::parseTextSong(toSongText(m_lyrics), m_presentation.title);
+    return parsed.ok() ? parsed.value().order : QStringList();
+}
+
+QStringList EditorController::groupLabels() const
+{
+    QStringList labels;
+    if (auto parsed = songs::parseTextSong(toSongText(m_lyrics), m_presentation.title); parsed.ok()) {
+        for (const songs::ParsedSection &section : parsed.value().sections)
+            labels << section.label;
+    }
+    return labels;
+}
+
+QStringList EditorController::arrangement() const
+{
+    if (!isSong())
+        return {};
+    if (!m_arrangementCustom)
+        return writtenOrder();
+    // Groups since renamed or removed from the lyrics drop out.
+    const QStringList known = groupLabels();
+    QStringList order;
+    for (const QString &label : m_arrangement) {
+        if (known.contains(label))
+            order << label;
+    }
+    return order;
+}
+
+void EditorController::arrangementEdited()
+{
+    m_arrangementChanged = true;
+    m_dirty = true;
+    emit changed();
+}
+
+void EditorController::addToArrangement(const QString &label)
+{
+    if (!isOpen() || !isSong() || !groupLabels().contains(label))
+        return;
+    m_arrangement = arrangement();
+    m_arrangementCustom = true;
+    m_arrangement << label;
+    arrangementEdited();
+}
+
+void EditorController::removeFromArrangement(int index)
+{
+    QStringList order = arrangement();
+    if (!isOpen() || index < 0 || index >= order.size() || order.size() == 1)
+        return; // a song keeps at least one group
+    order.removeAt(index);
+    m_arrangement = order;
+    m_arrangementCustom = true;
+    arrangementEdited();
+}
+
+void EditorController::moveInArrangement(int from, int to)
+{
+    QStringList order = arrangement();
+    if (!isOpen() || from < 0 || from >= order.size() || to < 0 || to >= order.size() || from == to)
+        return;
+    order.move(from, to);
+    m_arrangement = order;
+    m_arrangementCustom = true;
+    arrangementEdited();
+}
+
+void EditorController::resetArrangement()
+{
+    if (!isOpen() || !m_arrangementCustom)
+        return;
+    m_arrangement.clear();
+    m_arrangementCustom = false;
+    arrangementEdited();
+}
+
+void EditorController::autoSplit()
+{
+    if (!isOpen() || !isSong())
+        return;
+    const int perSlide = qMax(1, m_songs ? m_songs->linesPerSlide() : 2);
+    // Each group: its header (if any) and every line, breaks ignored.
+    std::vector<std::pair<QString, QStringList>> groups{{QString(), {}}};
+    for (const QString &line : m_lyrics.split(u'\n')) {
+        const QString t = line.trimmed();
+        if (t.startsWith(u'[') && t.endsWith(u']'))
+            groups.push_back({t, {}});
+        else if (!t.isEmpty() && t != QLatin1String("---"))
+            groups.back().second << t;
+    }
+    QStringList out;
+    for (const auto &[header, lines] : groups) {
+        if (header.isEmpty() && lines.isEmpty())
+            continue;
+        QStringList slides;
+        for (qsizetype i = 0; i < lines.size(); i += perSlide)
+            slides << lines.mid(i, perSlide).join(u'\n');
+        out << (header.isEmpty() ? slides.join(QStringLiteral("\n\n"))
+                                 : slides.isEmpty() ? header : header + u'\n' + slides.join(QStringLiteral("\n\n")));
+    }
+    setLyrics(out.join(QStringLiteral("\n\n")));
 }
 
 void EditorController::selectSlide(int index)
@@ -563,10 +696,35 @@ QString EditorController::toSongText(const QString &lyrics)
     return songs::slideBreaksFromBlankLines(lyrics);
 }
 
+Status EditorController::saveArrangement(const QHash<QString, QString> &groupIds, const QStringList &order)
+{
+    auto arrangements = Repository<Arrangement>(*m_db).listChildren(m_presentation.id);
+    for (const Arrangement &a : arrangements.ok() ? arrangements.value() : std::vector<Arrangement>{}) {
+        if (auto removed = Repository<Arrangement>(*m_db).remove(a.id); !removed.ok())
+            return removed;
+    }
+    QStringList ids;
+    for (const QString &label : order) {
+        if (groupIds.contains(label))
+            ids << groupIds.value(label);
+    }
+    auto arrangement = Repository<Arrangement>(*m_db).create(
+        {.presentationId = m_presentation.id, .name = tr("Default"), .isDefault = true, .groupIds = ids});
+    return arrangement.ok() ? success() : Status(arrangement.error());
+}
+
 Status EditorController::saveSong()
 {
-    if (!m_lyricsChanged)
-        return success();
+    if (!m_lyricsChanged) {
+        if (!m_arrangementChanged)
+            return success();
+        // Only the order changed: the groups stay as they are.
+        QHash<QString, QString> groupIds;
+        auto groups = Repository<Group>(*m_db).listChildren(m_presentation.id);
+        for (const Group &g : groups.ok() ? groups.value() : std::vector<Group>{})
+            groupIds.insert(g.label, g.id);
+        return saveArrangement(groupIds, arrangement());
+    }
     auto parsed = songs::parseTextSong(toSongText(m_lyrics), m_presentation.title);
     if (!parsed.ok())
         return parsed.error();
@@ -576,11 +734,6 @@ Status EditorController::saveSong()
     auto groups = Repository<Group>(*m_db).listChildren(m_presentation.id);
     for (const Group &g : groups.ok() ? groups.value() : std::vector<Group>{}) {
         if (auto removed = Repository<Group>(*m_db).remove(g.id); !removed.ok())
-            return removed;
-    }
-    auto arrangements = Repository<Arrangement>(*m_db).listChildren(m_presentation.id);
-    for (const Arrangement &a : arrangements.ok() ? arrangements.value() : std::vector<Arrangement>{}) {
-        if (auto removed = Repository<Arrangement>(*m_db).remove(a.id); !removed.ok())
             return removed;
     }
     const int linesPerSlide = m_songs ? m_songs->linesPerSlide() : 2;
@@ -609,14 +762,8 @@ Status EditorController::saveSong()
             }
         }
     }
-    QStringList order;
-    for (const QString &label : song.order) {
-        if (groupIds.contains(label))
-            order << groupIds.value(label);
-    }
-    auto arrangement = Repository<Arrangement>(*m_db).create(
-        {.presentationId = m_presentation.id, .name = tr("Default"), .isDefault = true, .groupIds = order});
-    return arrangement.ok() ? success() : Status(arrangement.error());
+    // The order set by hand, else the lyrics as written.
+    return saveArrangement(groupIds, m_arrangementCustom ? arrangement() : song.order);
 }
 
 bool EditorController::save()

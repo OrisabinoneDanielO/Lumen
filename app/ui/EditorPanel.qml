@@ -13,6 +13,23 @@ import Lumen.Slides
 Rectangle {
     id: root
 
+    // A small ‹ › × button on an arrangement chip.
+    component ChipButton: LText {
+        id: chipButton
+        signal activated()
+        width: 16
+        height: 28
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        color: Theme.textMuted
+        font.pixelSize: 12
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: chipButton.activated()
+        }
+    }
+
     required property QtObject controller
     property QtObject editor: null
     property QtObject timers: null // for countdown elements
@@ -209,7 +226,7 @@ Rectangle {
             // ---- left: lyrics (songs) ----
             Rectangle {
                 visible: root.ready && root.editor.isSong
-                Layout.preferredWidth: 300
+                Layout.preferredWidth: 280
                 Layout.fillHeight: true
                 color: Theme.panel
                 ColumnLayout {
@@ -249,6 +266,119 @@ Rectangle {
                                 selectByMouse: true
                                 onTextChanged: if (root.ready && activeFocus) root.editor.lyrics = text
                             }
+                        }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        LButton {
+                            objectName: "autoSplit"
+                            Layout.fillWidth: true
+                            implicitHeight: 32
+                            radius: 6
+                            text: qsTr("Auto-split slides")
+                            onClicked: root.editor.autoSplit()
+                        }
+                        LButton {
+                            objectName: "editArrangement"
+                            Layout.fillWidth: true
+                            implicitHeight: 32
+                            radius: 6
+                            text: qsTr("Edit arrangement")
+                            variant: arrangementBox.visible ? "primary" : "default"
+                            onClicked: arrangementBox.visible = !arrangementBox.visible
+                        }
+                    }
+                    // The play order: groups as chips, repeats allowed.
+                    ColumnLayout {
+                        id: arrangementBox
+                        objectName: "arrangementBox"
+                        visible: false
+                        Layout.fillWidth: true
+                        spacing: 6
+                        SectionLabel {
+                            text: root.ready && root.editor.arrangementCustom ? qsTr("PLAY ORDER") : qsTr("PLAY ORDER · AS WRITTEN")
+                        }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            Repeater {
+                                model: root.ready ? root.editor.arrangement : []
+                                delegate: Rectangle {
+                                    id: orderChip
+                                    required property string modelData
+                                    required property int index
+                                    objectName: "order-" + index
+                                    width: orderRow.implicitWidth + 16
+                                    height: 28
+                                    radius: 6
+                                    color: Theme.raised
+                                    border.color: Theme.border
+                                    Accessible.role: Accessible.ListItem
+                                    Accessible.name: modelData
+                                    Row {
+                                        id: orderRow
+                                        anchors.centerIn: parent
+                                        spacing: 2
+                                        ChipButton {
+                                            objectName: "orderEarlier-" + orderChip.index
+                                            visible: orderChip.index > 0
+                                            text: "‹"
+                                            Accessible.name: qsTr("Earlier")
+                                            onActivated: root.editor.moveInArrangement(orderChip.index, orderChip.index - 1)
+                                        }
+                                        LText {
+                                            height: 28
+                                            verticalAlignment: Text.AlignVCenter
+                                            text: orderChip.modelData
+                                            font.pixelSize: 12
+                                        }
+                                        ChipButton {
+                                            objectName: "orderLater-" + orderChip.index
+                                            visible: orderChip.index < root.editor.arrangement.length - 1
+                                            text: "›"
+                                            Accessible.name: qsTr("Later")
+                                            onActivated: root.editor.moveInArrangement(orderChip.index, orderChip.index + 1)
+                                        }
+                                        ChipButton {
+                                            objectName: "orderRemove-" + orderChip.index
+                                            visible: root.editor.arrangement.length > 1
+                                            text: "×"
+                                            Accessible.name: qsTr("Remove")
+                                            onActivated: root.editor.removeFromArrangement(orderChip.index)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        LText {
+                            text: qsTr("Add a group:")
+                            font.pixelSize: 11
+                            color: Theme.textMuted
+                        }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            Repeater {
+                                model: root.ready ? root.editor.groupLabels : []
+                                delegate: LButton {
+                                    required property string modelData
+                                    objectName: "orderAdd-" + modelData
+                                    implicitHeight: 28
+                                    radius: 6
+                                    text: "+ " + modelData
+                                    variant: "ghost"
+                                    onClicked: root.editor.addToArrangement(modelData)
+                                }
+                            }
+                        }
+                        LButton {
+                            objectName: "orderReset"
+                            implicitHeight: 28
+                            radius: 6
+                            text: qsTr("As written")
+                            enabled: root.ready && root.editor.arrangementCustom
+                            onClicked: root.editor.resetArrangement()
                         }
                     }
                 }
@@ -301,8 +431,12 @@ Rectangle {
                             }
                         }
                     }
-                    Item { Layout.fillWidth: true }
+                    // Gives way first when the window is narrow.
                     LText {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        Layout.preferredWidth: 0
+                        horizontalAlignment: Text.AlignRight
                         text: "1920 × 1080"
                         font.pixelSize: 12
                         color: Theme.textMuted
