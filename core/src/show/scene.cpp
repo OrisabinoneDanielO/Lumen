@@ -38,8 +38,13 @@ QJsonObject contentJson(const Content &content)
     QJsonObject json{{QStringLiteral("kind"), kindName(content.kind)}};
     if (content.kind == Content::Kind::Colour || content.kind == Content::Kind::Text)
         json.insert(QStringLiteral("colour"), content.colour.name(QColor::HexArgb));
-    if (content.kind == Content::Kind::Text)
+    if (content.kind == Content::Kind::Text) {
         json.insert(QStringLiteral("text"), content.text);
+        if (!content.style.isEmpty())
+            json.insert(QStringLiteral("style"), content.style);
+        if (!content.footer.isEmpty())
+            json.insert(QStringLiteral("footer"), content.footer);
+    }
     if (content.kind == Content::Kind::Image)
         json.insert(QStringLiteral("image"), content.imagePath);
     return json;
@@ -58,8 +63,11 @@ std::optional<Content> contentFrom(const QJsonValue &value)
         if (!content.colour.isValid())
             return std::nullopt;
     }
-    if (*kind == Content::Kind::Text)
+    if (*kind == Content::Kind::Text) {
         content.text = json.value(QStringLiteral("text")).toString();
+        content.style = json.value(QStringLiteral("style")).toObject();
+        content.footer = json.value(QStringLiteral("footer")).toString();
+    }
     if (*kind == Content::Kind::Image)
         content.imagePath = json.value(QStringLiteral("image")).toString();
     return content;

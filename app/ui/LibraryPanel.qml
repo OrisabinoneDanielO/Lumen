@@ -11,6 +11,7 @@ Rectangle {
     required property QtObject controller
     readonly property bool searchHasFocus: search.inputFocused
     signal searchDone()
+    signal themesRequested()
 
     // Relative column widths: Title, Author, Copyright, Default key.
     readonly property var columnWeights: [2, 1.5, 1, 1]
@@ -83,6 +84,11 @@ Rectangle {
                     required property string modelData
                     required property int index
                     readonly property bool active: index === 0
+                    // Songs are listed here; Scripture and Themes open their
+                    // panels; Media and Presentations arrive in batches 9-10.
+                    readonly property bool available: index !== 2 && index !== 3
+                    objectName: "libraryTab-" + index
+                    opacity: available ? 1 : 0.45
 
                     implicitWidth: tabLabel.implicitWidth + 28
                     implicitHeight: 40
@@ -102,6 +108,17 @@ Rectangle {
                         height: 2
                         visible: tab.active
                         color: Theme.live
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: tab.available && !tab.active
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (tab.index === 1)
+                                root.controller.scriptureRequested()
+                            else if (tab.index === 4)
+                                root.themesRequested()
+                        }
                     }
                 }
             }

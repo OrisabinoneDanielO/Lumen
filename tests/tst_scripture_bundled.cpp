@@ -178,8 +178,13 @@ private slots:
             QTest::keyClick(ui.window, Qt::Key_Return);
             QTRY_VERIFY(!dialog->isVisible());
             QVERIFY2(ui.controller->liveText().startsWith(expected.start), qPrintable(ui.controller->liveText()));
-            QVERIFY(ui.controller->liveText().endsWith(
-                QStringLiteral("%1 3:16 (%2)").arg(expected.book, value.toObject().value("abbreviation").toString())));
+            // Batch 8: the reference and the translation's copyright line are
+            // the slide's footer (they ended the slide text in batch 7).
+            const auto &live = ui.show.scene().layer(lumen::core::show::Layer::Slide).content;
+            QCOMPARE(live.footer, QStringLiteral("%1 3:16 (%2) · %3")
+                                      .arg(expected.book, value.toObject().value("abbreviation").toString(),
+                                           value.toObject().value("copyright").toString()));
+            QVERIFY(!live.style.isEmpty()); // drawn with the scripture theme
             QCOMPARE(ui.controller->slides()->property("count").toInt(), 3);
         }
     }

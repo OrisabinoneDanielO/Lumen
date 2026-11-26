@@ -15,6 +15,7 @@
 #include <QtQml/qqmlextensionplugin.h>
 
 Q_IMPORT_QML_PLUGIN(Lumen_UiPlugin)
+Q_IMPORT_QML_PLUGIN(Lumen_SlidesPlugin)
 
 using namespace lumen;
 
@@ -230,10 +231,19 @@ private slots:
         QVERIFY(QFile::exists(QStringLiteral(":/qt/qml/Lumen/Ui/fonts/OFL.txt")));
 
         load(false);
+        // Batch 8: slide pictures inside the Preview and Live frames are
+        // audience-output text, drawn with the output fonts; skip them.
+        auto inSlide = [](QQuickItem *item) {
+            for (QQuickItem *p = item; p; p = p->parentItem()) {
+                if (p->objectName() == QLatin1String("slideContent"))
+                    return true;
+            }
+            return false;
+        };
         int textItems = 0;
         const auto items = m_window->findChildren<QQuickItem *>();
         for (QQuickItem *item : items) {
-            if (!item->inherits("QQuickText"))
+            if (!item->inherits("QQuickText") || inSlide(item))
                 continue;
             ++textItems;
             const QFont font = item->property("font").value<QFont>();

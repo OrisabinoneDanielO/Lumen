@@ -7,6 +7,8 @@
 #include "operatorcontroller.h"
 #include "scripturecontroller.h"
 #include "servicedata.h"
+#include "themecontroller.h"
+#include "themes.h"
 
 #include "lumen/core/data/database.h"
 #include "lumen/core/show/showcontroller.h"
@@ -19,6 +21,9 @@
 #include <QQuickWindow>
 #include <QTest>
 #include <QtQuickTest/quicktest.h>
+#include <QtQml/qqmlextensionplugin.h>
+
+Q_IMPORT_QML_PLUGIN(Lumen_SlidesPlugin)
 
 #include <memory>
 
@@ -30,6 +35,7 @@ public:
     ~OperatorHarness()
     {
         engine.reset();
+        themes.reset();
         scripture.reset();
         controller.reset();
         songs.reset();
@@ -50,6 +56,10 @@ public:
             }
             m_db = std::move(db).value();
         }
+        if (!app::ensureDefaultThemes(*m_db).ok()) {
+            *error = QStringLiteral("could not set up the default themes");
+            return false;
+        }
         songs = std::make_unique<core::songs::SongLibrary>(*m_db);
         if (!songs->indexMissing().ok()) {
             *error = QStringLiteral("could not index the songs");
@@ -65,11 +75,14 @@ public:
         controller->attachLibrary(*m_db, *songs);
         scripture = std::make_unique<app::ScriptureController>(*controller);
         scripture->setStores(bibles, nullptr);
+        themes = std::make_unique<app::ThemeController>(*controller);
+        themes->attach(*m_db);
 
         engine = std::make_unique<QQmlApplicationEngine>();
         engine->setInitialProperties(
             {{QStringLiteral("controller"), QVariant::fromValue<QObject *>(controller.get())},
-             {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(scripture.get())}});
+             {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(scripture.get())},
+             {QStringLiteral("themes"), QVariant::fromValue<QObject *>(themes.get())}});
         engine->loadFromModule("Lumen.Ui", "Main");
         if (engine->rootObjects().isEmpty()) {
             *error = QStringLiteral("Main.qml did not load");
@@ -143,6 +156,7 @@ public:
     core::show::ShowController show;
     std::unique_ptr<core::songs::SongLibrary> songs;
     std::unique_ptr<app::ScriptureController> scripture;
+    std::unique_ptr<app::ThemeController> themes;
     std::unique_ptr<app::OperatorController> controller;
     std::unique_ptr<QQmlApplicationEngine> engine;
     QQuickWindow *window = nullptr;

@@ -10,6 +10,8 @@ Window {
     required property QtObject controller
     // Scripture quick search; optional (the panel is left out without it).
     property QtObject scripture: null
+    // The theme editor; optional too.
+    property QtObject themes: null
 
     width: 1440
     height: 900
@@ -27,7 +29,8 @@ Window {
 
         // Live shortcuts, unless the operator is typing in a search box.
         Keys.onPressed: event => {
-            if (library.searchHasFocus || (scripturePanel.item && scripturePanel.item.visible))
+            if (library.searchHasFocus || (scripturePanel.item && scripturePanel.item.visible)
+                || (themePanel.item && themePanel.item.visible))
                 return;
             event.accepted = window.controller.handleKey(event.key, event.modifiers);
         }
@@ -88,6 +91,10 @@ Window {
                 Layout.preferredHeight: Theme.libraryHeight
                 controller: window.controller
                 onSearchDone: keyRoot.forceActiveFocus()
+                onThemesRequested: {
+                    if (themePanel.item)
+                        themePanel.item.show()
+                }
             }
         }
     }
@@ -98,6 +105,16 @@ Window {
         active: window.scripture !== null
         sourceComponent: ScripturePanel {
             scripture: window.scripture
+            onClosed: keyRoot.forceActiveFocus()
+        }
+    }
+
+    Loader {
+        id: themePanel
+        anchors.fill: parent
+        active: window.themes !== null
+        sourceComponent: ThemeEditorPanel {
+            themes: window.themes
             onClosed: keyRoot.forceActiveFocus()
         }
     }

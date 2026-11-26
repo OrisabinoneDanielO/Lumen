@@ -366,15 +366,15 @@ struct Table<Theme>
     static constexpr const char *name = "themes";
     static constexpr const char *parentWhere = nullptr;
     static constexpr const char *orderBy = "name, id";
-    static QStringList columns() { return {"name", "applies_to", "background", "safe_area"}; }
+    static QStringList columns() { return {"name", "applies_to", "background", "safe_area", "is_default"}; }
     static QVariantList values(const Theme &e)
     {
-        return {e.name, enumText(e.appliesTo), jsonText(e.background), rectText(e.safeArea)};
+        return {e.name, enumText(e.appliesTo), jsonText(e.background), rectText(e.safeArea), e.isDefault ? 1 : 0};
     }
     static Theme read(const QSqlQuery &q)
     {
         return {q.value(0).toString(), q.value(1).toString(), enumFrom(q.value(2), ThemeTarget::Any),
-                objectFrom(q.value(3)), rectFrom(q.value(4))};
+                objectFrom(q.value(3)), rectFrom(q.value(4)), q.value(5).toInt() != 0};
     }
 };
 

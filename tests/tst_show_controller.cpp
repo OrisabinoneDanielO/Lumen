@@ -49,6 +49,19 @@ private slots:
         QCOMPARE(show.scene().sequence, quint64(1));
     }
 
+    // Batch 8: a themed slide and its background arrive in one snapshot.
+    void severalLayersInOneChange()
+    {
+        ShowController show;
+        QSignalSpy spy(&show, &ShowController::sceneChanged);
+        show.setContents({{Layer::Slide, Content::textContent("Verse 1")}, {Layer::Background, Content::fill(Qt::blue)}});
+        QCOMPARE(spy.count(), 1);
+        QCOMPARE(show.scene().sequence, quint64(1));
+        QCOMPARE(show.scene().layer(Layer::Background).content, Content::fill(Qt::blue));
+        show.setContents({{Layer::Slide, Content::textContent("Verse 1")}}); // no change
+        QCOMPARE(spy.count(), 1);
+    }
+
     void clearOneLayerLeavesTheOthers()
     {
         ShowController show;

@@ -1,5 +1,7 @@
 #include "scripturecontroller.h"
 
+#include "themes.h"
+
 #include "lumen/core/data/repository.h"
 
 #include <QDir>
@@ -98,6 +100,7 @@ void ScriptureController::setVersesPerSlide(int count)
     if (count == m_versesPerSlide)
         return;
     m_versesPerSlide = count;
+    rebuild();
     emit changed();
 }
 
@@ -126,6 +129,7 @@ void ScriptureController::refresh()
                 m_error = passage.error().message;
         }
     }
+    rebuild();
     emit changed();
 }
 
@@ -151,46 +155,56 @@ QString ScriptureController::copyright() const
     return m_sources[std::size_t(m_translation)].translation.copyright;
 }
 
-ItemView ScriptureController::item() const
+void ScriptureController::rebuild()
 {
-    ItemView view;
+    m_item = {};
     if (!m_passage)
-        return view;
+        return;
     const Translation &t = m_passage->translation;
+    ItemView &view = m_item;
     view.kind = QStringLiteral("BIBLE");
     view.title = m_passage->label;
     view.subtitle = t.title;
     view.detail = t.copyright;
     view.presentationId = QStringLiteral("scripture:%1:%2").arg(t.id, m_passage->label);
 
+    // The scripture theme: the library's default, else the built-in one.
+    ThemeView theme = builtInTheme(core::data::ThemeTarget::Scripture);
+    if (m_op.database()) {
+        if (const auto stored = defaultTheme(*m_op.database(), core::data::ThemeTarget::Scripture))
+            theme = *stored;
+    }
+
     const auto &verses = m_passage->verses;
     for (std::size_t i = 0; i < verses.size(); i += std::size_t(m_versesPerSlide)) {
         const std::vector<PassageVerse> chunk(verses.begin() + qsizetype(i),
                                               verses.begin() + qsizetype(qMin(i + std::size_t(m_versesPerSlide), verses.size())));
         const QString reference = slideReference(*m_passage, chunk);
-        view.slides.push_back({{}, reference, scriptureColour,
-                               QStringLiteral("%1\n\n%2 (%3)").arg(slideText(chunk), reference, t.abbreviation)});
+        const QString footer = QStringLiteral("%1 (%2) · %3").arg(reference, t.abbreviation, t.copyright);
+        const QStringList parts = core::show::splitToFit(slideText(chunk), theme.style, true);
+        for (qsizetype p = 0; p < parts.size(); ++p) {
+            const QString group = parts.size() > 1
+                                      ? QStringLiteral("%1 (%2/%3)").arg(reference).arg(p + 1).arg(parts.size())
+                                      : reference;
+            view.slides.push_back({{}, group, scriptureColour, parts[p], footer, 0});
+        }
     }
-    return view;
+    applyTheme(view, theme.style, theme.background);
 }
 
 QString ScriptureController::previewText() const
 {
-    const ItemView view = item();
-    return view.slides.empty() ? QString() : view.slides.front().text.section(QStringLiteral("\n\n"), 0, 0);
+    return m_item.slides.empty() ? QString() : m_item.slides.front().text;
 }
 
 QString ScriptureController::previewReference() const
 {
-    const ItemView view = item();
-    if (view.slides.empty())
-        return {};
-    return QStringLiteral("%1 (%2)").arg(view.slides.front().group, m_passage->translation.abbreviation);
+    return m_item.slides.empty() ? QString() : m_item.slides.front().footer.section(QStringLiteral(" · "), 0, 0);
 }
 
 bool ScriptureController::showNow()
 {
-    if (!m_passage || !m_op.showItem(item()))
+    if (!m_passage || !m_op.showItem(m_item))
         return false;
     return m_op.goLive(0);
 }
@@ -201,7 +215,7 @@ bool ScriptureController::addToPlan()
     Database *db = m_op.database();
     if (!m_passage || !db)
         return false;
-    const ItemView view = item();
+    const ItemView &view = m_item;
     const Translation &t = m_passage->translation;
 
     QString presentationId;
@@ -222,7 +236,7 @@ bool ScriptureController::addToPlan()
             {.libraryId = libraryId,
              .kind = PresentationKind::Scripture,
              .title = QStringLiteral("%1 (%2)").arg(m_passage->label, t.abbreviation),
-             .metadata = {{"subtitle", t.title}, {"copyright", t.copyright},
+             .metadata = {{"subtitle", t.title}, {"copyright", t.copyright}, {"abbreviation", t.abbreviation},
                           {"translation", t.id}, {"reference", m_passage->label}}});
         if (!presentation.ok())
             return presentation.error();

@@ -32,7 +32,9 @@ const QString johnUsfm = QStringLiteral(
     "\\v 16 \\w For|strong=\"G1063\"\\w* \\w God|strong=\"G2316\"\\w* so loved\\f + \\fr 3:16 \\ft A footnote.\\f* the world,\n"
     "\\q1 that he gave\\x - \\xo 3:16 \\xt Rom 5:8\\x* his \\wj one and only\\wj* Son.\n"
     "\\v 17-18 Verses \\add combined\\add* here.\n"
+    "\\qc ב BETH.\n"
     "\\s2 A heading between verses\n"
+    "\\qa Aleph\n"
     "\\p \\v 19 ¶ This is the judgment, \\+w qu|strong=\"G1\"\\+w*’\\+w il|strong=\"G2\"\\+w* came.\n"
     "\\c 4\n\\p\n\\v 1 Chapter four.\n");
 

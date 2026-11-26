@@ -268,6 +268,7 @@ private slots:
                         .background = {{"colour", "#14213D"}},
                         .safeArea = QRectF(0.05, 0.05, 0.9, 0.9)},
                   [](Theme &e) {
+                      e.isDefault = true; // batch 8
                       e.appliesTo = ThemeTarget::LowerThird;
                       e.background = {{"image", "/media/bg.png"}};
                       e.safeArea = QRectF(0.1, 0.7, 0.8, 0.25);

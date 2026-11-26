@@ -119,7 +119,7 @@ bool isParagraphMarker(const QString &m)
     static const QSet<QString> markers{
         "p", "m", "po", "pr", "cls", "pmo", "pm", "pmc", "pmr", "pi", "pi1", "pi2", "pi3",
         "mi", "nb", "pc", "ph", "ph1", "ph2", "ph3", "q", "q1", "q2", "q3", "q4", "qr",
-        "qc", "qa", "qm", "qm1", "qm2", "qm3", "qd", "b", "li", "li1", "li2", "li3", "li4",
+        "qc", "qm", "qm1", "qm2", "qm3", "qd", "b", "li", "li1", "li2", "li3", "li4",
         "lh", "lf", "lim", "lim1", "lim2", "tr", "tc1", "tc2", "tc3", "tc4", "th1", "th2"};
     return markers.contains(m);
 }
@@ -128,7 +128,7 @@ bool isParagraphMarker(const QString &m)
 bool isSkippedBlock(const QString &m)
 {
     static const QRegularExpression skipped(QStringLiteral(
-        R"(^(id|ide|h|h\d|toc\d|toca\d|rem|sts|usfm|mt\d?|mte\d?|ms\d?|mr|s\d?|sr|r|d|sp|sd\d?|)"
+        R"(^(id|ide|h|h\d|toc\d|toca\d|rem|sts|usfm|mt\d?|mte\d?|ms\d?|mr|s\d?|sr|r|d|sp|sd\d?|qa|)"
         R"(cl|cd|cp|ca|va|vp|imt\d?|is\d?|ip|ipi|im|imi|ipq|imq|ipr|iq\d?|ib|ili\d?|iot|io\d?|)"
         R"(iex|imte\d?|ie|restore|periph)$)"));
     Q_ASSERT(skipped.isValid());
@@ -138,6 +138,10 @@ bool isSkippedBlock(const QString &m)
 QString tidy(QString text)
 {
     text.remove(QChar(0x00B6)); // ¶ paragraph signs some editions keep in the text
+    // Psalm 119's acrostic headings ("ב BETH.") that an edition marked as a
+    // poetry line instead of a heading (\qa is skipped already).
+    static const QRegularExpression acrostic(QStringLiteral(R"(\s*[\x{05D0}-\x{05EA}]\s+[A-Z]{2,}\.?\s*$)"));
+    text.remove(acrostic);
     return text.simplified();
 }
 

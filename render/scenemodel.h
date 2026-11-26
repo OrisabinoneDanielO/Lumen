@@ -6,6 +6,7 @@
 #include <QList>
 #include <QObject>
 #include <QUrl>
+#include <QVariantMap>
 
 #include <memory>
 #include <vector>
@@ -26,6 +27,8 @@ class ContentModel : public QObject
     Q_PROPERTY(QUrl image READ image NOTIFY changed)
     // True if it hides everything beneath it (an opaque colour fill).
     Q_PROPERTY(bool opaque READ opaque NOTIFY changed)
+    Q_PROPERTY(QVariantMap style READ style NOTIFY changed)
+    Q_PROPERTY(QString footer READ footer NOTIFY changed)
 
 public:
     using QObject::QObject;
@@ -38,6 +41,8 @@ public:
     QString text() const { return m_content.text; }
     QUrl image() const;
     bool opaque() const;
+    QVariantMap style() const { return m_content.style.toVariantMap(); }
+    QString footer() const { return m_content.footer; }
 
 signals:
     void changed();
