@@ -48,6 +48,8 @@ OperatorController::OperatorController(ShowController &show, bool editAvailable,
 
     // Timers shown in Preview and Live tick here too (the output counts on
     // its own).
+    // ...and drop the timer when the slide changes to one without.
+    connect(this, &OperatorController::stateChanged, this, &OperatorController::timersTicked);
     m_timerTick.setInterval(250);
     connect(&m_timerTick, &QTimer::timeout, this, [this] {
         if (!liveTimerText().isEmpty() || !previewTimerText().isEmpty())
