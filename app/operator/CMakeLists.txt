@@ -9,9 +9,11 @@ add_library(lumen_operator STATIC
     rowmodel.cpp
     operatorcontroller.h
     operatorcontroller.cpp
+    scripturecontroller.h
+    scripturecontroller.cpp
 )
 add_library(Lumen::Operator ALIAS lumen_operator)
 target_include_directories(lumen_operator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(lumen_operator
-    PUBLIC Lumen::Data Lumen::Show Lumen::Songs Qt6::Core Qt6::Gui
+    PUBLIC Lumen::Data Lumen::Show Lumen::Songs Lumen::Scripture Qt6::Core Qt6::Gui
     PRIVATE lumen_warnings)

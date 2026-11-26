@@ -1,15 +1,18 @@
 #include "operatorcontroller.h"
+#include "scripturecontroller.h"
 #include "servicedata.h"
 
 #include "lumen/core/buildinfo.h"
 #include "lumen/core/data/database.h"
 #include "lumen/core/render/renderlink.h"
+#include "lumen/core/scripture/biblestore.h"
 #include "lumen/core/show/outputbridge.h"
 #include "lumen/core/show/showcontroller.h"
 #include "lumen/core/songs/songlibrary.h"
 
 #include <QCommandLineParser>
 #include <QDir>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QSettings>
@@ -97,6 +100,19 @@ std::unique_ptr<data::Database> openLibrary(bool designPreview)
     return std::move(db).value();
 }
 
+// The Bibles built into the app: bibles.db beside the executable, in the
+// install's share folder, or in a macOS bundle's Resources.
+QString bundledBibles()
+{
+    const QDir appDir(QCoreApplication::applicationDirPath());
+    for (const QString &candidate : {QStringLiteral("bibles.db"), QStringLiteral("../share/lumen/bibles.db"),
+                                     QStringLiteral("../Resources/bibles.db"), QStringLiteral("../../../bibles.db")}) {
+        if (QFileInfo::exists(appDir.filePath(candidate)))
+            return appDir.filePath(candidate);
+    }
+    return {};
+}
+
 } // namespace
 
 int main(int argc, char *argv[])
@@ -147,6 +163,27 @@ int main(int argc, char *argv[])
         qWarning("Song search index not updated: %s", qPrintable(indexed.error().message));
     controller.attachLibrary(*library, songLibrary);
 
+    // Scripture: the bundled Bibles (read-only) and any the user adds.
+    std::unique_ptr<scripture::BibleStore> bundledBibleStore;
+    if (const QString path = bundledBibles(); !path.isEmpty()) {
+        if (auto store = scripture::BibleStore::open(path, true); store.ok())
+            bundledBibleStore = std::move(store).value();
+        else
+            qWarning("Bundled Bibles not opened: %s", qPrintable(store.error().message));
+    } else {
+        qWarning("Bundled Bibles not found (bibles.db)");
+    }
+    std::unique_ptr<scripture::BibleStore> userBibleStore;
+    if (!parser.isSet(designPreview)) {
+        const QString folder = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        if (auto store = scripture::BibleStore::open(QDir(folder).filePath(QStringLiteral("user-bibles.db")), false); store.ok())
+            userBibleStore = std::move(store).value();
+    } else if (auto store = scripture::BibleStore::open(QStringLiteral(":memory:"), false); store.ok()) {
+        userBibleStore = std::move(store).value();
+    }
+    app::ScriptureController scriptureController(controller);
+    scriptureController.setStores(bundledBibleStore.get(), userBibleStore.get());
+
     std::unique_ptr<Output> output;
     if (parser.isSet(experimentalOutput) || settings.value(QLatin1String(experimentalOutputKey), false).toBool()) {
         output = startOutput(show, parser.value(renderServer), parser.value(renderExecutable),
@@ -163,7 +200,8 @@ int main(int argc, char *argv[])
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         [] { QCoreApplication::exit(EXIT_FAILURE); }, Qt::QueuedConnection);
-    engine.setInitialProperties({{QStringLiteral("controller"), QVariant::fromValue<QObject *>(&controller)}});
+    engine.setInitialProperties({{QStringLiteral("controller"), QVariant::fromValue<QObject *>(&controller)},
+                                 {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(&scriptureController)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     return QGuiApplication::exec();

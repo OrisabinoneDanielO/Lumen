@@ -85,3 +85,15 @@ target_link_libraries(tst_song_import PRIVATE Lumen::Songs)
 lumen_add_test(tst_song_samples tst_song_samples.cpp operatorharness.h)
 target_link_libraries(tst_song_samples PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Lumen::Songs Qt6::Quick Qt6::QuickTest)
 target_compile_definitions(tst_song_samples PRIVATE LUMEN_SONGS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/songs")
+
+# Scripture (batch 7).
+lumen_add_test(tst_scripture tst_scripture.cpp)
+target_link_libraries(tst_scripture PRIVATE Lumen::Scripture)
+
+# Done when: "jn 3 16-18" shows the right verses in every bundled Bible.
+lumen_add_test(tst_scripture_bundled tst_scripture_bundled.cpp operatorharness.h)
+target_link_libraries(tst_scripture_bundled PRIVATE lumen_ui lumen_uiplugin Lumen::Operator Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(tst_scripture_bundled PRIVATE
+    LUMEN_BIBLES_DB="${LUMEN_BIBLES_DB}"
+    LUMEN_BIBLES_MANIFEST="${CMAKE_SOURCE_DIR}/bibles/manifest.json")
+add_dependencies(tst_scripture_bundled bibles)

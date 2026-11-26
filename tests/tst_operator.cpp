@@ -207,7 +207,7 @@ private slots:
         // Modified keys are not live shortcuts.
         QCOMPARE(action(Qt::Key_Space, Qt::ShiftModifier), -1);
         QCOMPARE(action(Qt::Key_C, Qt::ControlModifier), -1);
-        QCOMPARE(action(Qt::Key_B, Qt::ControlModifier), -1); // left for scripture search
+        QCOMPARE(action(Qt::Key_B, Qt::ControlModifier), int(KeyAction::OpenScripture)); // batch 7
         QCOMPARE(action(Qt::Key_Q), -1);
     }
 
