@@ -114,8 +114,10 @@ private slots:
         QCOMPARE(updates.downloadUrl().toString(),
                  QStringLiteral("https://github.com/OrisabinoneDanielO/Lumen/releases/tag/v0.2.0"));
         // The request names the program and nothing else about the user.
-        QVERIFY(github.lastRequest.contains("User-Agent: LumenPresenter/0.1.0"));
-        QVERIFY(!github.lastRequest.toLower().contains("cookie"));
+        // (Header names are case-insensitive; Qt 6.8 sends them in lower case.)
+        const QByteArray request = github.lastRequest.toLower();
+        QVERIFY2(request.contains("user-agent: lumenpresenter/0.1.0"), request.constData());
+        QVERIFY(!request.contains("cookie"));
     }
 
     void sameOrOlderIsNotOffered()
