@@ -369,6 +369,35 @@ private slots:
         QVERIFY(ui.click(QStringLiteral("savedPlan-%1").arg(originalRow)));
         QCOMPARE(ui.controller->planName(), original);
     }
+
+    // Batch 18: the Share popover, against this same computer.
+    void sharePopover()
+    {
+        test::OperatorHarness ui;
+        QString error;
+        QVERIFY2(ui.load(false, &error), qPrintable(error));
+        QVERIFY(ui.click("planMenuButton"));
+        QVERIFY(ui.click("planShare"));
+        ui.settle();
+        QVERIFY(ui.item("sharePopover") && ui.item("shareToggle"));
+        QVERIFY(ui.click("shareToggle"));
+        QVERIFY(ui.sharing->enabled());
+        QTRY_COMPARE(ui.item("shareCode")->property("text").toString(), ui.sharing->code());
+        QVERIFY(ui.click("shareAddress"));
+        for (const QChar c : QStringLiteral("127.0.0.1:%1").arg(ui.sharing->port()))
+            QTest::keyClick(ui.window, c.toLatin1());
+        QVERIFY(ui.click("shareRemoteCode"));
+        for (const QChar c : ui.sharing->code())
+            QTest::keyClick(ui.window, c.toLatin1());
+        QVERIFY(ui.click("shareConnect"));
+        QTRY_VERIFY(ui.sharing->remotePlans()->property("count").toInt() >= 1);
+        const int before = int(Repository<Plan>(ui.database()).list().value().size());
+        ui.settle();
+        QVERIFY(ui.click("shareCopyPlan-0"));
+        QTRY_COMPARE(int(Repository<Plan>(ui.database()).list().value().size()), before + 1);
+        QVERIFY(ui.click("shareToggle"));
+        QVERIFY(!ui.sharing->enabled());
+    }
 };
 
 int main(int argc, char *argv[])

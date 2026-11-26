@@ -48,6 +48,7 @@ class OperatorController : public QObject
     Q_PROPERTY(QObject *savedPlans READ savedPlans CONSTANT)
     Q_PROPERTY(QObject *backups READ backups CONSTANT)
     Q_PROPERTY(QString planMessage READ planMessage NOTIFY stateChanged)
+    Q_PROPERTY(QString planId READ planId NOTIFY stateChanged)
     Q_PROPERTY(QString lastBackup READ lastBackup NOTIFY stateChanged)
     Q_PROPERTY(bool backupsAvailable READ backupsAvailable NOTIFY stateChanged)
     // Timers on Preview and Live (countdown slides), updated as they tick.
@@ -131,6 +132,9 @@ public:
     // The editor (batch 16): what it opens, and reloading after it saves.
     QString selectedPresentationId() const { return selected() ? selected()->presentationId : QString(); }
     void refreshAfterEdit();
+    // Something arrived in the library (sharing, batch 18): plans, songs,
+    // media and decks are listed again.
+    void refreshLibrary();
     QString messageShown() const;
     QStringList recentMessages() const { return m_recentMessages; }
 

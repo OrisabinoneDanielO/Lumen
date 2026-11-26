@@ -12,6 +12,7 @@ Rectangle {
 
     required property QtObject controller
     signal itemClicked(int index)
+    signal shareRequested() // batch 18: the Share popover
 
     // The plan menu's page: "" (closed), "main", "open", "restore", or
     // "input" (a name, header or notes, for inputAction).
@@ -349,6 +350,14 @@ Rectangle {
                         onTriggered: {
                             root.menuPage = ""
                             importDialog.active = true
+                        }
+                    }
+                    MenuEntry {
+                        objectName: "planShare"
+                        text: qsTr("Share with other computers…")
+                        onTriggered: {
+                            root.menuPage = ""
+                            root.shareRequested()
                         }
                     }
                     MenuEntry {

@@ -5,6 +5,7 @@
 #include "themes.h"
 #include "editorcontroller.h"
 #include "messagetemplates.h"
+#include "sharing.h"
 #include "propscontroller.h"
 #include "stagecontroller.h"
 #include "streamcontroller.h"
@@ -27,6 +28,7 @@
 #include <QQmlApplicationEngine>
 #include <QScreen>
 #include <QSettings>
+#include <QSysInfo>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QProcess>
@@ -47,6 +49,7 @@ namespace {
 constexpr auto outputEnabledKey = "output/enabled"; // on by default since batch 12
 constexpr auto stageEnabledKey = "stage/enabled";   // off by default (needs a screen)
 constexpr auto stageLayoutKey = "stage/layout";
+constexpr auto sharingEnabledKey = "sharing/enabled"; // off by default (batch 18)
 constexpr auto streamEnabledKey = "stream/enabled";   // off by default
 constexpr auto streamKeyFillKey = "stream/keyFill";
 constexpr auto streamNdiKey = "stream/ndi";
@@ -303,6 +306,18 @@ int main(int argc, char *argv[])
     messageTemplates.attach(*library);
     app::EditorController editorController(controller);
     editorController.attach(*library, &songLibrary);
+
+    // Sharing with other Lumen computers on the local network (batch 18):
+    // off unless the operator turned it on (remembered).
+    app::Sharing sharing(*library, QSysInfo::machineHostName(),
+                         QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).filePath(QStringLiteral("imported")));
+    if (!parser.isSet(designPreview) && settings.value(QLatin1String(sharingEnabledKey), false).toBool())
+        sharing.setEnabled(true);
+    QObject::connect(&sharing, &app::Sharing::changed, &app, [&sharing, &parser, &designPreview] {
+        if (!parser.isSet(designPreview))
+            QSettings().setValue(QLatin1String(sharingEnabledKey), sharing.enabled());
+    });
+    QObject::connect(&sharing, &app::Sharing::imported, &controller, &app::OperatorController::refreshLibrary);
     themeController.attach(*library);
 
     // Media: thumbnails go beside the library (a temporary folder for the
@@ -486,7 +501,8 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("propsController"), QVariant::fromValue<QObject *>(&propsController)},
                                  {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(&messageTemplates)},
                                  {QStringLiteral("streamController"), QVariant::fromValue<QObject *>(&streamController)},
-                                 {QStringLiteral("editorController"), QVariant::fromValue<QObject *>(&editorController)}});
+                                 {QStringLiteral("editorController"), QVariant::fromValue<QObject *>(&editorController)},
+                                 {QStringLiteral("sharing"), QVariant::fromValue<QObject *>(&sharing)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     if (parser.isSet(quitAfter))

@@ -23,6 +23,8 @@ Window {
     property QtObject streamController: null
     // The slide editor (batch 16); optional.
     property QtObject editorController: null
+    // Sharing on the local network (batch 18); optional.
+    property QtObject sharing: null
 
     width: 1440
     height: 900
@@ -108,6 +110,7 @@ Window {
                     Layout.fillHeight: true
                     controller: window.controller
                     onItemClicked: keyRoot.forceActiveFocus()
+                    onShareRequested: sharePopover.active = window.sharing !== null
                 }
 
                 SlideGridPanel {
@@ -195,6 +198,19 @@ Window {
             timers: window.timerController
             controller: window.controller
             onCloseRequested: timersPopover.active = false
+        }
+    }
+    Loader {
+        id: sharePopover
+        objectName: "sharePopover"
+        active: false
+        x: 16
+        y: 62
+        z: 50
+        sourceComponent: SharePopover {
+            sharing: window.sharing
+            controller: window.controller
+            onCloseRequested: sharePopover.active = false
         }
     }
     Loader {

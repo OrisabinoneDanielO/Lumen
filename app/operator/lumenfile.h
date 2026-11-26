@@ -26,10 +26,14 @@ constexpr int formatVersion = 1;
 
 core::Status exportPlan(core::data::Database &db, const QString &planId, const QString &file);
 
+// Presentations (songs, slides) without a plan; importing adds no plan.
+core::Status exportPresentations(core::data::Database &db, const QStringList &presentationIds, const QString &file);
+
 struct ImportReport
 {
-    QString planId;
+    QString planId;   // empty for a file without a plan
     QString planName;
+    QStringList presentationIds; // here, added or reused
     int presentationsAdded = 0;
     int presentationsReused = 0;
     int mediaAdded = 0;
