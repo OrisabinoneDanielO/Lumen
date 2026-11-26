@@ -5,7 +5,7 @@
 | Windows | `.msi` | CPack (WiX Toolset 3) | bundled by `windeployqt` |
 | macOS | `.dmg` with `Lumen Presenter.app` | CPack (DragNDrop) | bundled by `macdeployqt` |
 | Linux | AppImage | `linux/build-appimage.sh` (linuxdeploy) | bundled |
-| Linux | Flatpak | `flatpak/io.github.OrisabinoneDanielO.Lumen.yml` | KDE runtime 6.8 |
+| Linux | Flatpak | `flatpak/io.github.OrisabinoneDanielO.Lumen.yml` | KDE runtime 6.11 |
 | Linux | `.deb`, `.rpm` | CPack | the distribution's (Qt 6.5 or newer) |
 
 The [Packages workflow](../.github/workflows/packages.yml) builds every one of them for each change to `main`, for `v*` tags, for pull requests that touch packaging, and for branches named `packaging/...`, installs it on a clean machine or container, and runs `lumen --check-install`. That checks the operator window loads, the bundled Bibles open, and the renderer starts and draws its first frame, then exits with an error if anything failed. Try it after installing anywhere:

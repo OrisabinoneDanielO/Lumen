@@ -3,11 +3,11 @@
 #       packaging/flatpak/io.github.OrisabinoneDanielO.Lumen.yml
 id: io.github.OrisabinoneDanielO.Lumen
 runtime: org.kde.Platform
-runtime-version: '6.8'
+runtime-version: '6.11'
 sdk: org.kde.Sdk
 # Qt PDF (PDF slide decks) is not in the KDE runtime; this base app has it.
 base: io.qt.qtwebengine.BaseApp
-base-version: '6.8'
+base-version: '6.11'
 command: lumen
 rename-desktop-file: lumen-presenter.desktop
 rename-icon: lumen-presenter
