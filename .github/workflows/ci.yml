@@ -87,3 +87,36 @@ jobs:
               echo "::endgroup::"
             fi
           done
+
+  # Memory and undefined-behaviour errors: every test under AddressSanitizer
+  # and UndefinedBehaviorSanitizer (debug build; leak reports off, Qt's
+  # caches look like leaks).
+  sanitizers:
+    name: Linux (sanitizers)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libfontconfig1-dev \
+            libpulse0 libva2 libva-drm2 libva-x11-2 libasound2-dev
+      - uses: lukka/get-cmake@latest
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          arch: linux_gcc_64
+          cache: true
+          modules: 'qtmultimedia qtpdf'
+      - name: Build
+        run: |
+          cmake --preset debug "-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined"
+          cmake --build --preset debug
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=0:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+          LUMEN_SKIP_TIMING: '1'
+        run: ctest --preset debug --output-on-failure
+
