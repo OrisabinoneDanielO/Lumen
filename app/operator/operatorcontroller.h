@@ -2,6 +2,7 @@
 
 #include "keymap.h"
 #include "medialibrary.h"
+#include "presentationlibrary.h"
 #include "rowmodel.h"
 #include "servicedata.h"
 
@@ -32,6 +33,13 @@ class OperatorController : public QObject
     Q_PROPERTY(int selectedMedia READ selectedMedia NOTIFY stateChanged)
     Q_PROPERTY(QString mediaSummary READ mediaSummary NOTIFY stateChanged)
     Q_PROPERTY(bool mediaAvailable READ mediaAvailable NOTIFY stateChanged)
+    // Imported slide decks (batch 10).
+    Q_PROPERTY(QObject *decks READ decks CONSTANT)
+    Q_PROPERTY(int selectedDeck READ selectedDeck NOTIFY stateChanged)
+    Q_PROPERTY(QString deckSummary READ deckSummary NOTIFY stateChanged)
+    Q_PROPERTY(QString deckDetails READ deckDetails NOTIFY stateChanged)
+    Q_PROPERTY(bool decksAvailable READ decksAvailable NOTIFY stateChanged)
+    Q_PROPERTY(bool decksBusy READ decksBusy NOTIFY stateChanged)
     // Pictures for the Preview and Live frames when they show media.
     Q_PROPERTY(QUrl previewPoster READ previewPoster NOTIFY stateChanged)
     Q_PROPERTY(QUrl livePoster READ livePoster NOTIFY stateChanged)
@@ -84,6 +92,12 @@ public:
     int selectedMedia() const { return m_selectedMedia; }
     QString mediaSummary() const { return m_mediaSummary; }
     bool mediaAvailable() const { return m_mediaLibrary != nullptr; }
+    QObject *decks() { return &m_deckModel; }
+    int selectedDeck() const { return m_selectedDeck; }
+    QString deckSummary() const { return m_deckSummary; }
+    QString deckDetails() const { return m_deckDetails; }
+    bool decksAvailable() const { return m_decks != nullptr; }
+    bool decksBusy() const { return m_decksBusy; }
     QUrl previewPoster() const;
     QUrl livePoster() const;
 
@@ -93,6 +107,13 @@ public:
     Q_INVOKABLE bool showMedia(int row);       // in the slide grid, ready to send live
     Q_INVOKABLE bool useAsBackground(int row); // a looping, silent motion background
     Q_INVOKABLE bool addMediaToPlan(int row);
+    // Turns on the Presentations tab (batch 10).
+    void attachPresentations(PresentationLibrary &decks, DeckImporter::Options options = {});
+    // Draws the slides on another thread (an office conversion can take a
+    // while); decksImported() follows. Returns false if an import is running.
+    Q_INVOKABLE bool importPresentations(const QList<QUrl> &urls);
+    Q_INVOKABLE bool showDeck(int row); // in the slide grid, ready to send live
+    Q_INVOKABLE bool addDeckToPlan(int row);
     // The video Space would send next, if any (the renderer preloads it).
     QString previewVideo() const;
     QString planName() const;
@@ -170,6 +191,7 @@ signals:
     void stateChanged();
     void scriptureRequested(); // Ctrl+B
     void previewVideoChanged(const QString &path);
+    void decksImported(const QString &summary);
 
 private:
     static constexpr int libraryItem = -2; // m_current when showing a library song
@@ -212,6 +234,14 @@ private:
     QTimer m_verseTimeout;
 
     void refreshMedia();
+    void refreshDecks();
+
+    PresentationLibrary *m_decks = nullptr;
+    DeckImporter::Options m_deckOptions;
+    int m_selectedDeck = -1;
+    QString m_deckSummary;
+    QString m_deckDetails;
+    bool m_decksBusy = false;
     void updatePreviewVideo();
 
     MediaLibrary *m_mediaLibrary = nullptr;
@@ -223,6 +253,7 @@ private:
 
     RowModel m_planModel{{"kind", "title", "subtitle"}};
     RowModel m_mediaModel{{"title", "kind", "duration", "thumbnail", "presentationId", "path", "loop"}};
+    RowModel m_deckModel{{"title", "slides", "thumbnail", "presentationId", "method"}};
     RowModel m_slideModel{{"group", "colour", "text", "thumbnail"}};
     RowModel m_songModel{{"title", "author", "copyright", "key", "presentationId"}};
 };

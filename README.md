@@ -11,7 +11,7 @@ The operator UI bundles the [Inter](https://github.com/rsms/inter) typeface (v4.
 
 ## Building
 
-Needs CMake 3.24+, Ninja, a C++20 compiler and Qt 6.5+ (Core, Gui, Qml, Quick, Multimedia, Test).
+Needs CMake 3.24+, Ninja, a C++20 compiler and Qt 6.5+ (Core, Gui, Qml, Quick, Multimedia, Pdf, Xml, Test).
 
 ```sh
 cmake --preset debug          # or: release
@@ -25,7 +25,7 @@ On Fedora, the tools can live in a toolbox container instead of the host:
 ```sh
 toolbox create lumen
 toolbox run -c lumen sudo dnf install -y cmake ninja-build gcc-c++ \
-    qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtmultimedia-devel mesa-libGL-devel
+    qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtmultimedia-devel qt6-qtpdf-devel qt6-qtbase-private-devel mesa-libGL-devel
 toolbox run -c lumen cmake --preset debug   # and so on
 ```
 
@@ -40,6 +40,8 @@ Scripture: press **Ctrl+B** (Cmd+B on macOS), type a reference such as `jn 3 16-
 Themes: **Library > Themes** edits the look of songs, scripture and lower thirds (font, sizes, colour, alignment, outline, shadow, background, margins and the footer) with a live preview. Text shrinks to fit the theme's safe area and long passages split across slides. The output uses the bundled Noto Sans and Noto Serif fonts (SIL OFL 1.1, `core/fonts/OFL.txt`), which cover Yoruba, Igbo and Hausa letters and tone marks.
 
 Media: the **Media** tab in the library imports videos (`.mp4`, `.mov`, `.webm`, `.mkv` and more) and pictures. Each gets a thumbnail; videos of a minute or less are marked as loops. Click a card to show it in the slide grid and send it live like a slide (it fills the screen; Clear Slide stops it), or press **Use as background** to play it as a silent motion loop under songs and scripture. Videos are decoded in the render process with hardware decoding where the system offers it. The video in Preview is opened ahead of time, so it starts at once when it goes live.
+
+Presentations: the **Presentations** tab imports PowerPoint (`.pptx`, `.ppt`, `.odp`) and PDF files as picture slides, one per slide, in show order (hidden slides are left out). PowerPoint files are converted by PowerPoint (Windows) or LibreOffice when one is installed, so they look exactly as designed; without either, Lumen draws `.pptx` slides itself (backgrounds, pictures, shapes and text, but not charts, tables or effects) and the import report says so. For Keynote, export to PDF first. Optional: install LibreOffice (`sudo dnf install libreoffice-impress`) for exact PowerPoint slides.
 
 CI (`.github/workflows/ci.yml`) builds and tests on Windows, macOS and Linux with Qt 6.8 LTS.
 

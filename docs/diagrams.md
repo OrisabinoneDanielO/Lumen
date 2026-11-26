@@ -14,6 +14,7 @@ flowchart TB
   subgraph CORE["Core services (main process)"]
     LIB["Library service<br/>SQLite index, files, import/export"]
     MED["Media library<br/>import, thumbnails, preload requests"]
+    DECK["Presentation import<br/>PDF pages, PPTX via office or own drawing"]
     SHOW["Show controller<br/>layer state, cues, transitions"]
     PLG["Plugin host<br/>SongSelect, Bibles, song file importers"]
   end
@@ -28,6 +29,7 @@ flowchart TB
   UI -- "commands and edits" --> CORE
   APIS -- "remote commands" --> CORE
   MED -- "file paths, preload (IPC)" --> DEC
+  DECK -- "slide pictures" --> MED
   DEC -- "GPU frames" --> COMP
   SHOW -- "scene state (IPC)" --> COMP
   COMP --> OUT
