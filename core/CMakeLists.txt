@@ -4,7 +4,9 @@
 add_library(lumen_core STATIC
     include/lumen/core/buildinfo.h
     include/lumen/core/result.h
+    include/lumen/core/render/protocol.h
     src/buildinfo.cpp
+    src/render/protocol.cpp
 )
 add_library(Lumen::Core ALIAS lumen_core)
 
@@ -28,6 +30,16 @@ add_library(Lumen::Data ALIAS lumen_data)
 target_include_directories(lumen_data PUBLIC include)
 target_link_libraries(lumen_data
     PUBLIC lumen_core Qt6::Sql
+    PRIVATE lumen_warnings)
+
+# The operator UI's link to the render process (local socket client).
+add_library(lumen_renderlink STATIC
+    include/lumen/core/render/renderlink.h
+    src/render/renderlink.cpp
+)
+add_library(Lumen::RenderLink ALIAS lumen_renderlink)
+target_link_libraries(lumen_renderlink
+    PUBLIC lumen_core Qt6::Gui Qt6::Network
     PRIVATE lumen_warnings)
 
 # Migrations are numbered SQL files compiled in as resources.

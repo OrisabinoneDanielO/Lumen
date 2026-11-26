@@ -11,8 +11,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(LUMEN_BUILD_TESTS "Build the unit and integration tests" ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick Sql)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick Sql Network)
 qt_standard_project_setup(REQUIRES 6.5)
+
+# Every executable in one folder, so lumen finds lumen-render beside it.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Shared warning settings for every Lumen target.
 add_library(lumen_warnings INTERFACE)

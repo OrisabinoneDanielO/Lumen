@@ -29,6 +29,8 @@ toolbox run -c lumen sudo dnf install -y cmake ninja-build gcc-c++ \
 toolbox run -c lumen cmake --preset debug   # and so on
 ```
 
+The audience output runs in its own process, `lumen-render`, so a crash in the operator UI never freezes the screen. It is still experimental (it shows a test frame) and off by default; try it with `lumen --experimental-output`. With one screen it opens as a window; with more it goes fullscreen on the first screen that is not the operator's (`--render-option=--screen=N` to choose).
+
 CI (`.github/workflows/ci.yml`) builds and tests on Windows, macOS and Linux with Qt 6.8 LTS.
 
 ## Layout
