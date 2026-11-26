@@ -86,9 +86,10 @@ jobs:
           cache: true
           modules: 'qtmultimedia qtpdf'
 
+      # One app for Apple Silicon and Intel Macs (Qt's macOS build is universal).
       - name: Build
         run: |
-          cmake --preset release -DLUMEN_BUILD_TESTS=OFF
+          cmake --preset release -DLUMEN_BUILD_TESTS=OFF "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
           cmake --build --preset release
 
       - name: Make the disk image
@@ -103,6 +104,8 @@ jobs:
           hdiutil detach /Volumes/LumenCheck
           app="$RUNNER_TEMP/Lumen Presenter.app"
           codesign --verify --deep --strict "$app"
+          lipo -archs "$app/Contents/MacOS/Lumen Presenter" | grep -q x86_64
+          lipo -archs "$app/Contents/MacOS/lumen-render" | grep -q arm64
           QT_QPA_PLATFORM=offscreen "$app/Contents/MacOS/Lumen Presenter" --check-install
 
       - uses: actions/upload-artifact@v4
@@ -201,3 +204,81 @@ jobs:
           bundle: Lumen-Presenter.flatpak
           manifest-path: packaging/flatpak/io.github.OrisabinoneDanielO.Lumen.yml
           cache-key: flatpak-builder-${{ github.sha }}
+
+  # The Linux AppImage (batch 12), built on the oldest supported Ubuntu so it
+  # runs on as many distributions as possible.
+  appimage:
+    name: AppImage
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libfontconfig1-dev \
+            libpulse0 libva2 libva-drm2 libva-x11-2 libfuse2 libasound2-dev
+
+      - name: Install CMake and Ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: linux_gcc_64
+          cache: true
+          modules: 'qtmultimedia qtpdf'
+
+      - name: Build
+        run: |
+          cmake --preset release -DLUMEN_BUILD_TESTS=OFF
+          cmake --build --preset release
+
+      - name: Get linuxdeploy
+        run: |
+          mkdir -p build/tools
+          curl -sSL -o build/tools/linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -sSL -o build/tools/linuxdeploy-plugin-qt-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x build/tools/*.AppImage
+
+      - name: Leave out SQL drivers Lumen does not use
+        # Lumen only uses SQLite; the others need client libraries
+        # (Mimer, MySQL, PostgreSQL) the AppImage would have to carry.
+        run: |
+          find "$QT_ROOT_DIR/plugins/sqldrivers" -name 'libqsql*.so' ! -name 'libqsqlite.so' -print -delete
+
+      - name: Build the AppImage
+        run: packaging/linux/build-appimage.sh
+
+      - name: Check
+        run: |
+          app=$(ls build/appimage/Lumen-Presenter-*-x86_64.AppImage)
+          QT_QPA_PLATFORM=offscreen APPIMAGE_EXTRACT_AND_RUN=1 "$app" --check-install
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lumen-Presenter-AppImage
+          path: build/appimage/Lumen-Presenter-*-x86_64.AppImage
+
+  # A tag v1.2.3 makes a GitHub release with every installer, once each has
+  # been installed and checked.
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, macos, deb-check, rpm-check, flatpak, appimage]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la installers
+          gh release create "$GITHUB_REF_NAME" installers/* --repo "$GITHUB_REPOSITORY" \
+            --title "Lumen Presenter ${GITHUB_REF_NAME#v}" --generate-notes --draft

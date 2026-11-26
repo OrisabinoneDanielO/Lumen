@@ -5,10 +5,10 @@ How to use each part of Lumen. For building and contributing, see the [README](.
 ## Installing
 
 - **Windows:** run the `.msi`. Lumen Presenter is added to the Start menu and the desktop. The installer is not signed yet: if SmartScreen stops it, choose **More info → Run anyway**.
-- **macOS:** open the `.dmg` and drag Lumen Presenter to Applications. The first time, right-click it and choose **Open** (it is not notarised yet).
+- **macOS:** open the `.dmg` and drag Lumen Presenter to Applications. It is not notarised yet, so the first time macOS blocks it: on macOS 15 or newer, open **System Settings → Privacy & Security** and click **Open Anyway**; on older versions, right-click the app and choose **Open**.
 - **Linux:** the AppImage runs on any distribution (make it executable and double-click it). There are also a Flatpak, a `.deb` for Debian 13 and Ubuntu 25.04 or newer, and an `.rpm` for Fedora.
 
-Everything Lumen needs is included, the Bibles too, and it never needs the internet. To check an installation, run `lumen --check-install` (on Windows, `lumen.exe --check-install > check.txt`); every line should start with `ok`.
+Step-by-step instructions for each system are in the [README](../README.md#install). Everything Lumen needs is included, the Bibles too, and it never needs the internet. To check an installation, run `lumen --check-install` (on Windows, `lumen.exe --check-install > check.txt`); every line should start with `ok`.
 
 ## Starting
 

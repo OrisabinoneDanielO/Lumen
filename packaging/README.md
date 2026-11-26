@@ -16,6 +16,13 @@ lumen --check-install                                                # Linux
 "C:\Program Files\Lumen Presenter\lumen.exe" --check-install > check.txt   # Windows (a GUI program: redirect to see the output)
 ```
 
+## Making a release
+
+1. Set the new version in `CMakeLists.txt` (`project(... VERSION x.y.z)`) and add a `<release>` line to `linux/lumen-presenter.metainfo.xml`.
+2. Commit, then tag and push: `git tag -a vX.Y.Z -m "Lumen Presenter X.Y.Z" && git push origin vX.Y.Z`.
+3. The Packages workflow builds, installs and checks every installer, then makes a **draft** release with all of them attached and notes from the merged changes.
+4. Read the draft on the Releases page, edit the notes, and click **Publish release**.
+
 ## Where things go
 
 | | Windows | macOS | Linux |
@@ -52,7 +59,7 @@ packaging/linux/build-appimage.sh   # writes build/appimage/Lumen-Presenter-<ver
 
 The script installs the build into an AppDir, adds `linux/lumen-presenter.desktop` and the icon, and bundles Qt (including Qt Multimedia's FFmpeg backend, Qt PDF and the Wayland and X11 platforms) with [linuxdeploy](https://github.com/linuxdeploy/linuxdeploy) and its Qt plugin. It expects their AppImages in `build/tools` (or set `LINUXDEPLOY` and `LINUXDEPLOY_PLUGIN_QT`).
 
-An AppImage only runs on systems whose glibc is at least as new as the build machine's, so release AppImages are built in CI on Ubuntu 22.04 (the `appimage` job), not on a developer's newest Fedora.
+An AppImage only runs on systems whose glibc is at least as new as the build machine's, so release AppImages are built in CI on Ubuntu 22.04 (the Packages workflow's `appimage` job), not on a developer's newest Fedora.
 
 ## Icons
 

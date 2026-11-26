@@ -95,4 +95,4 @@ Windows `.msi`, macOS `.dmg`, Linux AppImage, Flatpak, `.deb` and `.rpm`: see [p
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` builds the release preset and runs every test on Ubuntu 24.04, macOS 15 and Windows 2022 with Qt 6.8.3, and builds the AppImage on Ubuntu 22.04. `.github/workflows/packages.yml` builds and checks every installer.
+`.github/workflows/ci.yml` builds the release preset and runs every test on Ubuntu 24.04, macOS 15 and Windows 2022 with Qt 6.8.3, `.github/workflows/packages.yml` builds every installer (the AppImage on Ubuntu 22.04), installs and checks each one, and makes a draft release for a `v*` tag.
