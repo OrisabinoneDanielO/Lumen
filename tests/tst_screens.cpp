@@ -204,6 +204,17 @@ private slots:
             }
         }
 
+        // While the setup is open, the live shortcuts do nothing.
+        ui.controller->selectItem(2);
+        const QString live = ui.controller->property("liveText").toString();
+        const int liveSlide = ui.controller->property("liveSlide").toInt();
+        QTest::keyClick(ui.window, Qt::Key_Space);
+        QTest::keyClick(ui.window, Qt::Key_F7);
+        QCOMPARE(ui.controller->property("liveText").toString(), live);
+        QCOMPARE(ui.controller->property("liveSlide").toInt(), liveSlide);
+        QVERIFY(!ui.controller->property("blackOn").toBool());
+        QVERIFY(ui.screens->isOpen());
+
         QVERIFY(ui.click("screensDone"));
         QTRY_VERIFY(!ui.item("screensPopover")->property("active").toBool());
         QVERIFY(!ui.screens->isOpen());
@@ -213,7 +224,10 @@ private slots:
         QTRY_VERIFY(ui.item("planScreens"));
         QVERIFY(ui.click("planScreens"));
         QTRY_VERIFY(ui.screens->isOpen());
-        ui.screens->close();
+        // Escape closes it.
+        QTRY_VERIFY(ui.window->activeFocusItem());
+        QTest::keyClick(ui.window, Qt::Key_Escape);
+        QTRY_VERIFY(!ui.screens->isOpen());
     }
 
     // The renderer moves its window to another screen and shows the label

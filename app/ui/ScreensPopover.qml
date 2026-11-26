@@ -17,6 +17,16 @@ Rectangle {
     color: Theme.window
     border.color: Theme.border
 
+    // Takes the keyboard while open: Escape or Return closes it, and no other
+    // key reaches the live shortcuts.
+    focus: true
+    Component.onCompleted: forceActiveFocus()
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+            root.closeRequested()
+        event.accepted = true
+    }
+
     function roleColour(role) {
         return role === "main" ? Theme.live : role === "stage" ? Theme.next : role === "operator" ? Theme.ok : Theme.unknown
     }

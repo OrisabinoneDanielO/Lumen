@@ -48,8 +48,15 @@ Window {
         anchors.fill: parent
         focus: true
 
-        // Live shortcuts, unless the operator is typing in a search box.
+        // Live shortcuts, unless the operator is typing in a search box or
+        // setting up the screens (there Escape and Return close the setup).
         Keys.onPressed: event => {
+            if (window.screenSetup && window.screenSetup.open) {
+                if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                    window.screenSetup.close()
+                event.accepted = true
+                return;
+            }
             if (library.searchHasFocus || (scripturePanel.item && scripturePanel.item.visible)
                 || (themePanel.item && themePanel.item.visible))
                 return;
@@ -245,9 +252,13 @@ Window {
         active: window.screenSetup !== null && window.screenSetup.open
         anchors.centerIn: parent
         z: 60
+        onLoaded: window.requestActivate()
         sourceComponent: ScreensPopover {
             setup: window.screenSetup
-            onCloseRequested: window.screenSetup.close()
+            onCloseRequested: {
+                window.screenSetup.close()
+                keyRoot.forceActiveFocus()
+            }
         }
     }
     // While it is open, the screens with no output on them show their number
@@ -268,7 +279,8 @@ Window {
             y: screen ? screen.virtualY : 0
             width: screen ? screen.width : 640
             height: screen ? screen.height : 480
-            flags: Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+            // Labels only: they never take the keyboard from the operator.
+            flags: Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
             visibility: labelHere ? Window.FullScreen : Window.Hidden
             color: Theme.window
             Column {
