@@ -1,5 +1,6 @@
 #include "keymap.h"
 #include "operatorcontroller.h"
+#include "sampleservice.h"
 #include "servicedata.h"
 
 #include "lumen/core/data/repository.h"

@@ -63,10 +63,9 @@ The app is `build/debug/app/lumen.app`. As on Windows, macOS has only been built
 
 ```sh
 ./build/debug/bin/lumen                     # your library (in the app's data folder)
-./build/debug/bin/lumen --design-preview    # the mockup's sample service, temporary
 ```
 
-Useful options: `--no-output` (no audience output), `--output` (with `--design-preview`), `--render-option=--screen=1` (the output's screen), `--render-option=--windowed`. `lumen --help` lists them all. `lumen-render --help` lists the renderer's.
+Useful options: `--no-output` (no audience output), `--output` (start the output even when it was turned off), `--render-option=--screen=1` (the output's screen), `--render-option=--windowed`. `lumen --help` lists them all. `lumen-render --help` lists the renderer's.
 
 ## Tests
 

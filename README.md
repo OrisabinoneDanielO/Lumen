@@ -41,7 +41,7 @@ Needs CMake 3.24+, Ninja, a C++20 compiler and Qt 6.5+ with Multimedia and PDF (
 cmake --preset debug          # or: release
 cmake --build --preset debug
 ctest --preset debug          # every test, offscreen
-./build/debug/bin/lumen --design-preview   # a sample service in a temporary library
+./build/debug/bin/lumen                    # opens your library (empty the first time)
 ```
 
 Per-platform setup (Fedora, Ubuntu, Windows, macOS), the AppImage and the long-running tests are in [docs/building.md](docs/building.md).

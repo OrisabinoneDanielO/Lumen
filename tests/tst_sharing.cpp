@@ -1,4 +1,5 @@
 #include "planstore.h"
+#include "sampleservice.h"
 #include "servicedata.h"
 #include "sharing.h"
 

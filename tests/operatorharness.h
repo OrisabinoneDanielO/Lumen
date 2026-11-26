@@ -11,6 +11,7 @@
 #include "operatorcontroller.h"
 #include "presentationlibrary.h"
 #include "scripturecontroller.h"
+#include "sampleservice.h"
 #include "servicedata.h"
 #include "themecontroller.h"
 #include "themes.h"
