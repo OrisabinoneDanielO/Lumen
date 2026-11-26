@@ -40,6 +40,9 @@
 #include <QSettings>
 #include <QSysInfo>
 #include <QStandardPaths>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QWindow>
 #include <QProcess>
 #include <QTimer>
 #include <QFile>
@@ -284,6 +287,26 @@ int main(int argc, char *argv[])
     const QString outputServer = checking && !parser.isSet(renderServer)
                                      ? QStringLiteral("lumen-check-%1").arg(QCoreApplication::applicationPid())
                                      : parser.value(renderServer);
+
+    // One Lumen at a time (per output): a second start brings the running
+    // window forward and quits, rather than share (and later close) the same
+    // audience output.
+    const QString instanceName = (outputServer.isEmpty() ? render::defaultServerName() : outputServer) + QStringLiteral("-ui");
+    QLocalServer instance;
+    if (!checking) {
+        QLocalSocket running;
+        running.connectToServer(instanceName);
+        if (running.waitForConnected(300)) {
+            running.write("show\n");
+            running.flush();
+            running.waitForBytesWritten(300);
+            std::printf("Lumen Presenter is already running; its window was brought forward.\n");
+            return EXIT_SUCCESS;
+        }
+        QLocalServer::removeServer(instanceName); // left by a crash
+        if (!instance.listen(instanceName))
+            qWarning("Single-instance check unavailable: %s", qPrintable(instance.errorString()));
+    }
 
     const QSettings settings;
     show::ShowController show;
@@ -711,6 +734,18 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("screenSetup"), QVariant::fromValue<QObject *>(&screenSetup)},
                                  {QStringLiteral("updates"), QVariant::fromValue<QObject *>(&updates)}});
     engine.loadFromModule("Lumen.Ui", "Main");
+
+    // Another start of Lumen asked for this window.
+    QObject::connect(&instance, &QLocalServer::newConnection, &app, [&] {
+        while (QLocalSocket *other = instance.nextPendingConnection()) {
+            QObject::connect(other, &QLocalSocket::disconnected, other, &QObject::deleteLater);
+            if (auto *window = engine.rootObjects().isEmpty() ? nullptr : qobject_cast<QWindow *>(engine.rootObjects().first())) {
+                window->show();
+                window->raise();
+                window->requestActivate();
+            }
+        }
+    });
 
     // Screens seen for the first time: ask which is which.
     if (!checking && screenSetup.needsSetup())

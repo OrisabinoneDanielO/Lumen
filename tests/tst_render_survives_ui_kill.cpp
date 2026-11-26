@@ -156,6 +156,34 @@ private slots:
         (void)link.quit();
     }
 
+    // One Lumen at a time: a second start brings the running one forward and
+    // quits, instead of sharing (and later closing) its audience output.
+    void secondStartJoinsTheFirst()
+    {
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        env.insert(QStringLiteral("XDG_CONFIG_HOME"), m_dir.filePath(QStringLiteral("config")));
+        env.insert(QStringLiteral("XDG_DATA_HOME"), m_dir.filePath(QStringLiteral("data")));
+        const QStringList arguments{QStringLiteral("--no-output"), QStringLiteral("--render-server"), m_server,
+                                    QStringLiteral("--quit-after=20000")};
+        QProcess first;
+        first.setProcessEnvironment(env);
+        first.start(QStringLiteral(LUMEN_APP_PATH), arguments);
+        QVERIFY(first.waitForStarted(10000));
+        QTest::qWait(1500); // its window is up and listening
+
+        QProcess second;
+        second.setProcessEnvironment(env);
+        second.start(QStringLiteral(LUMEN_APP_PATH), arguments);
+        QVERIFY(second.waitForFinished(10000));
+        QCOMPARE(second.exitCode(), 0);
+        QVERIFY(second.readAllStandardOutput().contains("already running"));
+        QCOMPARE(first.state(), QProcess::Running);
+
+        first.terminate();
+        if (!first.waitForFinished(5000))
+            first.kill();
+    }
+
     // Any version can ask a renderer to quit.
     void quitWorksFromAnyVersion()
     {
