@@ -226,6 +226,10 @@ public:
     Q_INVOKABLE bool addHeader(const QString &text); // after the selected item
     Q_INVOKABLE bool removeItem(int index);
     Q_INVOKABLE bool moveItem(int from, int to);
+    // Dropped on the plan: a library song ("song"), video or picture
+    // ("media") or presentation ("deck"), put in at position `at` (the end
+    // if out of range).
+    Q_INVOKABLE bool addToPlanAt(const QString &source, int row, int at);
     Q_INVOKABLE bool setItemNotes(int index, const QString &notes);
     Q_INVOKABLE bool exportPlan(const QUrl &file);
     Q_INVOKABLE bool importPlan(const QUrl &file);

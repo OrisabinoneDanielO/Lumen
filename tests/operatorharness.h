@@ -219,6 +219,25 @@ public:
 
     void key(int key) const { QTest::keyClick(window, Qt::Key(key)); }
 
+    // Presses on one item, moves in steps like a hand would, and lets go on
+    // the given point of another (0..1 of its width and height).
+    bool drag(const QString &from, const QString &to, QPointF at = {0.5, 0.5}) const
+    {
+        settle();
+        QQuickItem *source = item(from);
+        QQuickItem *target = item(to);
+        if (!source || !target)
+            return false;
+        const QPointF start = source->mapToScene(QPointF(source->width() / 2, source->height() / 2));
+        const QPointF end = target->mapToScene(QPointF(target->width() * at.x(), target->height() * at.y()));
+        QTest::mousePress(window, Qt::LeftButton, {}, start.toPoint());
+        for (int step = 1; step <= 10; ++step)
+            QTest::mouseMove(window, (start + (end - start) * step / 10.0).toPoint(), 10);
+        QTest::mouseRelease(window, Qt::LeftButton, {}, end.toPoint());
+        settle();
+        return true;
+    }
+
     // Clicks the library row showing a song title, once the list has settled
     // (rows from a previous search are deleted later, so an old row can still
     // carry the same name for a moment).

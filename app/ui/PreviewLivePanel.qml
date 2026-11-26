@@ -205,11 +205,15 @@ Rectangle {
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
                         anchors.margins: 3
-                        height: 24
+                        height: Math.max(24, outputOffText.implicitHeight + 6)
                         visible: !root.controller.outputConnected
                         color: Theme.warnBackground
                         LText {
+                            id: outputOffText
                             anchors.centerIn: parent
+                            width: parent.width - 8
+                            horizontalAlignment: Text.AlignHCenter
+                            wrapMode: Text.WordWrap
                             text: qsTr("Output off: the audience sees nothing")
                             color: Theme.warnText
                             font.pixelSize: 11

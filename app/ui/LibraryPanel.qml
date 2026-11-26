@@ -16,6 +16,46 @@ Rectangle {
     signal picked() // a row or card clicked: the live keys work again
     onPicked: search.leave()
     signal themesRequested()
+    // What follows the pointer while dragging onto the plan (Main.qml).
+    property Item dragGhost: null
+    // + Add in the plan: a tab, with the search ready for songs.
+    function showPage(p) {
+        page = p
+        if (p === 0)
+            search.focusInput()
+    }
+
+    // Press, then move: a drag onto the service plan instead of a click.
+    component DragMouse: MouseArea {
+        id: dm
+        property string dragSource
+        property int dragRow: -1
+        property string dragTitle
+        property point pressAt
+        property bool dragged: false
+        signal tapped()
+        signal doubleTapped()
+        preventStealing: true
+        onPressed: mouse => {
+            pressAt = Qt.point(mouse.x, mouse.y)
+            dragged = false
+        }
+        onPositionChanged: mouse => {
+            const ghost = root.dragGhost
+            if (!pressed || !ghost || dragSource === "")
+                return
+            if (dragged) {
+                ghost.place(dm, mouse.x, mouse.y)
+            } else if (Math.abs(mouse.x - pressAt.x) + Math.abs(mouse.y - pressAt.y) >= ghost.threshold) {
+                dragged = true
+                ghost.begin(dm, mouse.x, mouse.y, dragSource, dragRow, dragTitle)
+            }
+        }
+        onReleased: if (dragged) root.dragGhost.finish()
+        onCanceled: if (dragged) root.dragGhost.finish()
+        onClicked: if (!dragged) tapped()
+        onDoubleClicked: if (!dragged) doubleTapped()
+    }
     // 0: Songs, 2: Media, 3: Presentations (Scripture and Themes open their
     // own panels).
     property int page: 0
@@ -30,6 +70,8 @@ Rectangle {
         property url thumbnail
         property string badge
         property bool selected: false
+        property string dragSource // "media" or "deck"
+        property int dragRow: -1
         signal hovered()
         signal doubleClicked()
         signal clicked()
@@ -75,12 +117,15 @@ Rectangle {
             text: card.title
             font.pixelSize: 12
         }
-        MouseArea {
+        DragMouse {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
             hoverEnabled: true
-            onClicked: card.clicked()
-            onDoubleClicked: card.doubleClicked()
+            dragSource: card.dragSource
+            dragRow: card.dragRow
+            dragTitle: card.title
+            onTapped: card.clicked()
+            onDoubleTapped: card.doubleClicked()
             onContainsMouseChanged: if (containsMouse) card.hovered()
         }
     }
@@ -90,6 +135,7 @@ Rectangle {
         property var cells: []
         property bool header: false
         property bool selected: false
+        property int dragRow: -1 // a song row: dragged onto the plan
         signal doubleClicked()
         signal clicked()
 
@@ -117,12 +163,15 @@ Rectangle {
                 }
             }
         }
-        MouseArea {
+        DragMouse {
             anchors.fill: parent
             enabled: !tableRow.header
             cursorShape: Qt.PointingHandCursor
-            onClicked: tableRow.clicked()
-            onDoubleClicked: tableRow.doubleClicked()
+            dragSource: tableRow.dragRow >= 0 ? "song" : ""
+            dragRow: tableRow.dragRow
+            dragTitle: tableRow.cells.length > 0 ? tableRow.cells[0] : ""
+            onTapped: tableRow.clicked()
+            onDoubleTapped: tableRow.doubleClicked()
         }
     }
 
@@ -365,6 +414,7 @@ Rectangle {
                         required property string key
                         objectName: "songRow-" + index
                         cells: [title, author, copyright, key]
+                        dragRow: index
                         selected: index === root.controller.selectedSong
                         onClicked: { root.picked(); root.controller.showSong(index) }
                         onDoubleClicked: root.controller.playSong(index)
@@ -398,6 +448,8 @@ Rectangle {
                         required property string duration
                         required property bool loop
                         objectName: "mediaCard-" + index
+                        dragSource: "media"
+                        dragRow: index
                         badge: duration === "" ? "" : loop ? qsTr("Loop · %1").arg(duration) : duration
                         selected: index === root.controller.selectedMedia
                         // Click: in Preview. Double-click: on the screen now.
@@ -434,6 +486,8 @@ Rectangle {
                         required thumbnail
                         required property int slides
                         objectName: "deckCard-" + index
+                        dragSource: "deck"
+                        dragRow: index
                         badge: slides === 1 ? qsTr("1 slide") : qsTr("%1 slides").arg(slides)
                         selected: index === root.controller.selectedDeck
                         onClicked: { root.picked(); root.controller.showDeck(index) }

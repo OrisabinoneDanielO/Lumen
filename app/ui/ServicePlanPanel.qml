@@ -16,11 +16,15 @@ Rectangle {
     signal remoteRequested() // batch 19: the Remote control popover
     signal screensRequested() // the Screens setup
     signal updatesRequested() // the Updates popover
+    // "+ Add": "songs", "media" or "decks" (that library tab), "scripture".
+    signal addRequested(string what)
+    // What follows the pointer while dragging (Main.qml's DragGhost).
+    property Item dragGhost: null
     // A newer version found by an update check (shown in the menu).
     property string updateVersion: ""
 
-    // The plan menu's page: "" (closed), "main", "open", "restore", or
-    // "input" (a name, header or notes, for inputAction).
+    // The plan menu's page: "" (closed), "main", "add", "open", "restore",
+    // or "input" (a name, header or notes, for inputAction).
     property string menuPage: ""
     property int restoreRow: -1 // the backup waiting for confirmation
     property string inputAction: ""
@@ -120,7 +124,16 @@ Rectangle {
 
             SectionLabel {
                 Layout.fillWidth: true
-                text: qsTr("SERVICE PLAN")
+                // Narrow (the window at 1024 wide): the buttons keep their room.
+                text: root.width < 260 ? qsTr("PLAN") : qsTr("SERVICE PLAN")
+            }
+            LButton {
+                objectName: "planAddButton"
+                text: qsTr("+ Add")
+                variant: "ghost"
+                implicitHeight: 32
+                radius: 6
+                onClicked: root.menuPage = root.menuPage === "add" ? "" : "add"
             }
             LButton {
                 id: menuButton
@@ -129,7 +142,7 @@ Rectangle {
                 variant: "ghost"
                 implicitHeight: 32
                 radius: 6
-                onClicked: root.menuPage = root.menuPage === "" ? "main" : ""
+                onClicked: root.menuPage = root.menuPage === "main" ? "" : "main"
             }
         }
         // The result of the last plan action (the plan's name is in the
@@ -149,11 +162,30 @@ Rectangle {
         }
 
         Flickable {
+            id: planFlick
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
             contentHeight: planColumn.height + 12
             boundsBehavior: Flickable.StopAtBounds
+
+            // Where a dragged item will land.
+            Rectangle {
+                objectName: "planDropLine"
+                visible: planDrop.insertAt >= 0
+                z: 2
+                x: planColumn.x
+                width: planColumn.width
+                height: 2
+                radius: 1
+                color: Theme.next
+                y: {
+                    if (planDrop.insertAt < 0)
+                        return 0
+                    const row = planDrop.insertAt < planRepeater.count ? planRepeater.itemAt(planDrop.insertAt) : null
+                    return row ? row.y - 1 : planColumn.height
+                }
+            }
 
             Column {
                 id: planColumn
@@ -162,6 +194,7 @@ Rectangle {
                 spacing: 2
 
                 Repeater {
+                    id: planRepeater
                     model: root.controller.plan
 
                     delegate: Rectangle {
@@ -245,7 +278,31 @@ Rectangle {
                             hoverEnabled: true
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
                             cursorShape: Qt.PointingHandCursor
+                            // Dragged up or down: the item moves there.
+                            property point pressAt
+                            property bool dragged: false
+                            preventStealing: true
+                            onPressed: mouse => {
+                                pressAt = Qt.point(mouse.x, mouse.y)
+                                dragged = false
+                            }
+                            onPositionChanged: mouse => {
+                                const ghost = root.dragGhost
+                                if (!pressed || !ghost || !(pressedButtons & Qt.LeftButton))
+                                    return
+                                if (dragged) {
+                                    ghost.place(rowMouse, mouse.x, mouse.y)
+                                } else if (Math.abs(mouse.x - pressAt.x) + Math.abs(mouse.y - pressAt.y) >= ghost.threshold) {
+                                    dragged = true
+                                    root.itemMenuFor = -1
+                                    ghost.begin(rowMouse, mouse.x, mouse.y, "plan", planRow.index, planRow.title)
+                                }
+                            }
+                            onReleased: if (dragged) root.dragGhost.finish()
+                            onCanceled: if (dragged) root.dragGhost.finish()
                             onClicked: mouse => {
+                                if (dragged)
+                                    return
                                 if (mouse.button === Qt.RightButton) {
                                     root.menuPage = ""
                                     root.itemMenuFor = planRow.index
@@ -273,10 +330,75 @@ Rectangle {
         anchors.centerIn: parent
         width: parent.width - 48
         visible: root.controller.plan.count === 0
-        text: qsTr("No items yet. Pick a song in the library below and choose Add to plan.")
+        text: qsTr("No items yet. Drag a song, video or presentation here from the library, or use + Add.")
         wrapMode: Text.WordWrap
         horizontalAlignment: Text.AlignHCenter
         color: Theme.textMuted
+    }
+
+    // Songs, videos, pictures and presentations dragged from the library,
+    // and plan items dragged to a new place.
+    DropArea {
+        id: planDrop
+        objectName: "planDrop"
+        keys: ["lumen/plan"]
+        x: planFlick.x
+        y: planFlick.y
+        width: planFlick.width
+        height: planFlick.height
+        // The position the item would take, or -1 (no drag over the plan).
+        property int insertAt: -1
+        property real pointerY: 0
+
+        function indexAt(y) {
+            const contentY = y + planFlick.contentY - planColumn.y
+            for (let i = 0; i < planRepeater.count; ++i) {
+                const row = planRepeater.itemAt(i)
+                if (row && contentY < row.y + row.height / 2)
+                    return i
+            }
+            return planRepeater.count
+        }
+        onEntered: drag => {
+            pointerY = drag.y
+            insertAt = indexAt(drag.y)
+        }
+        onPositionChanged: drag => {
+            pointerY = drag.y
+            insertAt = indexAt(drag.y)
+        }
+        onExited: insertAt = -1
+        onDropped: drop => {
+            const at = indexAt(drop.y)
+            insertAt = -1
+            const ghost = drop.source
+            if (!ghost)
+                return
+            if (ghost.source === "plan") {
+                const to = at > ghost.row ? at - 1 : at
+                if (to !== ghost.row)
+                    root.controller.moveItem(ghost.row, to)
+            } else {
+                root.controller.addToPlanAt(ghost.source, ghost.row, at)
+            }
+            drop.accept(Qt.MoveAction)
+        }
+
+        // Near the top or bottom edge, the plan scrolls.
+        Timer {
+            interval: 30
+            repeat: true
+            running: planDrop.containsDrag
+            onTriggered: {
+                const edge = 32
+                const most = Math.max(0, planFlick.contentHeight - planFlick.height)
+                if (planDrop.pointerY < edge)
+                    planFlick.contentY = Math.max(0, planFlick.contentY - 8)
+                else if (planDrop.pointerY > planDrop.height - edge)
+                    planFlick.contentY = Math.min(most, planFlick.contentY + 8)
+                planDrop.insertAt = planDrop.indexAt(planDrop.pointerY)
+            }
+        }
     }
 
     // Clicking outside a menu closes it.
@@ -316,6 +438,51 @@ Rectangle {
                 id: menuColumn
                 width: parent.width
                 spacing: 0
+
+                // + Add: where to find what goes in the plan.
+                Column {
+                    width: parent.width
+                    visible: root.menuPage === "add"
+                    MenuEntry {
+                        objectName: "addSong"
+                        text: qsTr("Song…")
+                        detail: qsTr("Library")
+                        onTriggered: { root.menuPage = ""; root.addRequested("songs") }
+                    }
+                    MenuEntry {
+                        objectName: "addScripture"
+                        text: qsTr("Scripture…")
+                        detail: qsTr("Ctrl+B")
+                        onTriggered: { root.menuPage = ""; root.addRequested("scripture") }
+                    }
+                    MenuEntry {
+                        objectName: "addMedia"
+                        text: qsTr("Video or picture…")
+                        onTriggered: { root.menuPage = ""; root.addRequested("media") }
+                    }
+                    MenuEntry {
+                        objectName: "addDeck"
+                        text: qsTr("Presentation…")
+                        onTriggered: { root.menuPage = ""; root.addRequested("decks") }
+                    }
+                    MenuEntry {
+                        objectName: "addHeader"
+                        enabled: root.controller.planId !== ""
+                        text: qsTr("Header…")
+                        onTriggered: root.openInput("header", qsTr("Header (e.g. Worship, Sermon)"), "")
+                    }
+                    LText {
+                        width: parent.width
+                        leftPadding: 10
+                        rightPadding: 10
+                        topPadding: 6
+                        bottomPadding: 4
+                        text: qsTr("Or drag from the library onto the plan.")
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 11
+                        color: Theme.textMuted
+                    }
+                }
 
                 // Main page.
                 Column {

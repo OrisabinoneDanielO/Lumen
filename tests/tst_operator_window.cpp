@@ -319,6 +319,61 @@ private slots:
         QVERIFY(m_ui->item("planNew")->isEnabled());
     }
 
+    QString planTitle(int index) const
+    {
+        QQuickItem *row = m_ui->item(QStringLiteral("planItem-%1").arg(index));
+        return row ? row->property("title").toString() : QString();
+    }
+
+    // Songs dragged from the library land where they are dropped; plan
+    // items dragged up or down move; + Add shows where to find things.
+    void dragAndDropOntoThePlan()
+    {
+        open();
+        const int count = m_ui->controller->plan()->property("count").toInt();
+        QVERIFY(count > 4);
+        const QString second = planTitle(1);
+        const QString song = m_ui->item(QStringLiteral("songRow-0"))->property("cells").toList().front().toString();
+
+        // Dropped on the top half of item 1: it becomes item 1.
+        QVERIFY(m_ui->drag("songRow-0", "planItem-1", {0.5, 0.2}));
+        QTRY_COMPARE(m_ui->controller->plan()->property("count").toInt(), count + 1);
+        QTRY_COMPARE(planTitle(1), song);
+        QCOMPARE(planTitle(2), second);
+        QVERIFY(!m_ui->item("dragGhost")->isVisible());
+        QVERIFY(!m_ui->item("planDropLine")->isVisible());
+        QCOMPARE(m_ui->show.scene().sequence, quint64(0)); // nothing went live
+
+        // Item 3 dragged above item 0.
+        const QString third = planTitle(3);
+        const QString first = planTitle(0);
+        QVERIFY(m_ui->drag("planItem-3", "planItem-0", {0.5, 0.1}));
+        QTRY_COMPARE(planTitle(0), third);
+        QCOMPARE(planTitle(1), first);
+        QCOMPARE(m_ui->controller->plan()->property("count").toInt(), count + 1);
+
+        // A drag that ends outside the plan changes nothing.
+        QVERIFY(m_ui->drag("songRow-0", "slideGrid"));
+        QCOMPARE(m_ui->controller->plan()->property("count").toInt(), count + 1);
+
+        // + Add → Song: the library's song search, ready to type.
+        QVERIFY(m_ui->click("planAddButton"));
+        QTRY_VERIFY(m_ui->item("addSong")->isVisible());
+        QVERIFY(m_ui->click("addSong"));
+        QTRY_VERIFY(!m_ui->item("planMenu")->isVisible());
+        QCOMPARE(m_ui->item("library")->property("page").toInt(), 0);
+        QTRY_VERIFY(m_ui->item("library")->property("searchHasFocus").toBool());
+
+        // The same through the controller: at the top, past the end, unknown.
+        const int now = m_ui->controller->plan()->property("count").toInt();
+        QVERIFY(m_ui->controller->addToPlanAt(QStringLiteral("song"), 0, 0));
+        QTRY_COMPARE(planTitle(0), song);
+        QVERIFY(m_ui->controller->addToPlanAt(QStringLiteral("song"), 0, 999));
+        QTRY_COMPARE(planTitle(now + 1), song);
+        QVERIFY(!m_ui->controller->addToPlanAt(QStringLiteral("hymnal"), 0, 0));
+        QCOMPARE(m_ui->controller->plan()->property("count").toInt(), now + 2);
+    }
+
     // The Main light asks before turning the output off.
     void outputOffIsConfirmed()
     {
