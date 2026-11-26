@@ -166,6 +166,19 @@ Result<std::vector<Translation>> BibleStore::translations() const
     return out;
 }
 
+Result<std::vector<std::pair<QString, QString>>> BibleStore::books(const QString &translationId) const
+{
+    QSqlQuery q(QSqlDatabase::database(m_connection));
+    q.prepare(QStringLiteral("SELECT code, name FROM books WHERE translation = ? ORDER BY ordinal"));
+    q.addBindValue(translationId);
+    if (!q.exec())
+        return sqlFailure(q, QStringLiteral("Listing books"));
+    std::vector<std::pair<QString, QString>> out;
+    while (q.next())
+        out.emplace_back(q.value(0).toString(), q.value(1).toString());
+    return out;
+}
+
 Status BibleStore::addBookNames(BookNames &names) const
 {
     QSqlQuery q(QSqlDatabase::database(m_connection));

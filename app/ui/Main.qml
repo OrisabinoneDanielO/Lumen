@@ -68,8 +68,7 @@ Window {
                 event.accepted = true
                 return;
             }
-            if (library.searchHasFocus || (scripturePanel.item && scripturePanel.item.visible)
-                || (themePanel.item && themePanel.item.visible))
+            if (library.searchHasFocus || (themePanel.item && themePanel.item.visible))
                 return;
             event.accepted = window.controller.handleKey(event.key, event.modifiers);
         }
@@ -183,6 +182,10 @@ Window {
                     objectName: "previewLive"
                     visible: window.controller.mode !== "edit"
                     Layout.preferredWidth: window.previewWidth
+                    onMessageRequested: {
+                        messagePopover.visible = true
+                        messagePopover.focusInput()
+                    }
                     Layout.fillHeight: true
                     controller: window.controller
                 }
@@ -210,9 +213,9 @@ Window {
         }
     }
 
+    // Its own window (not over this one), so the operator window stays usable.
     Loader {
         id: scripturePanel
-        anchors.fill: parent
         active: window.scripture !== null
         sourceComponent: ScripturePanel {
             scripture: window.scripture

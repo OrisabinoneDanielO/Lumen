@@ -114,6 +114,12 @@ void ScriptureController::refresh()
 {
     m_passage.reset();
     m_error.clear();
+    m_completion = {};
+    if (!m_sources.empty() && !m_query.trimmed().isEmpty()) {
+        const Source &source = m_sources[std::size_t(m_translation)];
+        if (auto books = source.store->books(source.translation.id); books.ok())
+            m_completion = completeReference(m_query, m_names, books.value());
+    }
     if (m_sources.empty()) {
         m_error = tr("No Bibles are installed.");
     } else if (!m_query.trimmed().isEmpty()) {
@@ -207,6 +213,11 @@ bool ScriptureController::showNow()
     if (!m_passage || !m_op.showItem(m_item))
         return false;
     return m_op.goLive(0);
+}
+
+bool ScriptureController::preview()
+{
+    return m_passage && m_op.showItem(m_item);
 }
 
 bool ScriptureController::addToPlan()

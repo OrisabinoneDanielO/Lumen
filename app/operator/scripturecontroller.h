@@ -33,6 +33,10 @@ class ScriptureController : public QObject
     Q_PROPERTY(QString previewText READ previewText NOTIFY changed)
     Q_PROPERTY(QString previewReference READ previewReference NOTIFY changed)
     Q_PROPERTY(QString addSummary READ addSummary NOTIFY changed)
+    // Typing ahead (see completeReference): the passage the typing most
+    // likely leads to, and what Space turns the typing into.
+    Q_PROPERTY(QString suggestion READ suggestion NOTIFY changed)
+    Q_PROPERTY(QString completionStep READ completionStep NOTIFY changed)
 
 public:
     explicit ScriptureController(OperatorController &op, QObject *parent = nullptr);
@@ -55,6 +59,8 @@ public:
     QString previewText() const;
     QString previewReference() const;
     QString addSummary() const { return m_addSummary; }
+    QString suggestion() const { return m_completion.suggestion; }
+    QString completionStep() const { return m_completion.step; }
 
     // The passage as slides: one or two verses each, themed, with the
     // reference and copyright in the footer. Verses too long for one slide
@@ -65,6 +71,8 @@ public:
     Q_INVOKABLE void selectTranslation(int index) { setTranslation(index); }
     // Sends the first slide live and shows the passage in the slide grid.
     Q_INVOKABLE bool showNow();
+    // The passage in the slide grid and Preview, not yet on the screen.
+    Q_INVOKABLE bool preview();
     // Stores the passage as a scripture presentation and appends it to the plan.
     Q_INVOKABLE bool addToPlan();
     // Adds a Bible from a folder of USFM files or a USFX file.
@@ -74,6 +82,7 @@ signals:
     void changed();
 
 private:
+    core::scripture::Completion m_completion;
     struct Source
     {
         core::scripture::BibleStore *store;

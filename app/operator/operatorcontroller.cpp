@@ -12,6 +12,7 @@
 #include <QFileInfo>
 #include <QLocale>
 #include <QJsonArray>
+#include <QSettings>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSaveFile>
@@ -36,6 +37,13 @@ OperatorController::OperatorController(ShowController &show, bool editAvailable,
         emit stateChanged();
     });
     connect(this, &OperatorController::stateChanged, this, &OperatorController::updatePreviewVideo);
+    // The transition chosen last time.
+    const QSettings settings;
+    const QString kind = settings.value(QStringLiteral("show/transition"), QStringLiteral("cut")).toString();
+    if (core::show::transitionKindFromName(kind))
+        m_transition = kind;
+    m_transitionMs = std::clamp(settings.value(QStringLiteral("show/transitionMs"), 600).toInt(), 100, 3000);
+    applyTransition();
     m_verseTimeout.setSingleShot(true);
     m_verseTimeout.setInterval(1500);
     connect(&m_verseTimeout, &QTimer::timeout, this, [this] { m_versePending = false; });
@@ -145,6 +153,12 @@ void OperatorController::refreshMedia()
     if (!m_mediaLibrary)
         return;
     auto rows = m_mediaLibrary->list();
+    const auto loopChosen = [this](const QString &presentationId) {
+        if (!m_db)
+            return false;
+        const auto p = core::data::Repository<core::data::Presentation>(*m_db).get(presentationId);
+        return p.ok() && p.value().metadata.value(QStringLiteral("videoLoop")).toBool();
+    };
     QList<QVariantMap> list;
     if (rows.ok()) {
         for (const MediaRow &row : rows.value()) {
@@ -157,7 +171,8 @@ void OperatorController::refreshMedia()
                                 {"thumbnail", row.thumbnail.isEmpty() ? QUrl() : QUrl::fromLocalFile(row.thumbnail)},
                                 {"presentationId", row.presentationId},
                                 {"path", row.path},
-                                {"loop", row.loop}};
+                                // Shown as "Loop" on the card: the operator's choice.
+                                {"loop", loopChosen(row.presentationId)}};
         }
     }
     m_mediaModel.setRows(list);
@@ -205,13 +220,119 @@ void OperatorController::preloadMedia(int row)
         emit previewVideoChanged(media.value(QStringLiteral("path")).toString());
 }
 
-void OperatorController::chooseItem(int index)
+bool OperatorController::shownIsVideo() const
+{
+    const ItemView *view = selected();
+    return view && !view->slides.empty() && view->slides.front().mediaKind == QLatin1String("video");
+}
+
+bool OperatorController::shownVideoLoops() const
+{
+    return shownIsVideo() && selected()->slides.front().mediaLoop;
+}
+
+void OperatorController::setShownVideoLoops(bool loops)
+{
+    if (!shownIsVideo() || !m_db || shownVideoLoops() == loops)
+        return;
+    const QString presentationId = selected()->presentationId;
+    const QString path = selected()->slides.front().mediaPath;
+    // Kept with the video's presentation: in the library and every plan.
+    using core::data::Presentation;
+    using core::data::Repository;
+    if (auto p = Repository<Presentation>(*m_db).get(presentationId); p.ok()) {
+        p.value().metadata.insert(QStringLiteral("videoLoop"), loops);
+        if (auto updated = Repository<Presentation>(*m_db).update(p.value()); !updated.ok())
+            qWarning("Loop setting not saved: %s", qPrintable(updated.error().message));
+    }
+    const auto apply = [&](ItemView &view) {
+        if (view.presentationId != presentationId)
+            return;
+        for (SlideView &slide : view.slides)
+            slide.mediaLoop = loops;
+    };
+    if (m_plan) {
+        for (ItemView &item : m_plan->items)
+            apply(item);
+    }
+    if (m_librarySong)
+        apply(*m_librarySong);
+    // The card's badge.
+    QList<QVariantMap> rows;
+    for (int i = 0; i < m_mediaModel.count(); ++i) {
+        QVariantMap row = m_mediaModel.get(i);
+        if (row.value(QStringLiteral("presentationId")).toString() == presentationId)
+            row.insert(QStringLiteral("loop"), loops);
+        rows << row;
+    }
+    m_mediaModel.updateRows(rows);
+    // Playing now: it takes the setting at once (from where it is).
+    const Content &onAir = m_show.scene().layer(Layer::Media).content;
+    if (onAir.kind == Content::Kind::Video && onAir.videoPath == path) {
+        Content changed = onAir;
+        changed.loop = loops;
+        m_show.setContent(Layer::Media, changed);
+    }
+    emit stateChanged();
+}
+
+QVariantList OperatorController::transitions() const
+{
+    return {QVariantMap{{"key", "cut"}, {"name", tr("Cut")}},
+            QVariantMap{{"key", "fade"}, {"name", tr("Fade")}},
+            QVariantMap{{"key", "push"}, {"name", tr("Push")}},
+            QVariantMap{{"key", "pushUp"}, {"name", tr("Push up")}},
+            QVariantMap{{"key", "wipe"}, {"name", tr("Wipe")}},
+            QVariantMap{{"key", "zoom"}, {"name", tr("Zoom")}}};
+}
+
+void OperatorController::setTransition(const QString &kind)
+{
+    if (kind == m_transition || !core::show::transitionKindFromName(kind))
+        return;
+    m_transition = kind;
+    QSettings().setValue(QStringLiteral("show/transition"), kind);
+    applyTransition();
+    emit transitionChanged();
+}
+
+void OperatorController::setTransitionMs(int ms)
+{
+    ms = std::clamp(ms, 100, 3000);
+    if (ms == m_transitionMs)
+        return;
+    m_transitionMs = ms;
+    QSettings().setValue(QStringLiteral("show/transitionMs"), ms);
+    applyTransition();
+    emit transitionChanged();
+}
+
+void OperatorController::applyTransition()
+{
+    // Only a real change is a change of scene (a cut at start sends nothing).
+    const auto kind = *core::show::transitionKindFromName(m_transition);
+    const auto transition = kind == core::show::TransitionKind::Cut ? core::show::Transition::cut()
+                                                                    : core::show::Transition::of(kind, m_transitionMs);
+    for (const Layer layer : {Layer::Slide, Layer::Media}) {
+        if (m_show.scene().layer(layer).transition != transition)
+            m_show.setTransition(layer, transition);
+    }
+}
+
+bool OperatorController::playItem(int index)
 {
     selectItem(index);
     const ItemView *view = selected();
-    if (!m_editMode && m_current == index && view && view->kind == QLatin1String("MEDIA") && !view->slides.empty()
-        && liveItem() != index)
-        goLive(0);
+    if (m_editMode || m_current != index || !view || view->slides.empty())
+        return false;
+    return goLive(0);
+}
+
+bool OperatorController::playSong(int row)
+{
+    if (!showSong(row))
+        return false;
+    return m_editMode || goLive(0);
 }
 
 bool OperatorController::useAsBackground(int row)
@@ -697,7 +818,7 @@ bool OperatorController::goLive(int index)
     if (!slide.mediaKind.isEmpty()) {
         // A video or picture fills the Media layer; the slide text goes.
         const Content media = slide.mediaKind == QLatin1String("video")
-                                  ? Content::video(slide.mediaPath, false, 1.0, slide.thumbnail)
+                                  ? Content::video(slide.mediaPath, slide.mediaLoop, 1.0, slide.thumbnail)
                                   : Content::image(slide.mediaPath);
         changes = {{Layer::Media, media}, {Layer::Slide, Content::empty()}};
     } else {
@@ -722,7 +843,7 @@ Content OperatorController::slideContent(const ItemView &view, int index) const
 {
     const SlideView &slide = view.slides[std::size_t(index)];
     if (slide.mediaKind == QLatin1String("video"))
-        return Content::video(slide.mediaPath, false, 1.0, slide.thumbnail);
+        return Content::video(slide.mediaPath, slide.mediaLoop, 1.0, slide.thumbnail);
     if (slide.mediaKind == QLatin1String("image"))
         return Content::image(slide.mediaPath);
     // A countdown slide shows its timer, counted by the renderer.

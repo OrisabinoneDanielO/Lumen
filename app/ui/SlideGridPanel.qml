@@ -47,6 +47,32 @@ Item {
                     }
                 }
 
+                // A video: play it once and stop on its last frame, or loop
+                // until it is cleared (kept with the video).
+                Row {
+                    Layout.alignment: Qt.AlignBottom
+                    visible: root.controller.shownIsVideo
+                    spacing: 4
+                    LButton {
+                        objectName: "videoOnce"
+                        text: qsTr("Play once")
+                        variant: root.controller.shownVideoLoops ? "default" : "primary"
+                        implicitHeight: 28
+                        radius: 6
+                        fontSize: 11
+                        onClicked: root.controller.shownVideoLoops = false
+                    }
+                    LButton {
+                        objectName: "videoLoop"
+                        text: qsTr("Loop")
+                        variant: root.controller.shownVideoLoops ? "primary" : "default"
+                        implicitHeight: 28
+                        radius: 6
+                        fontSize: 11
+                        onClicked: root.controller.shownVideoLoops = true
+                    }
+                }
+
                 LButton {
                     objectName: "cuesButton"
                     Layout.alignment: Qt.AlignBottom

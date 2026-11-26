@@ -62,4 +62,23 @@ Result<Reference> parseReference(const QString &text, const BookNames &names);
 // "John 3:16", "John 3:16–18", "Genesis 1:1–2:3", "Psalms 23", "John 3–4".
 QString formatReference(const Reference &reference, const QString &bookName);
 
+// Typing ahead in the scripture box. From what has been typed so far:
+// `suggestion`, the whole passage it most likely leads to ("j" -> "John 1:1"),
+// shown after the typing in grey; and `step`, what Space turns the typing
+// into: the book's full name and a space, then the chapter and a colon,
+// then the verse ("j" -> "John ", "John " -> "John 1:", "John 3" -> "John 3:",
+// "John 3:" -> "John 3:1"). Both empty when there is nothing to add (a verse
+// is typed, or nothing matches): Space then types a space.
+struct Completion
+{
+    QString suggestion;
+    QString step;
+};
+
+// books: the translation's books in order, {code, name}. Among books whose
+// name starts with the typing, the most read comes first (so "j" is John,
+// not Joshua); exact names and abbreviations ("jn", "ps") come before that.
+Completion completeReference(const QString &typed, const BookNames &names,
+                             const std::vector<std::pair<QString, QString>> &books);
+
 } // namespace lumen::core::scripture

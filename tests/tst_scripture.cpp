@@ -53,6 +53,48 @@ private:
     BookNames m_names;
 
 private slots:
+    // Typing ahead: "J" suggests John 1:1, Space takes the book, then the
+    // chapter, then the verse; the most read book wins among those that fit.
+    void typingAhead()
+    {
+        const std::vector<std::pair<QString, QString>> books{
+            {"GEN", "Genesis"}, {"EXO", "Exodus"}, {"JOS", "Joshua"}, {"JDG", "Judges"}, {"JOB", "Job"},
+            {"PSA", "Psalms"}, {"JER", "Jeremiah"}, {"JOL", "Joel"}, {"JON", "Jonah"}, {"MAT", "Matthew"},
+            {"JHN", "John"}, {"ACT", "Acts"}, {"ROM", "Romans"}, {"1CO", "1 Corinthians"}, {"JAS", "James"},
+            {"1JN", "1 John"}, {"JUD", "Jude"}};
+        const BookNames names;
+        const auto check = [&](const QString &typed, const QString &suggestion, const QString &step) {
+            const Completion c = completeReference(typed, names, books);
+            QVERIFY2(c.suggestion == suggestion && c.step == step,
+                     qPrintable(QStringLiteral("\"%1\" gave \"%2\" / \"%3\"").arg(typed, c.suggestion, c.step)));
+        };
+        check("j", "John 1:1", "John ");
+        check("J", "John 1:1", "John ");
+        check("jo", "John 1:1", "John ");
+        check("job", "Job 1:1", "Job ");
+        check("josh", "Joshua 1:1", "Joshua ");
+        check("jn", "John 1:1", "John ");
+        check("p", "Psalms 1:1", "Psalms ");
+        check("1 c", "1 Corinthians 1:1", "1 Corinthians ");
+        check("1 j", "1 John 1:1", "1 John ");
+        // Space after the whole name: on to the chapter (1 unless typed).
+        check("John ", "John 1:1", "John 1:");
+        check("John 3", "John 3:1", "John 3:");
+        check("jn 3", "John 3:1", "John 3:");
+        check("John 3:", "John 3:1", "John 3:1");
+        check("John 1:", "John 1:1", "John 1:1");
+        // A verse or a range being typed, or nothing that matches: nothing.
+        check("John 3:16", "", "");
+        check("jn 3 16-18", "", "");
+        check("xyz", "", "");
+        check("", "", "");
+        check("3", "", "");
+        // A translation's own (accented) names.
+        const std::vector<std::pair<QString, QString>> yoruba{{"GEN", "Jẹ́nẹ́sísì"}, {"JHN", "Jòhánù"}, {"JOB", "Jóòbù"}};
+        const Completion y = completeReference(QStringLiteral("joh"), names, yoruba);
+        QCOMPARE(y.suggestion, QStringLiteral("Jòhánù 1:1"));
+    }
+
     void initTestCase()
     {
         // A translation's own names, as the bundled Yoruba Bible has them.

@@ -40,6 +40,10 @@ struct SlideView
     // composed content (see scene.h; timers carry "timerName" until they go
     // live). Empty for every other slide.
     QJsonArray elements;
+    // A video: loop until cleared, or play once and stop (the presentation's
+    // "videoLoop"; once by default). Last, so positional initialisers stay
+    // as they were.
+    bool mediaLoop = false;
 };
 
 // The JSON for composed content from a slide's stored elements, bottom

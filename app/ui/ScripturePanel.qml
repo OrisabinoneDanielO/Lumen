@@ -1,22 +1,32 @@
 import QtQuick
 import QtQuick.Dialogs
 import QtQuick.Layouts
+import QtQuick.Window
 
-// Scripture quick search (Ctrl+B), after design/mockups/Scripture.html.
-// Type a reference such as "jn 3 16-18", pick a translation, press Enter to
-// show it now (or Add to plan). Esc closes.
-Item {
+// Scripture quick search (Ctrl+B), after design/mockups/Scripture.html, in a
+// window of its own: it stays open beside the operator window, so passages
+// can be looked up one after another while the rest of Lumen is used.
+// Type a reference such as "jn 3 16-18" and pick a translation; Enter puts it
+// in Preview, Shift+Enter (or a double-click on the passage) shows it now.
+// Esc closes it.
+Window {
     id: root
 
     required property QtObject scripture
     signal closed()
 
+    title: qsTr("Scripture · Lumen Presenter")
+    width: 900
+    height: 600
+    minimumWidth: 640
+    minimumHeight: 420
     visible: false
-    anchors.fill: parent
-    z: 50
+    color: Theme.panel
 
     function show() {
         visible = true
+        raise()
+        requestActivate()
         reference.selectAll()
         reference.forceActiveFocus()
     }
@@ -24,30 +34,15 @@ Item {
         visible = false
         root.closed()
     }
-
-    // Dim the window behind; clicking outside closes.
-    Rectangle {
-        anchors.fill: parent
-        color: "#99000000"
-        MouseArea {
-            anchors.fill: parent
-            onClicked: root.close()
-        }
-    }
+    onClosing: root.closed()
 
     Rectangle {
         id: dialog
         objectName: "scriptureDialog"
-        anchors.centerIn: parent
-        width: Math.min(960, parent.width - 48)
-        height: Math.min(640, parent.height - 48)
-        radius: 12
+        anchors.fill: parent
         color: Theme.panel
-        border.color: Theme.border
         Accessible.role: Accessible.Dialog
         Accessible.name: qsTr("Scripture")
-
-        MouseArea { anchors.fill: parent } // keep clicks inside
 
         ColumnLayout {
             anchors.fill: parent
@@ -96,9 +91,33 @@ Item {
                             Accessible.role: Accessible.EditableText
                             Accessible.name: qsTr("Scripture reference")
                             onTextChanged: root.scripture.lookup(text)
+                            // The typing finished by its suggestion when it is not a
+                            // passage yet ("j" + Enter is John 1:1).
+                            function completed() {
+                                if (root.scripture.label === "" && root.scripture.suggestion !== "") {
+                                    text = root.scripture.suggestion
+                                    cursorPosition = text.length
+                                }
+                            }
+                            // Space: the next step of the suggestion (the book, then
+                            // the chapter, then the verse). Enter: in Preview.
+                            // Shift+Enter: on the screen now.
+                            Keys.onPressed: event => {
+                                if (event.key === Qt.Key_Space && root.scripture.completionStep !== ""
+                                    && cursorPosition === text.length && selectedText === "") {
+                                    text = root.scripture.completionStep
+                                    cursorPosition = text.length
+                                    event.accepted = true
+                                } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                                           && (event.modifiers & Qt.ShiftModifier)) {
+                                    completed()
+                                    root.scripture.showNow()
+                                    event.accepted = true
+                                }
+                            }
                             onAccepted: {
-                                if (root.scripture.showNow())
-                                    root.close()
+                                completed()
+                                root.scripture.preview()
                             }
                             Keys.onEscapePressed: root.close()
 
@@ -107,6 +126,19 @@ Item {
                                 verticalAlignment: Text.AlignVCenter
                                 visible: reference.text === ""
                                 text: qsTr("e.g. jn 3 16-18")
+                                color: Theme.textMuted
+                                font.pixelSize: 16
+                            }
+                            // The suggestion, in grey after the typing: the rest of
+                            // it when the typing is its start, else the whole of it.
+                            LText {
+                                objectName: "scriptureSuggestion"
+                                x: reference.contentWidth + (ghostRest ? 0 : 12)
+                                anchors.verticalCenter: parent.verticalCenter
+                                readonly property string suggestion: root.scripture.suggestion
+                                readonly property bool ghostRest: suggestion.toLowerCase().startsWith(reference.text.toLowerCase())
+                                visible: reference.text !== "" && suggestion !== "" && reference.cursorPosition === reference.text.length
+                                text: ghostRest ? suggestion.substring(reference.text.length) : "→ " + suggestion
                                 color: Theme.textMuted
                                 font.pixelSize: 16
                             }
@@ -304,6 +336,13 @@ Item {
                         Layout.preferredHeight: width * 9 / 16
                         radius: 8
                         color: "#1B1F2B"
+                        // Click: in Preview. Double-click: on the screen now.
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.scripture.preview()
+                            onDoubleClicked: root.scripture.showNow()
+                        }
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
                             x: 24
@@ -376,20 +415,20 @@ Item {
                     objectName: "scriptureAddToPlan"
                     text: qsTr("Add to plan")
                     opacity: root.scripture.label !== "" ? 1 : 0.5
-                    onClicked: {
-                        if (root.scripture.addToPlan())
-                            root.close()
-                    }
+                    onClicked: root.scripture.addToPlan()
+                }
+                LButton {
+                    objectName: "scripturePreviewButton"
+                    text: qsTr("Preview (Enter)")
+                    opacity: root.scripture.label !== "" ? 1 : 0.5
+                    onClicked: root.scripture.preview()
                 }
                 LButton {
                     objectName: "scriptureShowNow"
-                    text: qsTr("Show now (Enter)")
+                    text: qsTr("Show now (Shift+Enter)")
                     variant: "primary"
                     opacity: root.scripture.label !== "" ? 1 : 0.5
-                    onClicked: {
-                        if (root.scripture.showNow())
-                            root.close()
-                    }
+                    onClicked: root.scripture.showNow()
                 }
             }
         }

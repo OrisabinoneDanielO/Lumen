@@ -61,6 +61,8 @@ public:
 
     // Adds every book name and abbreviation the translations use.
     Status addBookNames(BookNames &names) const;
+    // A translation's books in its order: {USFM code, name as it prints it}.
+    Result<std::vector<std::pair<QString, QString>>> books(const QString &translationId) const;
 
     // The verses of a reference, clamped to the chapter's real length. Errors
     // say what does not exist ("John has 21 chapters").

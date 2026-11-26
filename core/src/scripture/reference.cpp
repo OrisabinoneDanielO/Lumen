@@ -6,6 +6,9 @@
 #include <QRegularExpression>
 #include <QSet>
 
+#include <algorithm>
+#include <climits>
+
 namespace lumen::core::scripture {
 
 namespace {
@@ -246,6 +249,92 @@ QString formatReference(const Reference &ref, const QString &bookName)
     else if (ref.endVerse != ref.verse)
         out += dash + QString::number(ref.endVerse);
     return out;
+}
+
+} // namespace lumen::core::scripture
+
+namespace lumen::core::scripture {
+
+namespace {
+
+// The books read most in services, most first: when several books start
+// with what was typed, the first of these wins ("j" is John, "p" Psalms).
+const QStringList &popularBooks()
+{
+    static const QStringList order{
+        QStringLiteral("JHN"), QStringLiteral("PSA"), QStringLiteral("MAT"), QStringLiteral("ROM"), QStringLiteral("GEN"),
+        QStringLiteral("ISA"), QStringLiteral("LUK"), QStringLiteral("ACT"), QStringLiteral("PRO"), QStringLiteral("MRK"),
+        QStringLiteral("EPH"), QStringLiteral("PHP"), QStringLiteral("HEB"), QStringLiteral("JAS"), QStringLiteral("1CO"),
+        QStringLiteral("GAL"), QStringLiteral("REV"), QStringLiteral("EXO"), QStringLiteral("JER"), QStringLiteral("COL"),
+        QStringLiteral("1PE"), QStringLiteral("1JN"), QStringLiteral("DAN"), QStringLiteral("JOS"), QStringLiteral("2CO"),
+        QStringLiteral("1TH"), QStringLiteral("2TI"), QStringLiteral("DEU"), QStringLiteral("MIC"), QStringLiteral("NEH")};
+    return order;
+}
+
+} // namespace
+
+Completion completeReference(const QString &typed, const BookNames &names,
+                             const std::vector<std::pair<QString, QString>> &books)
+{
+    const QString text = typed.trimmed();
+    if (text.isEmpty() || books.empty())
+        return {};
+    // The book: an optional 1-3 ("1 cor"), then letters up to the first
+    // number after them.
+    int i = 0;
+    if (text.size() > 1 && text[0] >= u'1' && text[0] <= u'3' && (text[1].isLetter() || text[1].isSpace()))
+        i = 1;
+    while (i < text.size() && !text[i].isDigit())
+        ++i;
+    const QString bookText = text.left(i).trimmed().remove(QRegularExpression(QStringLiteral("[.:]+$"))).trimmed();
+    if (bookText.isEmpty() || !std::any_of(bookText.begin(), bookText.end(), [](QChar c) { return c.isLetter(); }))
+        return {};
+
+    // Which book: an exact name or abbreviation, else the most read book
+    // whose name starts with the typing, else the first in the Bible's order.
+    QString code = names.find(bookText);
+    if (code.isEmpty()) {
+        const QString key = BookNames::key(bookText);
+        int best = -1;
+        int bestRank = INT_MAX;
+        for (int b = 0; b < int(books.size()); ++b) {
+            if (!BookNames::key(books[std::size_t(b)].second).startsWith(key))
+                continue;
+            const qsizetype popular = popularBooks().indexOf(books[std::size_t(b)].first);
+            const int rank = popular >= 0 ? int(popular) : 1000 + b;
+            if (rank < bestRank) {
+                bestRank = rank;
+                best = b;
+            }
+        }
+        if (best < 0)
+            return {};
+        code = books[std::size_t(best)].first;
+    }
+    QString name;
+    for (const auto &[bookCode, bookName] : books)
+        name = bookCode == code ? bookName : name;
+    if (name.isEmpty())
+        return {};
+
+    // After the book: chapter, separator, verse.
+    static const QRegularExpression after(QStringLiteral("^(\\d+)?(\\s*[:.]\\s*|\\s+)?(\\d+)?"));
+    const QString rest = text.mid(i);
+    const auto m = after.match(rest);
+    const QString chapter = m.captured(1);
+    const bool separated = !m.captured(2).isEmpty() || (chapter.size() > 0 && typed.endsWith(u' '));
+    const QString verse = m.captured(3);
+    if (!verse.isEmpty() || m.capturedLength(0) < rest.size())
+        return {}; // a verse (or a range) is being typed: nothing to add
+    if (chapter.isEmpty()) {
+        // Only the book so far; a space after it means "on to the chapter".
+        if (typed.endsWith(u' ') && BookNames::key(bookText) == BookNames::key(name))
+            return {name + QStringLiteral(" 1:1"), name + QStringLiteral(" 1:")};
+        return {name + QStringLiteral(" 1:1"), name + u' '};
+    }
+    if (!separated)
+        return {QStringLiteral("%1 %2:1").arg(name, chapter), QStringLiteral("%1 %2:").arg(name, chapter)};
+    return {QStringLiteral("%1 %2:1").arg(name, chapter), QStringLiteral("%1 %2:1").arg(name, chapter)};
 }
 
 } // namespace lumen::core::scripture

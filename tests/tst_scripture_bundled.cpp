@@ -158,16 +158,23 @@ private slots:
             const QString id = value.toObject().value("id").toString();
             const Expected expected = m_expected.value(id);
 
+            // Scripture is a window of its own (it stays open beside the
+            // operator window); Ctrl+B opens it or brings it forward.
+            // Back in the operator window (as clicking it would), Ctrl+B.
+            ui.window->requestActivate();
+            QTRY_VERIFY(ui.window->activeFocusItem());
             QTest::keyClick(ui.window, Qt::Key_B, Qt::ControlModifier);
+            QTRY_VERIFY(ui.item("scriptureDialog"));
             QQuickItem *dialog = ui.item("scriptureDialog");
-            QVERIFY(dialog);
-            QTRY_VERIFY(dialog->isVisible());
+            QQuickWindow *scriptureWindow = dialog->window();
+            QVERIFY(scriptureWindow != ui.window);
+            QTRY_VERIFY(scriptureWindow->isVisible());
             QQuickItem *input = ui.item("scriptureReference");
             QTRY_VERIFY(input->hasActiveFocus());
 
             // Type it as an operator would.
             for (const char c : QByteArray("jn 3 16-18"))
-                QTest::keyClick(ui.window, c);
+                QTest::keyClick(scriptureWindow, c);
             QVERIFY(ui.click("translation-" + id));
             QCOMPARE(ui.scripture->label(), expected.book + QStringLiteral(" 3:16–18"));
             QCOMPARE(ui.scripture->verses().size(), 3);
@@ -175,8 +182,15 @@ private slots:
             QCOMPARE(ui.item("scriptureCopyright")->property("text").toString(),
                      value.toObject().value("copyright").toString());
 
-            QTest::keyClick(ui.window, Qt::Key_Return);
-            QTRY_VERIFY(!dialog->isVisible());
+            // Enter: in Preview, not yet on the screen (the user's request:
+            // "choosing a scripture should take it to the preview window
+            // first"); Shift+Enter: on the screen. The window stays open.
+            const QString liveBefore = ui.controller->liveText();
+            QTest::keyClick(scriptureWindow, Qt::Key_Return);
+            QTRY_VERIFY2(ui.controller->previewText().startsWith(expected.start), qPrintable(ui.controller->previewText()));
+            QCOMPARE(ui.controller->liveText(), liveBefore);
+            QTest::keyClick(scriptureWindow, Qt::Key_Return, Qt::ShiftModifier);
+            QVERIFY(scriptureWindow->isVisible());
             QVERIFY2(ui.controller->liveText().startsWith(expected.start), qPrintable(ui.controller->liveText()));
             // Batch 8: the reference and the translation's copyright line are
             // the slide's footer (they ended the slide text in batch 7).
@@ -187,6 +201,52 @@ private slots:
             QVERIFY(!live.style.isEmpty()); // drawn with the scripture theme
             QCOMPARE(ui.controller->slides()->property("count").toInt(), 3);
         }
+    }
+
+    // Typing ahead in the window: "j" shows John 1:1 in grey; Space takes
+    // the book, then the chapter; Enter takes the whole suggestion.
+    void typingAheadInTheWindow()
+    {
+        OperatorHarness ui;
+        ui.bibles = m_store.get();
+        QString error;
+        QVERIFY2(ui.load(false, &error), qPrintable(error));
+        QTest::keyClick(ui.window, Qt::Key_B, Qt::ControlModifier);
+        QTRY_VERIFY(ui.item("scriptureDialog"));
+        QQuickWindow *window = ui.item("scriptureDialog")->window();
+        QVERIFY(ui.click("translation-engwebp"));
+        QQuickItem *input = ui.item("scriptureReference");
+        input->forceActiveFocus();
+        QTRY_VERIFY(input->hasActiveFocus());
+        const auto typed = [input] { return input->property("text").toString(); };
+        QQuickItem *ghost = ui.item("scriptureSuggestion");
+        QVERIFY(ghost);
+
+        QTest::keyClick(window, 'j');
+        QTRY_VERIFY(ghost->isVisible());
+        QCOMPARE(ghost->property("text").toString(), QStringLiteral("ohn 1:1"));
+        QTest::keyClick(window, Qt::Key_Space);
+        QCOMPARE(typed(), QStringLiteral("John "));
+        QTest::keyClick(window, '3');
+        QCOMPARE(ghost->property("text").toString(), QStringLiteral(":1"));
+        QTest::keyClick(window, Qt::Key_Space);
+        QCOMPARE(typed(), QStringLiteral("John 3:"));
+        QTest::keyClick(window, '1');
+        QTest::keyClick(window, '6');
+        QCOMPARE(ui.scripture->label(), QStringLiteral("John 3:16"));
+        QVERIFY(!ghost->isVisible()); // a verse is typed: nothing to add
+        QTest::keyClick(window, Qt::Key_Space); // an ordinary space now
+        QCOMPARE(typed(), QStringLiteral("John 3:16 "));
+        QTest::keyClick(window, Qt::Key_Return);
+        QVERIFY(ui.controller->previewText().startsWith(QStringLiteral("For God so loved")));
+
+        // "j" and Enter: John 1:1.
+        input->setProperty("text", QString());
+        QTest::keyClick(window, 'j');
+        QTest::keyClick(window, Qt::Key_Return);
+        QCOMPARE(typed(), QStringLiteral("John 1:1"));
+        QCOMPARE(ui.scripture->label(), QStringLiteral("John 1:1"));
+        QVERIFY(ui.controller->previewText().startsWith(QStringLiteral("In the beginning")));
     }
 };
 

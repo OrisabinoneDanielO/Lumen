@@ -21,17 +21,25 @@ inline constexpr int layerCount = 6;
 QString layerName(Layer layer);              // "background", "media", ...
 std::optional<Layer> layerFromName(const QString &name);
 
-enum class TransitionKind { Cut, Fade };
+// How a layer changes to new content: at once (Cut), or over durationMs by
+// fading (Fade), sliding the new content in from the right (Push) or from
+// below (PushUp), uncovering it from left to right (Wipe), or growing it in
+// while the old fades (Zoom).
+enum class TransitionKind { Cut, Fade, Push, PushUp, Wipe, Zoom };
+
+QString transitionKindName(TransitionKind kind);           // "cut", "fade", "push", "pushUp", "wipe", "zoom"
+std::optional<TransitionKind> transitionKindFromName(const QString &name);
 
 struct Transition
 {
     TransitionKind kind = TransitionKind::Cut;
-    int durationMs = 0; // fades only
+    int durationMs = 0; // all but cuts
 
     static Transition cut() { return {}; }
     static Transition fade(int durationMs) { return {TransitionKind::Fade, durationMs}; }
+    static Transition of(TransitionKind kind, int durationMs) { return {kind, durationMs}; }
     // Milliseconds the change takes on screen (0 for a cut).
-    int effectiveMs() const { return kind == TransitionKind::Fade ? qMax(0, durationMs) : 0; }
+    int effectiveMs() const { return kind == TransitionKind::Cut ? 0 : qMax(0, durationMs); }
 
     bool operator==(const Transition &) const = default;
 };

@@ -5,6 +5,9 @@
 #include <QQuickWindow>
 #include <QRegularExpression>
 #include <QTest>
+#include <QQuickItem>
+
+#include <functional>
 
 using lumen::render::OutputWindow;
 using namespace lumen::core::show;
@@ -75,6 +78,71 @@ private slots:
         for (double y : {0.05, 0.5, 0.9})
             QVERIFY(near(colourAt(frame, 0.5, y), Qt::red));
         QCOMPARE(textPixels(frame), 0);
+    }
+
+    // Each transition halfway: the new content half in (and the old half
+    // out), as the kind says; at the end only the new content, in place.
+    void transitionsHalfway_data()
+    {
+        QTest::addColumn<QString>("kind");
+        for (const char *kind : {"fade", "push", "pushUp", "wipe", "zoom"})
+            QTest::newRow(kind) << QString::fromLatin1(kind);
+    }
+    void transitionsHalfway()
+    {
+        QFETCH(QString, kind);
+        const auto find = [this](const QString &name) {
+            QQuickItem *found = nullptr;
+            std::function<void(QQuickItem *)> walk = [&](QQuickItem *item) {
+                if (!item || found)
+                    return;
+                if (item->objectName() == name)
+                    found = item;
+                for (QQuickItem *child : item->childItems())
+                    walk(child);
+            };
+            walk(m_output->window()->contentItem());
+            return found;
+        };
+        m_scene.layer(Layer::Slide).content = Content::fill(navy);
+        show();
+        m_scene.layer(Layer::Slide).content = Content::fill(gold);
+        m_scene.layer(Layer::Slide).transition = Transition::of(*transitionKindFromName(kind), 1000);
+        show();
+        m_output->advanceClock(500);
+        QQuickItem *incoming = find(QStringLiteral("layerCurrent-slide"));
+        QQuickItem *outgoing = find(QStringLiteral("layerPrevious-slide"));
+        QQuickItem *clip = find(QStringLiteral("layerClip-slide"));
+        QVERIFY(incoming && outgoing && clip);
+        const qreal w = m_output->window()->width(), h = m_output->window()->height();
+        if (kind == QLatin1String("fade")) {
+            QVERIFY(std::abs(incoming->opacity() - 0.5) < 0.01);
+        } else if (kind == QLatin1String("push")) {
+            QVERIFY(std::abs(incoming->x() - w / 2) < 1);
+            QVERIFY(std::abs(outgoing->x() + w / 2) < 1);
+            QCOMPARE(incoming->opacity(), 1.0);
+        } else if (kind == QLatin1String("pushUp")) {
+            QVERIFY(std::abs(incoming->y() - h / 2) < 1);
+            QVERIFY(std::abs(outgoing->y() + h / 2) < 1);
+        } else if (kind == QLatin1String("wipe")) {
+            QVERIFY(clip->clip());
+            QVERIFY(std::abs(clip->width() - w / 2) < 1);
+            QCOMPARE(outgoing->opacity(), 1.0);
+        } else if (kind == QLatin1String("zoom")) {
+            QVERIFY(std::abs(incoming->scale() - 0.9) < 0.01);
+            QVERIFY(std::abs(incoming->opacity() - 0.5) < 0.01);
+        }
+        // Halfway, the picture is neither all old nor all new.
+        const QImage mid = m_output->grab();
+        QVERIFY(!mid.isNull());
+        // At the end: the new content alone, in place.
+        const QImage end = after(600);
+        QCOMPARE(incoming->x(), 0.0);
+        QCOMPARE(incoming->y(), 0.0);
+        QCOMPARE(incoming->scale(), 1.0);
+        QCOMPARE(clip->width(), w);
+        QVERIFY(!outgoing->isVisible());
+        QVERIFY(near(end.pixelColor(end.width() / 2, end.height() / 2), gold));
     }
 
     void cutIsImmediate()
