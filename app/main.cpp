@@ -12,6 +12,7 @@
 #include "oscserver.h"
 #include "remoteserver.h"
 #include "propscontroller.h"
+#include "screensetup.h"
 #include "stagecontroller.h"
 #include "streamcontroller.h"
 #include "timercontroller.h"
@@ -82,23 +83,15 @@ struct Output
     std::unique_ptr<show::OutputBridge> bridge;
 };
 
-// The stage display's renderer (batch 13): on a screen that is neither the
-// operator's (the primary) nor the audience output's (the first other one),
-// else in a window. Returns its link, or null if it could not start.
-std::unique_ptr<render::RenderLink> startStage(const QString &executable, const QString &audienceServer)
+// The stage display's renderer (batch 13): on the screen the screen setup
+// gives it, else in a window. Returns its link, or null if it could not start.
+std::unique_ptr<render::RenderLink> startStage(const QString &executable, const QString &audienceServer, int screen)
 {
-    const QList<QScreen *> screens = QGuiApplication::screens();
-    QScreen *primary = QGuiApplication::primaryScreen();
-    QList<int> others;
-    for (int i = 0; i < screens.size(); ++i) {
-        if (screens.at(i) != primary)
-            others << i;
-    }
     render::RenderLink::Options options;
     options.serverName = (audienceServer.isEmpty() ? render::defaultServerName() : audienceServer) + QStringLiteral("-stage");
     options.executable = executable;
     options.arguments = {QStringLiteral("--stage"),
-                         others.size() >= 2 ? QStringLiteral("--screen=%1").arg(others.at(1)) : QStringLiteral("--windowed")};
+                         screen >= 0 ? QStringLiteral("--screen=%1").arg(screen) : QStringLiteral("--windowed")};
     auto link = std::make_unique<render::RenderLink>(options);
     if (auto started = link->start(); !started.ok()) {
         qWarning("Stage display not started: %s", qPrintable(started.error().message));
@@ -414,12 +407,32 @@ int main(int argc, char *argv[])
     app::PresentationLibrary presentationLibrary(*library, slideFolder);
     controller.attachPresentations(presentationLibrary);
 
+    // Which screen shows what (the Screens setup): remembered for each set of
+    // screens; a set seen for the first time opens the setup.
+    app::ScreenSetup screenSetup;
+    // Where the screen setup puts an output: fullscreen on its screen, or a
+    // window when several screens are connected but none has the role.
+    const auto screenArguments = [&screenSetup](int index) -> QStringList {
+        if (index >= 0)
+            return {QStringLiteral("--screen=%1").arg(index)};
+        return screenSetup.count() > 1 ? QStringList{QStringLiteral("--windowed")} : QStringList{};
+    };
+    const auto screenCommand = [&screenSetup](int index) {
+        return index >= 0 ? QJsonObject{{QStringLiteral("cmd"), QStringLiteral("screen")}, {QStringLiteral("index"), index}}
+                          : QJsonObject{{QStringLiteral("cmd"), QStringLiteral("screen")}, {QStringLiteral("windowed"), true}};
+    };
+
     std::unique_ptr<Output> output;
     const auto turnOutputOn = [&] {
         if (output)
             return;
+        // The setup's screen first, so a --render-option=--screen=N given by
+        // hand still wins.
         output = startOutput(show, outputServer, parser.value(renderExecutable),
-                             parser.values(renderOption));
+                             screenArguments(screenSetup.mainScreen()) + parser.values(renderOption));
+        // A renderer that kept running from before may be on another screen.
+        if (output && !parser.isSet(renderOption) && (screenSetup.mainScreen() >= 0 || screenSetup.count() > 1))
+            (void)output->link->send(screenCommand(screenSetup.mainScreen()));
         controller.setOutputConnected(output != nullptr);
         // The video Space would send next is opened ahead of time, so it
         // starts at once when it goes live.
@@ -457,8 +470,9 @@ int main(int argc, char *argv[])
     const auto turnStageOn = [&] {
         if (stage)
             return;
-        stage = startStage(parser.value(renderExecutable), parser.value(renderServer));
+        stage = startStage(parser.value(renderExecutable), parser.value(renderServer), screenSetup.stageScreen());
         if (stage) {
+            (void)stage->send(screenCommand(screenSetup.stageScreen()));
             render::RenderLink *link = stage.get();
             stageController.setSender([link](const QJsonObject &state) {
                 (void)link->send({{QStringLiteral("cmd"), QStringLiteral("stage")}, {QStringLiteral("stage"), state}});
@@ -548,6 +562,61 @@ int main(int argc, char *argv[])
         stored.setValue(QLatin1String(streamNdiNameKey), streamController.ndiName());
     });
 
+    // The Screens setup: labels on every screen while it is open, and the
+    // outputs follow the roles as they change.
+    const auto showLabels = [&] {
+        screenSetup.setRunning(output != nullptr, stage != nullptr);
+        const bool open = screenSetup.isOpen();
+        if (output) {
+            (void)output->link->send({{QStringLiteral("cmd"), QStringLiteral("identify")},
+                                      {QStringLiteral("identify"),
+                                       open ? screenSetup.label(screenSetup.mainScreen()) : QJsonObject()}});
+        }
+        if (stage) {
+            (void)stage->send({{QStringLiteral("cmd"), QStringLiteral("identify")},
+                               {QStringLiteral("identify"),
+                                open ? screenSetup.label(screenSetup.stageScreen()) : QJsonObject()}});
+        }
+    };
+    int stageScreenBefore = screenSetup.stageScreen();
+    QObject::connect(&screenSetup, &app::ScreenSetup::rolesChanged, &app, [&] {
+        if (output)
+            (void)output->link->send(screenCommand(screenSetup.mainScreen()));
+        const int stageScreen = screenSetup.stageScreen();
+        if (stageScreen >= 0 && !stage) {
+            // Giving a screen the stage role turns the stage display on.
+            turnStageOn();
+            QSettings().setValue(QLatin1String(stageEnabledKey), true);
+        } else if (stageScreen >= 0 && stage) {
+            (void)stage->send(screenCommand(stageScreen));
+        } else if (stageScreen < 0 && stageScreenBefore >= 0 && stage) {
+            // Its screen was given to something else: the stage display goes off.
+            stageController.setConnected(false);
+            stageController.setSender({});
+            (void)stage->quit();
+            stage.reset();
+            QSettings().setValue(QLatin1String(stageEnabledKey), false);
+        }
+        stageScreenBefore = stageScreen;
+        showLabels();
+    });
+    QObject::connect(&screenSetup, &app::ScreenSetup::openChanged, &app, showLabels);
+    QObject::connect(&controller, &app::OperatorController::stateChanged, &app, [&] {
+        screenSetup.setRunning(output != nullptr, stage != nullptr);
+    });
+    QObject::connect(&stageController, &app::StageController::changed, &app, [&] {
+        screenSetup.setRunning(output != nullptr, stage != nullptr);
+    });
+    // A screen plugged in or out: a new set of screens opens the setup.
+    const auto screensChanged = [&] {
+        screenSetup.refresh();
+        if (!checking && screenSetup.needsSetup())
+            screenSetup.openSetup();
+        showLabels();
+    };
+    QObject::connect(&app, &QGuiApplication::screenAdded, &app, screensChanged);
+    QObject::connect(&app, &QGuiApplication::screenRemoved, &app, screensChanged);
+
     // A normal quit closes the outputs; a crash leaves them showing.
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&output, &stage, &stream] {
         if (stream)
@@ -575,8 +644,13 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("remote"), QVariant::fromValue<QObject *>(&remote)},
                                  {QStringLiteral("osc"), QVariant::fromValue<QObject *>(&osc)},
                                  {QStringLiteral("midi"), QVariant::fromValue<QObject *>(&midi)},
-                                 {QStringLiteral("cues"), QVariant::fromValue<QObject *>(&cueController)}});
+                                 {QStringLiteral("cues"), QVariant::fromValue<QObject *>(&cueController)},
+                                 {QStringLiteral("screenSetup"), QVariant::fromValue<QObject *>(&screenSetup)}});
     engine.loadFromModule("Lumen.Ui", "Main");
+
+    // Screens seen for the first time: ask which is which.
+    if (!checking && screenSetup.needsSetup())
+        screenSetup.openSetup();
 
     if (checking)
         return checkInstallation(engine, bundledBibleStore.get(), [&]() -> render::RenderLink * {

@@ -14,6 +14,10 @@
 //   {"v":2,"cmd":"status"}    -> {"v":2,"ok":true,"frames":123,"pid":4567,
 //                                 "presentedSequence":12}  (scene in the last frame)
 //   {"v":2,"cmd":"quit"}      -> {"v":2,"ok":true}, then the renderer exits
+//   {"v":10,"cmd":"identify","identify":{"number":2,"name":"DELL U2720Q","role":"Main output"}}
+//       shows a large label naming this screen above everything ({}: hides it)
+//   {"v":10,"cmd":"screen","index":2}  -> moves the window, fullscreen, to that
+//       screen (or {"windowed":true}: a window on the operator's screen)
 //   {"v":4,"cmd":"preload","video":"/path"}  -> opens a video ahead of use
 //       (the item in Preview), so it starts at once when sent live
 //   "status" also reports "video": {frames, dropped, loops, stalls,
@@ -48,7 +52,9 @@ namespace lumen::core::render {
 // v8 (batch 16): composed content (positioned elements from the editor).
 // v9 (batch 20): cued content (slides following a backing track); "status"
 //     reports "timeline".
-inline constexpr int protocolVersion = 9;
+// v10: the screen setup: "identify" labels and "screen" moves an output;
+//     "status" reports "identify".
+inline constexpr int protocolVersion = 10;
 
 // Longest line either side accepts, to bound memory use.
 inline constexpr qsizetype maxLineBytes = 1024 * 1024;

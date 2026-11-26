@@ -71,4 +71,9 @@ Window {
         opacity: output.scene.blackLevel
         visible: opacity > 0
     }
+
+    // While the operator sets up the screens: which screen this is.
+    IdentifyLabel {
+        identify: output.scene.identify
+    }
 }

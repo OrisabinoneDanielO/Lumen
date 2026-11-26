@@ -137,6 +137,9 @@ class SceneModel : public QObject
     Q_PROPERTY(qint64 wallMs READ wallMs NOTIFY wallChanged)
     // The stage display's state (stage windows, batch 13).
     Q_PROPERTY(QVariantMap stage READ stage NOTIFY stageChanged)
+    // While the operator sets up the screens: a large label naming this
+    // screen ({number, name, role}), drawn above everything; empty otherwise.
+    Q_PROPERTY(QVariantMap identify READ identify NOTIFY identifyChanged)
 
 public:
     explicit SceneModel(QObject *parent = nullptr);
@@ -163,6 +166,15 @@ public:
     // Cued content (batch 20): where its timeline is, for status.
     QJsonObject timelineStatus(qint64 nowMs) const;
 
+    QVariantMap identify() const { return m_identify.toVariantMap(); }
+    void setIdentify(const QJsonObject &identify)
+    {
+        if (identify == m_identify)
+            return;
+        m_identify = identify;
+        emit identifyChanged();
+    }
+
     QVariantMap stage() const { return m_stage.toVariantMap(); }
     void setStage(const QJsonObject &stage)
     {
@@ -173,6 +185,7 @@ public:
     }
 
 signals:
+    void identifyChanged();
     void levelsChanged();
     void preloadsChanged();
     void wallChanged();
@@ -187,6 +200,7 @@ private:
     QList<QUrl> m_preloads;
     qint64 m_wallBaseMs = -1; // wall clock minus render clock
     qint64 m_wallShownMs = 0;
+    QJsonObject m_identify;
     QJsonObject m_stage;
     std::array<std::unique_ptr<CueRunner>, core::show::layerCount> m_cueRunners;
     std::function<qint64()> m_clock;

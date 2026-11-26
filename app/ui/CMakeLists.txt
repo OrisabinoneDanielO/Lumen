@@ -11,6 +11,7 @@ qt_add_qml_module(lumen_ui
     OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml/Lumen/Ui
     QML_FILES
         Main.qml
+        ScreensPopover.qml
         Theme.qml
         LText.qml
         SectionLabel.qml

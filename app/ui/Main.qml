@@ -31,6 +31,8 @@ Window {
     property QtObject midi: null
     // Timecode cues (batch 20); optional.
     property QtObject cues: null
+    // The Screens setup (which screen is the main output, which the stage).
+    property QtObject screenSetup: null
 
     width: 1440
     height: 900
@@ -118,6 +120,7 @@ Window {
                     onItemClicked: keyRoot.forceActiveFocus()
                     onShareRequested: sharePopover.active = window.sharing !== null
                     onRemoteRequested: remotePopover.active = window.remote !== null
+                    onScreensRequested: if (window.screenSetup) window.screenSetup.openSetup()
                 }
 
                 SlideGridPanel {
@@ -220,6 +223,79 @@ Window {
         sourceComponent: CuesPopover {
             cues: window.cues
             onCloseRequested: cuesPopover.active = false
+        }
+    }
+    // The Screens setup, in the middle of the window: it opens by itself the
+    // first time a set of screens is connected.
+    // Behind the Screens setup: the window dims and ignores clicks.
+    Rectangle {
+        anchors.fill: parent
+        z: 59
+        visible: screensPopover.active
+        color: "#A6000000"
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.AllButtons
+            onWheel: wheel => wheel.accepted = true
+        }
+    }
+    Loader {
+        id: screensPopover
+        objectName: "screensPopover"
+        active: window.screenSetup !== null && window.screenSetup.open
+        anchors.centerIn: parent
+        z: 60
+        sourceComponent: ScreensPopover {
+            setup: window.screenSetup
+            onCloseRequested: window.screenSetup.close()
+        }
+    }
+    // While it is open, the screens with no output on them show their number
+    // here (the renderer draws it on the screens it is on).
+    Instantiator {
+        model: window.screenSetup ? window.screenSetup.screens : null
+        delegate: Window {
+            required property int index
+            required property int number
+            required property string name
+            required property string role
+            required property bool labelHere
+            objectName: "screenLabel-" + number
+            title: qsTr("Lumen screen %1").arg(number)
+            screen: Qt.application.screens[index]
+            // Inside its screen too: some platforms go by position.
+            x: screen ? screen.virtualX : 0
+            y: screen ? screen.virtualY : 0
+            width: screen ? screen.width : 640
+            height: screen ? screen.height : 480
+            flags: Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+            visibility: labelHere ? Window.FullScreen : Window.Hidden
+            color: Theme.window
+            Column {
+                anchors.centerIn: parent
+                width: parent.width * 0.8
+                spacing: parent.height * 0.02
+                LText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: number
+                    color: Theme.live
+                    font.weight: Font.Bold
+                    font.pixelSize: Math.max(48, parent.parent.height * 0.4)
+                }
+                LText {
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    text: name
+                    font.pixelSize: Math.max(16, parent.parent.height * 0.05)
+                }
+                LText {
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    text: role === "main" ? qsTr("Main output") : role === "stage" ? qsTr("Stage display") : qsTr("Not used")
+                    color: Theme.textMuted
+                    font.pixelSize: Math.max(14, parent.parent.height * 0.045)
+                }
+            }
         }
     }
     Loader {

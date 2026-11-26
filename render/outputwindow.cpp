@@ -116,7 +116,8 @@ bool OutputWindow::create()
     core::show::registerOutputFonts();
     if (m_kind == Kind::Stream)
         return createStream();
-    if (m_kind == Kind::Stage) {
+    // Inter: the stage display's type, and the screen-setup label's.
+    {
         for (const char *file : {"Inter-Regular", "Inter-Medium", "Inter-SemiBold", "Inter-Bold"})
             QFontDatabase::addApplicationFont(QStringLiteral(":/lumen/stage/fonts/%1.ttf").arg(QLatin1String(file)));
     }
@@ -256,8 +257,15 @@ void OutputWindow::place(QScreen *screen, bool fullscreen, QSize windowedSize)
 {
     if (!m_window || m_kind == Kind::Stream) // drawn off screen
         return;
-    if (screen)
+    // A window that is showing does not move to another screen reliably on
+    // every platform: it is hidden, moved, and shown again (a blink, only
+    // while the operator sets up the screens).
+    if (screen && m_window->isVisible() && m_window->screen() != screen)
+        m_window->hide();
+    if (screen) {
         m_window->setScreen(screen);
+        m_window->setGeometry(screen->geometry());
+    }
 
     if (fullscreen) {
         m_window->setFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);

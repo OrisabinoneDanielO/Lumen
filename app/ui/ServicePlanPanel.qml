@@ -14,6 +14,7 @@ Rectangle {
     signal itemClicked(int index)
     signal shareRequested() // batch 18: the Share popover
     signal remoteRequested() // batch 19: the Remote control popover
+    signal screensRequested() // the Screens setup
 
     // The plan menu's page: "" (closed), "main", "open", "restore", or
     // "input" (a name, header or notes, for inputAction).
@@ -359,6 +360,14 @@ Rectangle {
                         onTriggered: {
                             root.menuPage = ""
                             root.shareRequested()
+                        }
+                    }
+                    MenuEntry {
+                        objectName: "planScreens"
+                        text: qsTr("Screens…")
+                        onTriggered: {
+                            root.menuPage = ""
+                            root.screensRequested()
                         }
                     }
                     MenuEntry {

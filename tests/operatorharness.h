@@ -12,6 +12,7 @@
 #include "presentationlibrary.h"
 #include "scripturecontroller.h"
 #include "sampleservice.h"
+#include "screensetup.h"
 #include "servicedata.h"
 #include "themecontroller.h"
 #include "themes.h"
@@ -53,6 +54,7 @@ public:
     ~OperatorHarness()
     {
         engine.reset();
+        screens.reset();
         cues.reset();
         midi.reset();
         osc.reset();
@@ -123,6 +125,7 @@ public:
         osc = std::make_unique<app::OscServer>(*live, 0);
         midi = std::make_unique<app::MidiInput>(*live);
         cues = std::make_unique<app::CueController>(*controller);
+        screens = std::make_unique<app::ScreenSetup>();
         cues->attach(*m_db);
         media = std::make_unique<app::MediaLibrary>(*m_db, thumbnails.path());
         controller->attachMedia(*media);
@@ -145,7 +148,8 @@ public:
              {QStringLiteral("remote"), QVariant::fromValue<QObject *>(remote.get())},
              {QStringLiteral("osc"), QVariant::fromValue<QObject *>(osc.get())},
              {QStringLiteral("midi"), QVariant::fromValue<QObject *>(midi.get())},
-             {QStringLiteral("cues"), QVariant::fromValue<QObject *>(cues.get())}});
+             {QStringLiteral("cues"), QVariant::fromValue<QObject *>(cues.get())},
+             {QStringLiteral("screenSetup"), QVariant::fromValue<QObject *>(screens.get())}});
         engine->loadFromModule("Lumen.Ui", "Main");
         if (engine->rootObjects().isEmpty()) {
             *error = QStringLiteral("Main.qml did not load");
@@ -234,6 +238,7 @@ public:
     std::unique_ptr<app::RemoteServer> remote;
     std::unique_ptr<app::OscServer> osc;
     std::unique_ptr<app::MidiInput> midi;
+    std::unique_ptr<app::ScreenSetup> screens;
     std::unique_ptr<app::CueController> cues;
     std::unique_ptr<app::OperatorController> controller;
     std::unique_ptr<QQmlApplicationEngine> engine;

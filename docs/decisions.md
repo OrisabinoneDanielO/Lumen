@@ -259,3 +259,12 @@ Following an external clock (MIDI timecode or LTC from a playback system) is not
 ## No sample content in the app
 
 The app once had `--design-preview`, which loaded the mockup's sample service into a temporary library to compare the window with `design/mockups`. It was removed before the first release so the app ships no sample or mock content: a first start shows an empty library. The sample service is now test data only (`tests/support/sampleservice.cpp`), used by the operator tests.
+
+## The screen setup
+
+Which screen shows the main output and which the stage display used to follow a fixed rule (the first screen that is not the operator's, then the next), changeable only with a command-line option. Volunteers could not tell which screen was which, so a **Screens** panel now opens the first time a set of screens is connected: each screen shows its number in large type, and the operator gives each a role. The roles are remembered per set of screens (by connector, monitor model and size), meeting the design doc's "output windows restore to the right screens automatically".
+
+- The labels are drawn by the renderer on the screens it is on (protocol v10 "identify") and by the operator window elsewhere, so a label never hides behind a fullscreen output.
+- A running output moves with the protocol's "screen" command instead of restarting, so the picture is kept. Showing windows do not move between screens reliably on every platform, so the renderer hides, moves and shows the window again: a blink, only during setup.
+- The operator window stays on the primary screen; choosing the operator's screen is left to the system's display settings.
+
