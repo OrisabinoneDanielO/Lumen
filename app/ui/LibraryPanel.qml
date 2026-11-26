@@ -18,6 +18,9 @@ Rectangle {
     signal themesRequested()
     // What follows the pointer while dragging onto the plan (Main.qml).
     property Item dragGhost: null
+    // Scripture and Themes are separate parts (null when not loaded).
+    property bool scriptureAvailable: true
+    property bool themesAvailable: true
     // + Add in the plan: a tab, with the search ready for songs.
     function showPage(p) {
         page = p
@@ -206,8 +209,10 @@ Rectangle {
                     readonly property bool active: index === root.page
                     // Songs, Media and Presentations are listed here;
                     // Scripture and Themes open their panels.
-                    readonly property bool available: (index !== 2 || root.controller.mediaAvailable)
+                    readonly property bool available: (index !== 1 || root.scriptureAvailable)
+                                                      && (index !== 2 || root.controller.mediaAvailable)
                                                       && (index !== 3 || root.controller.decksAvailable)
+                                                      && (index !== 4 || root.themesAvailable)
                     objectName: "libraryTab-" + index
                     opacity: available ? 1 : 0.45
 

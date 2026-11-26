@@ -51,7 +51,7 @@ Rectangle {
             }
             LText {
                 visible: root.props.props.count === 0
-                text: qsTr("No props yet. Add a lower third or a logo below.")
+                text: qsTr("No props yet. Add a lower third or a corner picture below.")
                 font.pixelSize: 11
                 color: Theme.textMuted
             }
@@ -86,7 +86,7 @@ Rectangle {
                         spacing: 8
                         SectionLabel {
                             Layout.preferredWidth: 44
-                            text: row.kind === "bug" ? qsTr("LOGO") : qsTr("LOWER")
+                            text: row.kind === "bug" ? qsTr("CORNER") : qsTr("LOWER")
                             font.pixelSize: 10
                         }
                         ColumnLayout {
@@ -112,11 +112,9 @@ Rectangle {
                             font.weight: Font.Bold
                             color: Theme.live
                         }
-                        Small {
+                        RemoveButton {
                             objectName: "propRemove-" + row.index
-                            text: "🗑"
-                            variant: "ghost"
-                            onClicked: root.props.remove(row.index)
+                            onConfirmed: root.props.remove(row.index)
                         }
                     }
                 }
@@ -132,6 +130,7 @@ Rectangle {
                 inputName: "propLine1Text"
                 Layout.fillWidth: true
                 placeholder: qsTr("Name, e.g. Pastor Ade Johnson")
+                onAccepted: line2.focusInput() // Enter: on to the title
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -167,7 +166,8 @@ Rectangle {
 
             SectionLabel {
                 Layout.topMargin: 6
-                text: qsTr("ADD A LOGO")
+                // Not the full-screen Logo (F6): a small picture in a corner.
+                text: qsTr("ADD A CORNER PICTURE")
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -201,7 +201,7 @@ Rectangle {
         id: bugDialog
         active: false
         sourceComponent: FileDialog {
-            title: qsTr("Choose a logo")
+            title: qsTr("Choose a corner picture")
             nameFilters: [qsTr("Pictures (*.png *.svg *.jpg *.jpeg *.webp)")]
             Component.onCompleted: open()
             onAccepted: {

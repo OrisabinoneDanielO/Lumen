@@ -181,7 +181,7 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.controller.showMessage(recent.modelData)
+                    onClicked: root.controller.showMessage(recent.modelData, root.ticker)
                 }
             }
         }

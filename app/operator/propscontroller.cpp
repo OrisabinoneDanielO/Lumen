@@ -4,6 +4,9 @@
 #include "lumen/core/show/showcontroller.h"
 
 #include <QFileInfo>
+#include <QUuid>
+#include <QFile>
+#include <QDir>
 #include <QUrl>
 
 namespace lumen::app {
@@ -56,7 +59,7 @@ void PropsController::refresh()
         const bool shown = layer.kind == Content::Kind::Prop
                            && layer.prop.value(partName(p.kind)).toObject().value("id").toString() == p.id;
         const QString summary = p.kind == PropKind::Bug
-                                    ? tr("Logo · %1").arg(QFileInfo(p.data.value("image").toString()).fileName())
+                                    ? tr("Corner picture · %1").arg(QFileInfo(p.data.value("image").toString()).fileName())
                                     : p.data.value("line2").toString();
         rows << QVariantMap{{"name", p.name}, {"kind", partName(p.kind)}, {"summary", summary}, {"shown", shown}};
     }
@@ -120,9 +123,18 @@ bool PropsController::addBug(const QUrl &image, const QString &corner)
     static const QStringList corners{"topLeft", "topRight", "bottomLeft", "bottomRight"};
     if (!m_db || !QFileInfo(path).isFile() || !corners.contains(corner))
         return false;
+    QString stored = QFileInfo(path).absoluteFilePath();
+    if (!m_pictureFolder.isEmpty() && QDir().mkpath(m_pictureFolder)) {
+        const QString copy = QDir(m_pictureFolder).filePath(
+            QStringLiteral("%1-%2").arg(QUuid::createUuid().toString(QUuid::Id128).left(8), QFileInfo(path).fileName()));
+        if (QFile::copy(path, copy))
+            stored = copy;
+        else
+            qWarning("Corner picture not copied to %s; the original is used", qPrintable(copy));
+    }
     auto created = Repository<Prop>(*m_db).create({.name = QFileInfo(path).completeBaseName(),
                                                    .kind = PropKind::Bug,
-                                                   .data = {{"image", QFileInfo(path).absoluteFilePath()},
+                                                   .data = {{"image", stored},
                                                             {"corner", corner},
                                                             {"size", 0.12}}});
     if (!created.ok())

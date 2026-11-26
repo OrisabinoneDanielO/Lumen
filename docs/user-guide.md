@@ -49,7 +49,7 @@ The audience output runs in its own process, `lumen-render`, so a crash in the o
 
 ## Running a service
 
-In Show mode, click a slide to send it live, or use the keyboard: Space or → next slide, ← previous, Page Down/Up next/previous plan item, F1–F5 clear background/slide/props/messages/all, F6 Logo, F7 Black, C/B/P/E jump to Chorus/Bridge/Pre-chorus/Ending, V then a number for a verse, 1–9 for a section. Edit mode (the slide editor; set `experimental/editor` to false to hide it) edits a draft of the selected item and nothing is stored or shown until **Save**. Slides presentations take text boxes, shapes, pictures, videos, clocks and countdowns, dragged into place on the canvas and styled on the right, with a background picture or motion loop and a transition per slide; **New slides** makes a new presentation in the plan. Songs are edited as lyrics: a blank line starts a slide, a line like [Verse 2] starts a group. **Auto-split slides** re-splits every group into even slides of two lines (setting `songs/linesPerSlide`). **Edit arrangement** shows the play order: add a group again (a chorus after every verse), move groups earlier or later, remove them, or go back to **As written**; Save keeps the order, and changing the lyrics later keeps it too.
+In Show mode, click a slide to send it live, or use the keyboard: Space or → next slide, ← previous, Page Down/Up next/previous plan item, F1–F5 clear background/slide/props/messages/all, F6 Logo, F7 Black, C/B/P/E/T jump to Chorus/Bridge/Pre-chorus/Ending/Tag, V then a number for a verse, 1–9 for a section. Edit mode (the slide editor; set `experimental/editor` to false to hide it) edits a draft of the selected item and nothing is stored or shown until **Save**. Slides presentations take text boxes, shapes, pictures, videos, clocks and countdowns, dragged into place on the canvas and styled on the right, with a background picture or motion loop and a transition per slide; **New slides** makes a new presentation in the plan. Songs are edited as lyrics: a blank line starts a slide, a line like [Verse 2] starts a group. **Auto-split slides** re-splits every group into even slides of two lines (setting `songs/linesPerSlide`). **Edit arrangement** shows the play order: add a group again (a chorus after every verse), move groups earlier or later, remove them, or go back to **As written**; Save keeps the order, and changing the lyrics later keeps it too.
 
 ## Songs
 
@@ -85,11 +85,11 @@ The **Plan** menu above the service plan makes, opens, renames and duplicates pl
 
 ## Props
 
-**Props** in the toolbar keeps lower thirds (a name and a title) and logos for a corner. Click one to put it up or take it down; a lower third and a logo can be up together, and they stay up while the slides change until you take them down or press Clear Props (F3).
+**Props** in the toolbar keeps lower thirds (a name and a title) and corner pictures (a church logo in a corner; not the full-screen **Logo**, F6). Click one to put it up or take it down; a lower third and a corner picture can be up together, and they stay up while the slides change until you take them down or press Clear Props (F3). A corner picture is copied into Lumen's data folder when added, so moving the original does not break it. **Remove** asks once more (**Sure?**) before deleting a prop, timer or cue.
 
 ## Stage display
 
-Click **Stage** in the toolbar to turn on a confidence monitor for the musicians and speaker. It shows the slide on air (NOW) and the next one, the group, key, notes and arrangement, the time of day, a timer and a message to the stage only ("Repeat the last verse"). It runs in its own render process on a third screen (a window when there is none), in one of three layouts: Default, Lyrics (now and next, large) or Clock (time and timer, large).
+Click **Stage** at the right of the toolbar, then **Turn on**, for a confidence monitor for the musicians and speaker. It shows the slide on air (NOW) and the next one, the group, key, notes and arrangement, the time of day, a timer and a message to the stage only ("Repeat the last verse"). It runs in its own render process on the screen given the **Stage** role in **Plan ▾ → Screens…** (a window when there is none), in one of three layouts: Default, Lyrics (now and next, large) or Clock (time and timer, large).
 
 ## Stream output
 

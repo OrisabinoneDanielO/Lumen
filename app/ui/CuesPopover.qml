@@ -234,10 +234,9 @@ Rectangle {
                         text: "+1f"
                         onClicked: root.cues.nudge(cue.index, 1)
                     }
-                    Small {
-                        text: "🗑"
-                        variant: "ghost"
-                        onClicked: root.cues.removeCue(cue.index)
+                    RemoveButton {
+                        objectName: "cueRemove-" + cue.index
+                        onConfirmed: root.cues.removeCue(cue.index)
                     }
                 }
             }

@@ -20,6 +20,7 @@ Rectangle {
     signal addRequested(string what)
     // What follows the pointer while dragging (Main.qml's DragGhost).
     property Item dragGhost: null
+    property bool scriptureAvailable: true
     // A newer version found by an update check (shown in the menu).
     property string updateVersion: ""
 
@@ -451,6 +452,7 @@ Rectangle {
                     }
                     MenuEntry {
                         objectName: "addScripture"
+                        enabled: root.scriptureAvailable
                         text: qsTr("Scripture…")
                         detail: qsTr("Ctrl+B")
                         onTriggered: { root.menuPage = ""; root.addRequested("scripture") }

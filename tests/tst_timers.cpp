@@ -234,6 +234,12 @@ private slots:
         QVERIFY(ui.show.scene().layer(Layer::Messages).content.isEmpty());
         QVERIFY(ui.click("recentMessage-0")); // shown again with a click
         QCOMPARE(ui.show.scene().layer(Layer::Messages).content.text, message.text);
+        QVERIFY(!ui.show.scene().layer(Layer::Messages).content.style.value("ticker").toBool());
+        // With Ticker on, a recent message scrolls too (it was always a banner).
+        QVERIFY(ui.click("messageTicker"));
+        QVERIFY(ui.click("messageHide"));
+        QVERIFY(ui.click("recentMessage-0"));
+        QVERIFY(ui.show.scene().layer(Layer::Messages).content.style.value("ticker").toBool());
         // Clear Msg (F4) clears it too.
         QVERIFY(ui.click("clearMessages"));
         QVERIFY(ui.show.scene().layer(Layer::Messages).content.isEmpty());
@@ -256,6 +262,24 @@ private slots:
         QCOMPARE(ui.show.scene().layer(Layer::Messages).content.kind, Content::Kind::Timer);
         QVERIFY(ui.click(QStringLiteral("timerStart-%1").arg(sermon))); // now Pause
         QVERIFY(ui.show.scene().layer(Layer::Messages).content.timer.contains("pausedMs"));
+
+        // Keyboard only: a count up needs just a name, so Enter adds it; a
+        // countdown's name goes on to the minutes.
+        QVERIFY(ui.click("timerMode-elapsed"));
+        QVERIFY(ui.click("timerName"));
+        for (const char c : QByteArrayLiteral("Worship"))
+            QTest::keyClick(ui.window, c);
+        QTest::keyClick(ui.window, Qt::Key_Return);
+        QTRY_VERIFY(rowOf(ui.timers->timers(), "Worship") >= 0);
+        QVERIFY(ui.click("timerMode-countdown"));
+        QVERIFY(ui.click("timerName"));
+        for (const char c : QByteArrayLiteral("Offering"))
+            QTest::keyClick(ui.window, c);
+        QTest::keyClick(ui.window, Qt::Key_Return);
+        for (const char c : QByteArrayLiteral("5"))
+            QTest::keyClick(ui.window, c);
+        QTest::keyClick(ui.window, Qt::Key_Return);
+        QTRY_VERIFY(rowOf(ui.timers->timers(), "Offering") >= 0);
     }
 
     void outputLightTogglesOutput()
