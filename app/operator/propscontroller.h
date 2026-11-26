@@ -27,6 +27,8 @@ class PropsController : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QObject *props READ props CONSTANT)
+    // Why the last add did nothing; empty after one that worked.
+    Q_PROPERTY(QString message READ message NOTIFY messageChanged)
 
 public:
     explicit PropsController(core::show::ShowController &show, QObject *parent = nullptr);
@@ -39,10 +41,14 @@ public:
     Q_INVOKABLE bool toggle(int row);
     // A lower third; returns false if line1 is empty.
     Q_INVOKABLE bool addLowerThird(const QString &line1, const QString &line2);
+    QString message() const { return m_message; }
     // A bug from a picture file; corner: topLeft, topRight, bottomLeft,
     // bottomRight.
     Q_INVOKABLE bool addBug(const QUrl &image, const QString &corner);
     Q_INVOKABLE bool remove(int row);
+
+signals:
+    void messageChanged();
 
 private:
     void load();
@@ -54,6 +60,7 @@ private:
     core::data::Database *m_db = nullptr;
     std::vector<core::data::Prop> m_props;
     RowModel m_model{{"name", "kind", "summary", "shown"}};
+    QString m_message;
 };
 
 } // namespace lumen::app

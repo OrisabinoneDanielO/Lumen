@@ -87,6 +87,10 @@ Window {
             outputConfirm.visible = false
             closed = true
         }
+        if (planPanel.closeMenus())
+            closed = true
+        if (previewLivePanel.closeMenus())
+            closed = true
         return closed
     }
 
@@ -172,6 +176,7 @@ Window {
                 spacing: 0
 
                 ServicePlanPanel {
+                    id: planPanel
                     objectName: "servicePlan"
                     Layout.preferredWidth: window.planWidth
                     Layout.fillHeight: true
@@ -221,6 +226,7 @@ Window {
                 // Edit mode has the editor's own panels instead (as in
                 // design/mockups/Editor.html).
                 PreviewLivePanel {
+                    id: previewLivePanel
                     objectName: "previewLive"
                     visible: window.controller.mode !== "edit"
                     Layout.preferredWidth: window.previewWidth

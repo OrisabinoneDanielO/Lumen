@@ -21,6 +21,12 @@ Rectangle {
     // gaps, buttons and the transition row); the layers scroll below them.
     readonly property real frameWidth: Math.max(160, Math.min(flick.width, (root.height - 32 - 210) / 2 * 16 / 9))
     signal messageRequested()
+    // Escape: closes the Transition list (true if it was open).
+    function closeMenus() {
+        const open = transitionMenu.visible
+        transitionMenu.visible = false
+        return open
+    }
     // An output on another screen than it was given (from the Screens setup).
     property string placementWarning: ""
 

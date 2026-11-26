@@ -27,6 +27,13 @@ Rectangle {
     property int inputItem: -1
     // The item whose menu is open (right-click), or -1.
     property int itemMenuFor: -1
+    // Escape: closes the Plan menu or an item's menu (true if one was open).
+    function closeMenus() {
+        const open = menuPage !== "" || itemMenuFor >= 0
+        menuPage = ""
+        itemMenuFor = -1
+        return open
+    }
 
     function openInput(action, prompt, text, item) {
         inputAction = action
@@ -60,6 +67,7 @@ Rectangle {
         height: 32
         radius: 6
         color: entryMouse.containsMouse ? Theme.raised : "transparent"
+        opacity: enabled ? 1 : 0.4 // e.g. Rename with no plan open
         Accessible.role: Accessible.MenuItem
         Accessible.name: text
         LText {
@@ -329,11 +337,13 @@ Rectangle {
                     }
                     MenuEntry {
                         objectName: "planRename"
+                        enabled: root.controller.planId !== ""
                         text: qsTr("Rename plan…")
                         onTriggered: root.openInput("rename", qsTr("Plan name"), root.controller.planName)
                     }
                     MenuEntry {
                         objectName: "planDuplicate"
+                        enabled: root.controller.planId !== ""
                         text: qsTr("Duplicate plan")
                         onTriggered: {
                             root.controller.duplicatePlan()
@@ -342,11 +352,13 @@ Rectangle {
                     }
                     MenuEntry {
                         objectName: "planAddHeader"
+                        enabled: root.controller.planId !== ""
                         text: qsTr("Add header…")
                         onTriggered: root.openInput("header", qsTr("Header (e.g. Worship, Sermon)"), "")
                     }
                     MenuEntry {
                         objectName: "planExport"
+                        enabled: root.controller.planId !== ""
                         text: qsTr("Export plan…")
                         detail: ".lumen"
                         onTriggered: {
