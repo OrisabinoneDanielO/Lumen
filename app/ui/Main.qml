@@ -21,6 +21,8 @@ Window {
     property QtObject messageTemplates: null
     // The stream output (batch 15); optional.
     property QtObject streamController: null
+    // The slide editor (batch 16); optional.
+    property QtObject editorController: null
 
     width: 1440
     height: 900
@@ -123,10 +125,15 @@ Window {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     controller: window.controller
+                    editor: window.editorController
+                    timers: window.timerController
                 }
 
+                // Edit mode has the editor's own panels instead (as in
+                // design/mockups/Editor.html).
                 PreviewLivePanel {
                     objectName: "previewLive"
+                    visible: window.controller.mode !== "edit"
                     Layout.preferredWidth: Theme.previewWidth
                     Layout.fillHeight: true
                     controller: window.controller

@@ -21,7 +21,7 @@ Item {
     id: view
     objectName: "slideContent"
 
-    property string kind: "empty" // empty | colour | text | image | video | timer | prop
+    property string kind: "empty" // empty | colour | text | image | video | timer | prop | composed
     property color colour: "white"
     property string text
     property url image
@@ -35,6 +35,10 @@ Item {
     property bool playVideo: true
     property string timerText
     property var prop: ({})
+    // Composed slides (batch 16): positioned elements, and the wall clock
+    // their clocks and timers count from.
+    property var elements: []
+    property real wallMs: Date.now()
     readonly property var lowerThird: kind === "prop" && prop && prop.lowerThird ? prop.lowerThird : null
     readonly property var bug: kind === "prop" && prop && prop.bug ? prop.bug : null
     readonly property bool ticker: kind === "text" && isMessage && style !== null && style !== undefined && style.ticker === true
@@ -151,6 +155,16 @@ Item {
         font.pixelSize: Math.max(12, Math.round(view.height * (view.isMessage ? 0.05 : view.isProps ? 0.06 : 0.07)))
         font.weight: Font.DemiBold
         lineHeight: 1.2
+    }
+
+    // ---- composed slides (the editor) ----------------------------------------
+
+    ComposedSlide {
+        anchors.fill: parent
+        visible: view.kind === "composed"
+        elements: view.kind === "composed" ? view.elements : []
+        wallMs: view.wallMs
+        playVideo: view.playVideo
     }
 
     // ---- props -----------------------------------------------------------------

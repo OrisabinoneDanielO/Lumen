@@ -53,6 +53,9 @@ class OperatorController : public QObject
     // Timers on Preview and Live (countdown slides), updated as they tick.
     Q_PROPERTY(QString previewTimerText READ previewTimerText NOTIFY timersTicked)
     Q_PROPERTY(QString liveTimerText READ liveTimerText NOTIFY timersTicked)
+    // Slides made in the editor (batch 16), for the Preview and Live frames.
+    Q_PROPERTY(QVariantList previewElements READ previewElements NOTIFY stateChanged)
+    Q_PROPERTY(QVariantList liveElements READ liveElements NOTIFY stateChanged)
     // Messages (batch 12): the banner on the Messages layer.
     Q_PROPERTY(QString messageShown READ messageShown NOTIFY stateChanged)
     Q_PROPERTY(QStringList recentMessages READ recentMessages NOTIFY stateChanged)
@@ -122,6 +125,12 @@ public:
     QString planId() const { return m_plan ? m_plan->id : QString(); }
     QString previewTimerText() const;
     QString liveTimerText() const;
+    QVariantList previewElements() const;
+    QVariantList liveElements() const;
+    QJsonArray resolveTimers(const QJsonArray &elements) const;
+    // The editor (batch 16): what it opens, and reloading after it saves.
+    QString selectedPresentationId() const { return selected() ? selected()->presentationId : QString(); }
+    void refreshAfterEdit();
     QString messageShown() const;
     QStringList recentMessages() const { return m_recentMessages; }
 

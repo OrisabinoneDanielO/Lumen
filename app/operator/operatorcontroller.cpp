@@ -585,6 +585,9 @@ QVariantList OperatorController::layers() const
         case Content::Kind::Timer:
             value = content.text.isEmpty() ? tr("Timer") : tr("Timer: %1").arg(content.text.section(u'\n', 0, 0));
             break;
+        case Content::Kind::Composed:
+            value = (layer == Layer::Slide && m_onAir) ? liveLabel() : tr("Slide");
+            break;
         case Content::Kind::Prop: {
             QStringList parts;
             if (content.prop.contains("lowerThird"))
@@ -673,7 +676,8 @@ bool OperatorController::goLive(int index)
         // A countdown slide shows its timer, counted by the renderer.
         const std::optional<QJsonObject> timer =
             slide.hasTimer && m_timerSource ? m_timerSource(slide.timerName) : std::nullopt;
-        const Content content = timer ? Content::timerContent(*timer, slide.text)
+        const Content content = !slide.elements.isEmpty() ? Content::composed(resolveTimers(slide.elements))
+                                : timer ? Content::timerContent(*timer, slide.text)
                                 : view->style
                                     ? Content::styledText(slide.text, styleWithSize(*view->style, slide.fontSize), slide.footer)
                                     : Content::textContent(slide.text);
@@ -1242,6 +1246,64 @@ QJsonObject OperatorController::stageState() const
         state.insert("nextGroup", next.group);
     }
     return state;
+}
+
+} // namespace lumen::app
+
+namespace lumen::app {
+
+// ---- Composed slides (batch 16) ----
+
+// Timer elements name their timer; on air they carry its spec, so the
+// renderer counts them.
+QJsonArray OperatorController::resolveTimers(const QJsonArray &elements) const
+{
+    QJsonArray out;
+    for (const QJsonValue &value : elements) {
+        QJsonObject element = value.toObject();
+        if (element.value("type").toString() == QLatin1String("timer") && m_timerSource) {
+            if (const auto spec = m_timerSource(element.value("timerName").toString()))
+                element.insert("timer", *spec);
+        }
+        out.append(element);
+    }
+    return out;
+}
+
+QVariantList OperatorController::previewElements() const
+{
+    const ItemView *view = selected();
+    const int index = previewSlide();
+    if (!view || index < 0)
+        return {};
+    return resolveTimers(view->slides[size_t(index)].elements).toVariantList();
+}
+
+QVariantList OperatorController::liveElements() const
+{
+    const Content &content = m_show.scene().layer(Layer::Slide).content;
+    return content.kind == Content::Kind::Composed ? content.elements.toVariantList() : QVariantList();
+}
+
+} // namespace lumen::app
+
+namespace lumen::app {
+
+void OperatorController::refreshAfterEdit()
+{
+    if (m_librarySong && m_db) {
+        if (auto view = loadPresentationView(*m_db, m_librarySong->presentationId); view.ok())
+            m_librarySong = std::move(view).value();
+    }
+    const bool librarySong = m_current == libraryItem;
+    if (m_plan)
+        reloadPlan(librarySong ? 0 : m_current);
+    if (librarySong)
+        m_current = libraryItem; // the song shown from the library stays shown
+    showSelected();
+    refreshDecks();
+    refreshMedia();
+    emit stateChanged();
 }
 
 } // namespace lumen::app

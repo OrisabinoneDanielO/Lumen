@@ -5,6 +5,7 @@
 // scene; the render process draws it.
 
 #include <QColor>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QString>
 
@@ -43,7 +44,7 @@ struct Transition
 // (WEB)"; without a style the layer's default placement is used.
 struct Content
 {
-    enum class Kind { Empty, Colour, Text, Image, Video, Timer, Prop };
+    enum class Kind { Empty, Colour, Text, Image, Video, Timer, Prop, Composed };
 
     Kind kind = Kind::Empty;
     QColor colour;     // fill for Colour, text colour for Text
@@ -64,33 +65,46 @@ struct Content
     // topRight, bottomLeft, bottomRight), "size" (fraction of the height)}},
     // either or both.
     QJsonObject prop;
+    // Composed (batch 16, slides made in the editor): positioned elements on
+    // a 1920 x 1080 grid, bottom first. Each {"type": "text" | "shape" |
+    // "image" | "video" | "clock" | "timer", "frame": [x, y, w, h], "style":
+    // {...}, "text", "image" / "video" (file:// URLs), "timer" (a timer
+    // spec, see above)}.
+    QJsonArray elements;
 
     static Content empty() { return {}; }
-    static Content fill(const QColor &colour) { return {Kind::Colour, colour, {}, {}, {}, {}, {}, false, 1.0, {}, {}}; }
+    static Content fill(const QColor &colour) { return {Kind::Colour, colour, {}, {}, {}, {}, {}, false, 1.0, {}, {}, {}}; }
     static Content textContent(const QString &text, const QColor &colour = Qt::white)
     {
-        return {Kind::Text, colour, text, {}, {}, {}, {}, false, 1.0, {}, {}};
+        return {Kind::Text, colour, text, {}, {}, {}, {}, false, 1.0, {}, {}, {}};
     }
     static Content styledText(const QString &text, const QJsonObject &style, const QString &footer = {})
     {
-        return {Kind::Text, Qt::white, text, {}, style, footer, {}, false, 1.0, {}, {}};
+        return {Kind::Text, Qt::white, text, {}, style, footer, {}, false, 1.0, {}, {}, {}};
     }
-    static Content image(const QString &path) { return {Kind::Image, {}, {}, path, {}, {}, {}, false, 1.0, {}, {}}; }
+    static Content image(const QString &path) { return {Kind::Image, {}, {}, path, {}, {}, {}, false, 1.0, {}, {}, {}}; }
     static Content video(const QString &path, bool loop, double volume, const QString &poster = {})
     {
-        return {Kind::Video, {}, {}, poster, {}, {}, path, loop, volume, {}, {}};
+        return {Kind::Video, {}, {}, poster, {}, {}, path, loop, volume, {}, {}, {}};
     }
 
     static Content timerContent(const QJsonObject &timer, const QString &label = {})
     {
-        Content c{Kind::Timer, Qt::white, label, {}, {}, {}, {}, false, 1.0, {}, {}};
+        Content c{Kind::Timer, Qt::white, label, {}, {}, {}, {}, false, 1.0, {}, {}, {}};
         c.timer = timer;
+        return c;
+    }
+
+    static Content composed(const QJsonArray &elements)
+    {
+        Content c{Kind::Composed, Qt::white, {}, {}, {}, {}, {}, false, 1.0, {}, {}, {}};
+        c.elements = elements;
         return c;
     }
 
     static Content propContent(const QJsonObject &prop)
     {
-        Content c{Kind::Prop, Qt::white, {}, {}, {}, {}, {}, false, 1.0, {}, {}};
+        Content c{Kind::Prop, Qt::white, {}, {}, {}, {}, {}, false, 1.0, {}, {}, {}};
         c.prop = prop;
         return c;
     }

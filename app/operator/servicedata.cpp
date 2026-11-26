@@ -1,5 +1,7 @@
 #include "servicedata.h"
 
+#include <QUrl>
+
 #include "themes.h"
 
 #include "lumen/core/data/repository.h"
@@ -142,7 +144,6 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
             for (const Element &element : slideElements.value()) {
                 if (element.type == ElementType::Text && !element.content.isEmpty())
                     lines << element.content;
-                hasTimer = hasTimer || element.type == ElementType::Timer;
                 if (element.type == ElementType::Timer) {
                     slideTimer = true;
                     timerName = element.content;
@@ -156,8 +157,19 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
                     }
                 }
             }
-            view.slides.push_back({slide.id, group->label, colour, lines.join(u'\n'), {}, 0,
-                                   media.mediaKind, media.mediaPath, media.thumbnail, slideTimer, timerName});
+            SlideView made{slide.id, group->label, colour, lines.join(u'\n'), {}, 0,
+                           media.mediaKind, media.mediaPath, media.thumbnail, slideTimer, timerName, {}};
+            if (p.kind == PresentationKind::Slides && isComposed(slideElements.value())) {
+                // Drawn from its elements, not as text, picture or countdown.
+                made.elements = composedElements(db, slideElements.value());
+                made.mediaKind.clear();
+                made.mediaPath.clear();
+                made.hasTimer = false;
+            }
+            // A countdown slide (not one made in the editor) makes the item
+            // a TIMER in the plan.
+            hasTimer = hasTimer || made.hasTimer;
+            view.slides.push_back(std::move(made));
         }
     }
     view.kind = kindLabel(p, hasTimer);
@@ -232,6 +244,46 @@ QString groupAbbreviation(const QString &label)
     if (lower.startsWith(QLatin1String("ending")))
         return QStringLiteral("E");
     return l;
+}
+
+QString elementTypeName(ElementType type)
+{
+    switch (type) {
+    case ElementType::Text: return QStringLiteral("text");
+    case ElementType::Image: return QStringLiteral("image");
+    case ElementType::Video: return QStringLiteral("video");
+    case ElementType::Shape: return QStringLiteral("shape");
+    case ElementType::Timer: return QStringLiteral("timer");
+    case ElementType::Clock: return QStringLiteral("clock");
+    }
+    return {};
+}
+
+bool isComposed(const std::vector<Element> &elements)
+{
+    return std::any_of(elements.begin(), elements.end(), [](const Element &e) { return !e.style.isEmpty(); });
+}
+
+QJsonArray composedElements(Database &db, const std::vector<Element> &elements)
+{
+    std::vector<Element> ordered = elements;
+    std::stable_sort(ordered.begin(), ordered.end(), [](const Element &a, const Element &b) { return a.zOrder < b.zOrder; });
+    QJsonArray out;
+    for (const Element &e : ordered) {
+        QJsonObject json{{"type", elementTypeName(e.type)},
+                         {"frame", QJsonArray{e.frame.x(), e.frame.y(), e.frame.width(), e.frame.height()}},
+                         {"style", e.style}};
+        if (e.type == ElementType::Text)
+            json.insert("text", e.content);
+        if (e.type == ElementType::Timer)
+            json.insert("timerName", e.content);
+        if ((e.type == ElementType::Image || e.type == ElementType::Video) && !e.mediaAssetId.isEmpty()) {
+            if (auto asset = Repository<MediaAsset>(db).get(e.mediaAssetId); asset.ok())
+                json.insert(e.type == ElementType::Image ? "image" : "video", QUrl::fromLocalFile(asset.value().filePath).toString());
+        }
+        out.append(json);
+    }
+    return out;
 }
 
 Result<PlanView> loadPlan(Database &db, const QString &planId)

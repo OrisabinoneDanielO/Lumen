@@ -167,3 +167,21 @@ Chosen with the user: no proprietary SDK ships with Lumen (it is GPL-3.0). The N
 ### SDI (DeckLink): not yet
 
 Blackmagic's DeckLink API is a set of C++ COM interfaces whose declarations come only with the DeckLink SDK; there is nothing to compile against without it, and no card to test with. The stream output's frames are ready for a DeckLink sink when the SDK is available.
+
+## Batch 16: the slide editor
+
+### Drafts and Save
+
+The editor works on a draft of one presentation and writes nothing until Save; Cancel throws the draft away. Save replaces the presentation's groups, slides and elements in one transaction and keeps its id, so plans that use it carry on (a plan item's chosen arrangement falls back to the default if the arrangement was rebuilt). Edit mode still never reaches the screen; it hides the Preview and Live panel, as in the editor mockup, and keeps the service plan to pick what to edit.
+
+### Composed slides
+
+Slides presentations made or changed in the editor hold positioned elements (text, shape, image, video, clock, timer) on a 1920 x 1080 grid. Every element the editor makes carries a style, and a slide with any styled element is sent to the output as composed content: the element list, drawn by `ComposedSlide.qml` in the shared Lumen.Slides module, so the output, the Preview and Live frames and the editor canvas look the same. Clocks and countdowns are counted from the renderer's own clock (the countdown rule is also in `timertext.js`, matching `core::show::timerText`). Older slides (songs, scripture, imported decks, the sample service's slides) have no styled elements and keep their look.
+
+### Songs
+
+Songs are edited as lyrics text, as in the mockup: a blank line starts a slide within a group and a line like [Verse 2] starts a group. The editor turns that into the song importer's terms ("---" between slides) and saves through the same parsing and auto-split rules as importing, then rebuilds the default arrangement and the search entry. Song slides keep their theme's look; the Insert tools are for slides presentations.
+
+### Still behind the setting
+
+The editor stays behind `experimental/editor` (off by default), as chosen in batch 5, until the user decides to show it.
