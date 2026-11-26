@@ -18,6 +18,10 @@ Start Lumen from the Start menu, Applications or your desktop's app list (or `lu
 
 Drag the borders between the service plan, the slides, the Preview and Live column and the library to give each the room you want; double-click a border for the default. On smaller windows the toolbar shortens its labels (the F-key shortcuts still work), and Preview, Live and the Previous / Next buttons always stay in view; the layers and controls below them scroll.
 
+## When a video cannot be played
+
+If the output cannot play a video (the file was moved, or its format is not supported), a red bar on **Live** names it and says why, while the audience sees what is under it. A video in **Preview** that cannot be opened is flagged there before it goes live.
+
 ## Transitions
 
 The **Transition** box under Previous and Next chooses how slides and full-screen media change: **Cut** (at once), **Fade**, **Push** (the new slide slides in from the right), **Push up**, **Wipe** or **Zoom**, at Fast, Normal or Slow speed. The choice is remembered.
@@ -32,6 +36,8 @@ The first time Lumen starts with more than one screen connected (and whenever a 
 - **Done** closes the panel. Lumen remembers the roles for this set of screens and puts the outputs back on them at the next start without asking.
 
 Open it again any time with **Plan ▾ → Screens…**.
+
+Lumen checks where each output really is. Some desktops (Linux on Wayland, such as GNOME and KDE) decide for themselves where a window goes; if an output is not on the screen it was given, the Live frame and the Screens panel say so, and on Wayland the Screens panel offers **Place outputs through XWayland**, which lets Lumen put each output on its screen (the outputs restart once to take it).
 
 ## Updates
 

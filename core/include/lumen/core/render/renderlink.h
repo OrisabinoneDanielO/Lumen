@@ -6,6 +6,8 @@
 #include <QHash>
 #include <QJsonObject>
 #include <QLocalSocket>
+
+#include <functional>
 #include <QObject>
 #include <QSet>
 #include <QStringList>
@@ -57,6 +59,10 @@ public:
 
     Status quit();
 
+    // Sends without waiting; onReply gets the reply when it comes (never if
+    // the renderer has gone). For polling status without ever stalling the UI.
+    Status ask(const QJsonObject &message, std::function<void(const QJsonObject &)> onReply);
+
     // lumen-render next to the running executable (also inside a macOS bundle).
     static QString findExecutable();
 
@@ -77,6 +83,7 @@ private:
     quint64 m_nextId = 1;
     QSet<QString> m_waiting;           // ids request() is waiting for
     QHash<QString, QJsonObject> m_replies;
+    QHash<QString, std::function<void(const QJsonObject &)>> m_callbacks; // ask()
 };
 
 } // namespace lumen::core::render

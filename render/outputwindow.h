@@ -65,6 +65,7 @@ public:
     // Test support: what the wall clock (for timers) reads now.
     void setWallClock(qint64 wallMs) { m_model.setWallClock(wallMs, m_clock.now()); }
     QJsonObject timelineStatus() const { return m_model.timelineStatus(m_clock.now()); }
+    QJsonArray videoErrors() const { return m_model.videoErrors(); }
     // Tests: MIDI timecode bytes, received now.
     void feedMidi(const QByteArray &bytes) { m_model.feedMidi(bytes, m_clock.now()); }
 

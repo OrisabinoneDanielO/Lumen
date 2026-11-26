@@ -1,5 +1,7 @@
 #include "operatorharness.h"
 
+#include <QFileInfo>
+#include <QJsonArray>
 #include <QRegularExpression>
 #include "backups.h"
 #include <QTemporaryDir>
@@ -269,6 +271,27 @@ private slots:
         QTest::keyClick(m_ui->window, Qt::Key_Return);
         QTRY_COMPARE(m_ui->controller->itemTitle(), QStringLiteral("Holy, Holy, Holy"));
         QTRY_VERIFY(!m_ui->item("searchInput")->hasActiveFocus());
+    }
+
+    // A video the output could not play: Live says so (from the output's
+    // status), and stops saying so once the output no longer reports it.
+    void liveSaysWhenAVideoFails()
+    {
+        open();
+        // A video on the screen (no renderer in this test: only what Live says).
+        m_ui->show.setContent(Layer::Media, Content::video(QStringLiteral("/media/offering.mp4"), false, 1.0));
+        const Content media = m_ui->show.scene().layer(Layer::Media).content;
+        QCOMPARE(media.kind, Content::Kind::Video);
+        QVERIFY(m_ui->controller->liveProblem().isEmpty());
+        QVERIFY(!m_ui->item("liveProblem")->isVisible());
+
+        m_ui->controller->setOutputStatus(
+            {{"videoErrors", QJsonArray{QJsonObject{{"path", media.videoPath}, {"message", "Could not open file"}}}}});
+        QVERIFY(m_ui->controller->liveProblem().contains(QStringLiteral("Could not open file")));
+        QVERIFY(m_ui->controller->liveProblem().contains(QFileInfo(media.videoPath).fileName()));
+        QTRY_VERIFY(m_ui->item("liveProblem")->isVisible());
+        m_ui->controller->setOutputStatus({});
+        QTRY_VERIFY(!m_ui->item("liveProblem")->isVisible());
     }
 
     // The Main light asks before turning the output off.

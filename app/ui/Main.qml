@@ -224,6 +224,7 @@ Window {
                     objectName: "previewLive"
                     visible: window.controller.mode !== "edit"
                     Layout.preferredWidth: window.previewWidth
+                    placementWarning: window.screenSetup ? window.screenSetup.placementWarning : ""
                     onMessageRequested: {
                         messagePopover.visible = true
                         messagePopover.focusInput()

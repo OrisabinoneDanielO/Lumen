@@ -142,6 +142,7 @@ QList<QObject *> SceneModel::layers() const
 void SceneModel::apply(const Scene &scene, qint64 nowMs)
 {
     m_scene = scene;
+    forgetUnusedVideoErrors();
     for (int i = 0; i < layerCount; ++i) {
         const auto &state = scene.layers[std::size_t(i)];
         auto &runner = m_cueRunners[std::size_t(i)];
@@ -164,6 +165,37 @@ void SceneModel::apply(const Scene &scene, qint64 nowMs)
     const bool blackMoved = m_blackFader.setTarget(scene.black ? 1.0 : 0.0, overrideMs, nowMs);
     if (logoMoved || blackMoved)
         emit levelsChanged();
+}
+
+void SceneModel::reportVideoError(const QString &path, const QString &message)
+{
+    const QUrl url(path);
+    const QString local = url.isLocalFile() ? url.toLocalFile() : path;
+    if (local.isEmpty())
+        return;
+    qWarning("lumen-render: video %s could not be played: %s", qPrintable(local), qPrintable(message));
+    m_videoErrors.insert(local, message.isEmpty() ? QStringLiteral("could not be played") : message);
+}
+
+QJsonArray SceneModel::videoErrors() const
+{
+    QJsonArray list;
+    for (auto it = m_videoErrors.cbegin(); it != m_videoErrors.cend(); ++it)
+        list.append(QJsonObject{{QStringLiteral("path"), it.key()}, {QStringLiteral("message"), it.value()}});
+    return list;
+}
+
+void SceneModel::forgetUnusedVideoErrors()
+{
+    if (m_videoErrors.isEmpty())
+        return;
+    QSet<QString> used;
+    for (const auto &layer : m_scene.layers)
+        used.insert(layer.content.videoPath);
+    for (const QUrl &url : m_preloads)
+        used.insert(url.toLocalFile());
+    for (auto it = m_videoErrors.begin(); it != m_videoErrors.end();)
+        it = used.contains(it.key()) ? std::next(it) : m_videoErrors.erase(it);
 }
 
 void SceneModel::preload(const QString &path)

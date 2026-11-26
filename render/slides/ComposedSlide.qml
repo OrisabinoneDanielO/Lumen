@@ -15,6 +15,9 @@ import "timertext.js" as TimerText
 Item {
     id: root
 
+    // A video element could not be played.
+    signal videoFailed(string path, string message)
+
     property var elements: []
     // Wall-clock time for clocks and timers (ms since 1970); the render
     // process passes its own clock.
@@ -150,6 +153,7 @@ Item {
                                 muted: element.s.muted !== false
                             }
                             Component.onCompleted: play()
+                            onErrorOccurred: (error, errorString) => root.videoFailed(String(element.modelData.video), errorString)
                         }
                         VideoOutput {
                             id: output

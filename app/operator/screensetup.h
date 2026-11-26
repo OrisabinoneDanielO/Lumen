@@ -30,6 +30,13 @@ class ScreenSetup : public QObject
     Q_PROPERTY(QObject *screens READ screens CONSTANT)
     Q_PROPERTY(bool open READ isOpen NOTIFY openChanged)
     Q_PROPERTY(int count READ count NOTIFY changed)
+    // An output is not on the screen it was given (some desktops, such as
+    // Linux on Wayland, decide where windows go): what is wrong, or empty.
+    Q_PROPERTY(QString placementWarning READ placementWarning NOTIFY changed)
+    // Linux on Wayland: outputs can run through XWayland instead, where a
+    // window can be placed on a chosen screen (remembered).
+    Q_PROPERTY(bool onWayland READ onWayland CONSTANT)
+    Q_PROPERTY(bool viaXWayland READ viaXWayland WRITE setViaXWayland NOTIFY changed)
     // The whole arrangement's width and height, in the rows' fractions.
     Q_PROPERTY(double spanX READ spanX NOTIFY changed)
     Q_PROPERTY(double spanY READ spanY NOTIFY changed)
@@ -61,6 +68,16 @@ public:
     // The label for screen `index`: {number, name, role}.
     QJsonObject label(int index) const;
 
+    // Where the outputs really are (screen names, from their status; empty:
+    // not running or not known).
+    void setActualScreens(const QString &mainScreen, const QString &stageScreen);
+    QString placementWarning() const;
+    bool onWayland() const;
+    bool viaXWayland() const { return m_viaXWayland; }
+    void setViaXWayland(bool on);
+    // Extra arguments for the renderers: "-platform xcb" through XWayland.
+    QStringList rendererArguments() const;
+
     // Which outputs are running, so the operator window draws the labels
     // of the screens no renderer is on.
     void setRunning(bool mainRunning, bool stageRunning);
@@ -74,6 +91,8 @@ public:
 
 signals:
     void changed();
+    // Through XWayland or not: the outputs restart to take it.
+    void placementModeChanged();
     void openChanged();
     // Main or stage moved to another screen (or to none).
     void rolesChanged();
@@ -92,6 +111,9 @@ private:
     bool m_open = false;
     bool m_mainRunning = false;
     bool m_stageRunning = false;
+    bool m_viaXWayland = false;
+    QString m_actualMain;
+    QString m_actualStage;
     double m_spanX = 1;
     double m_spanY = 1;
     RowModel m_rows{{"index", "number", "name", "size", "role", "operator", "labelHere", "areaX", "areaY", "areaW", "areaH"}};

@@ -111,10 +111,16 @@ private slots:
 
     void cleanup()
     {
-        // Never leave a renderer behind, even if the test failed.
+        // Never leave a renderer behind, even if the test failed (nor a stage
+        // display the app may have started).
         RenderLink link(linkOptions());
         if (link.connectToRunning(500).ok())
             (void)link.quit();
+        RenderLink::Options stageOptions = linkOptions();
+        stageOptions.serverName += QStringLiteral("-stage");
+        RenderLink stage(stageOptions);
+        if (stage.connectToRunning(300).ok())
+            (void)stage.quit();
     }
 
     // After an update, a renderer from the old version may still be running
@@ -132,6 +138,21 @@ private slots:
         auto status = link.request({{"cmd", "status"}});
         QVERIFY2(status.ok(), status.ok() ? "" : qPrintable(status.error().message));
         QCOMPARE(status.value().value("kind").toString(), QStringLiteral("audience"));
+        (void)link.quit();
+    }
+
+    // ask(): the reply comes later, through the callback, without waiting
+    // (how the operator window polls its outputs).
+    void askDoesNotWait()
+    {
+        RenderLink link(linkOptions());
+        QVERIFY(link.start().ok());
+        QJsonObject got;
+        QVERIFY(link.ask({{"cmd", "status"}}, [&got](const QJsonObject &reply) { got = reply; }).ok());
+        QVERIFY(got.isEmpty()); // not yet: ask() returned at once
+        QTRY_VERIFY(!got.isEmpty());
+        QVERIFY(got.value("ok").toBool());
+        QVERIFY(got.contains("videoErrors"));
         (void)link.quit();
     }
 
@@ -162,6 +183,12 @@ private slots:
                          QStringLiteral("--render-option=--test-mode"),
                          QStringLiteral("--render-option=--windowed")});
         ui.setProcessChannelMode(QProcess::ForwardedChannels);
+        // Its own settings and library (Linux): never the user's, which may
+        // turn on a stage display or open their library.
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        env.insert(QStringLiteral("XDG_CONFIG_HOME"), m_dir.filePath(QStringLiteral("config")));
+        env.insert(QStringLiteral("XDG_DATA_HOME"), m_dir.filePath(QStringLiteral("data")));
+        ui.setProcessEnvironment(env);
         ui.start();
         QVERIFY2(ui.waitForStarted(10000), qPrintable(ui.errorString()));
 
@@ -205,6 +232,7 @@ private slots:
         restartedUi.setProgram(ui.program());
         restartedUi.setArguments(ui.arguments());
         restartedUi.setProcessChannelMode(QProcess::ForwardedChannels);
+        restartedUi.setProcessEnvironment(ui.processEnvironment());
         restartedUi.start();
         QVERIFY(restartedUi.waitForStarted(10000));
         QTest::qWait(1500);

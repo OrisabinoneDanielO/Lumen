@@ -21,6 +21,8 @@ Rectangle {
     // gaps, buttons and the transition row); the layers scroll below them.
     readonly property real frameWidth: Math.max(160, Math.min(flick.width, (root.height - 32 - 210) / 2 * 16 / 9))
     signal messageRequested()
+    // An output on another screen than it was given (from the Screens setup).
+    property string placementWarning: ""
 
     color: Theme.panel
 
@@ -64,6 +66,30 @@ Rectangle {
                     elements: root.controller.previewElements
                     background: root.controller.previewBackground
                     frameColor: Theme.next
+
+                    // The next video could not be opened.
+                    Rectangle {
+                        objectName: "previewProblem"
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 3
+                        height: previewProblemText.implicitHeight + 8
+                        visible: root.controller.previewProblem !== ""
+                        color: "#8A1C1C"
+                        LText {
+                            id: previewProblemText
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.margins: 6
+                            text: root.controller.previewProblem
+                            wrapMode: Text.WordWrap
+                            elide: Text.ElideNone
+                            color: "#FFFFFF"
+                            font.pixelSize: 11
+                        }
+                    }
                 }
             }
 
@@ -119,6 +145,52 @@ Rectangle {
                             color: Theme.textMuted
                             font.pixelSize: 14
                             font.weight: Font.DemiBold
+                        }
+                    }
+                    // A video on the screen that the output could not play.
+                    Rectangle {
+                        objectName: "liveProblem"
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 3
+                        height: liveProblemText.implicitHeight + 8
+                        visible: root.controller.liveProblem !== ""
+                        color: "#8A1C1C"
+                        LText {
+                            id: liveProblemText
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.margins: 6
+                            text: root.controller.liveProblem
+                            wrapMode: Text.WordWrap
+                            elide: Text.ElideNone
+                            color: "#FFFFFF"
+                            font.pixelSize: 11
+                        }
+                    }
+                    // The output is not where it was put.
+                    Rectangle {
+                        objectName: "livePlacement"
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        anchors.margins: 3
+                        height: placementText.implicitHeight + 8
+                        visible: root.placementWarning !== "" && root.controller.outputConnected
+                        color: Theme.warnBackground
+                        LText {
+                            id: placementText
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.margins: 6
+                            text: root.placementWarning + " " + qsTr("See Plan ▾ → Screens…")
+                            wrapMode: Text.WordWrap
+                            elide: Text.ElideNone
+                            color: Theme.warnText
+                            font.pixelSize: 11
                         }
                     }
                     Rectangle {
