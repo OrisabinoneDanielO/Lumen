@@ -270,3 +270,8 @@ target_compile_definitions(tst_screens PRIVATE
     LUMEN_APP_PATH="$<TARGET_FILE:lumen>")
 add_dependencies(tst_screens lumen-render lumen)
 set_tests_properties(tst_screens PROPERTIES TIMEOUT 120)
+
+# Optional update checks: off until asked; newer, same, older, no release,
+# nonsense and no answer, against a local stand-in for GitHub.
+lumen_add_test(tst_updates tst_updates.cpp operatorharness.h)
+target_link_libraries(tst_updates PRIVATE lumen_ui lumen_uiplugin Lumen::Operator lumen_test_support Qt6::Quick Qt6::QuickTest Qt6::Network)

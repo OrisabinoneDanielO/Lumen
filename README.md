@@ -135,6 +135,8 @@ The [user guide](docs/user-guide.md) explains every part. To get going:
 | macOS | `~/Library/Application Support/Lumen/Lumen Presenter` |
 | Linux | `~/.local/share/Lumen/Lumen Presenter` (Flatpak: `~/.var/app/io.github.OrisabinoneDanielO.Lumen/data/Lumen/Lumen Presenter`) |
 
+Lumen never updates itself. **Plan ▾ → Check for updates…** tells you when a newer version is published (and can check at each start if you turn that on); you then install it as you installed Lumen.
+
 To move a service to another computer, choose **Plan ▾ → Export plan…** to save a `.lumen` file (the plan with its songs and media), then **Plan ▾ → Import plan…** on the other computer.
 
 ## Status

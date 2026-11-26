@@ -33,6 +33,8 @@ Window {
     property QtObject cues: null
     // The Screens setup (which screen is the main output, which the stage).
     property QtObject screenSetup: null
+    // Optional update checks.
+    property QtObject updates: null
 
     width: 1440
     height: 900
@@ -128,6 +130,8 @@ Window {
                     onShareRequested: sharePopover.active = window.sharing !== null
                     onRemoteRequested: remotePopover.active = window.remote !== null
                     onScreensRequested: if (window.screenSetup) window.screenSetup.openSetup()
+                    onUpdatesRequested: updatePopover.active = window.updates !== null
+                    updateVersion: window.updates && window.updates.available ? window.updates.latestVersion : ""
                 }
 
                 SlideGridPanel {
@@ -308,6 +312,18 @@ Window {
                     font.pixelSize: Math.max(14, parent.parent.height * 0.045)
                 }
             }
+        }
+    }
+    Loader {
+        id: updatePopover
+        objectName: "updatePopover"
+        active: false
+        x: 16
+        y: 62
+        z: 50
+        sourceComponent: UpdatePopover {
+            updates: window.updates
+            onCloseRequested: updatePopover.active = false
         }
     }
     Loader {

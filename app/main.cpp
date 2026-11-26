@@ -13,6 +13,7 @@
 #include "remoteserver.h"
 #include "propscontroller.h"
 #include "screensetup.h"
+#include "updatechecker.h"
 #include "stagecontroller.h"
 #include "streamcontroller.h"
 #include "timercontroller.h"
@@ -627,6 +628,12 @@ int main(int argc, char *argv[])
             (void)output->link->quit();
     });
 
+    // Optional update checks: none unless the operator turned on "Check when
+    // Lumen starts" (then once, a little after starting) or checks by hand.
+    app::UpdateChecker updates;
+    if (!checking && updates.automatic())
+        QTimer::singleShot(10000, &updates, &app::UpdateChecker::check);
+
     QQmlApplicationEngine engine;
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
@@ -645,7 +652,8 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("osc"), QVariant::fromValue<QObject *>(&osc)},
                                  {QStringLiteral("midi"), QVariant::fromValue<QObject *>(&midi)},
                                  {QStringLiteral("cues"), QVariant::fromValue<QObject *>(&cueController)},
-                                 {QStringLiteral("screenSetup"), QVariant::fromValue<QObject *>(&screenSetup)}});
+                                 {QStringLiteral("screenSetup"), QVariant::fromValue<QObject *>(&screenSetup)},
+                                 {QStringLiteral("updates"), QVariant::fromValue<QObject *>(&updates)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     // Screens seen for the first time: ask which is which.

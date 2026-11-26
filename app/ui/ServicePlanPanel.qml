@@ -15,6 +15,9 @@ Rectangle {
     signal shareRequested() // batch 18: the Share popover
     signal remoteRequested() // batch 19: the Remote control popover
     signal screensRequested() // the Screens setup
+    signal updatesRequested() // the Updates popover
+    // A newer version found by an update check (shown in the menu).
+    property string updateVersion: ""
 
     // The plan menu's page: "" (closed), "main", "open", "restore", or
     // "input" (a name, header or notes, for inputAction).
@@ -368,6 +371,15 @@ Rectangle {
                         onTriggered: {
                             root.menuPage = ""
                             root.screensRequested()
+                        }
+                    }
+                    MenuEntry {
+                        objectName: "planUpdates"
+                        text: root.updateVersion !== "" ? qsTr("Lumen %1 is available…").arg(root.updateVersion)
+                                                        : qsTr("Check for updates…")
+                        onTriggered: {
+                            root.menuPage = ""
+                            root.updatesRequested()
                         }
                     }
                     MenuEntry {
