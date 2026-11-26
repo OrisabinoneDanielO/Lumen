@@ -8,6 +8,8 @@ Item {
 
     required property QtObject controller
     signal slideClicked(int index)
+    signal cuesRequested() // batch 20: the Cues popover
+    property bool cuesAvailable: false
 
     Flickable {
         anchors.fill: parent
@@ -43,6 +45,17 @@ Item {
                         text: root.controller.itemDetail
                         color: Theme.textMuted
                     }
+                }
+
+                LButton {
+                    objectName: "cuesButton"
+                    Layout.alignment: Qt.AlignBottom
+                    visible: root.cuesAvailable
+                    text: qsTr("Cues")
+                    implicitHeight: 28
+                    radius: 6
+                    fontSize: 11
+                    onClicked: root.cuesRequested()
                 }
 
                 Row {

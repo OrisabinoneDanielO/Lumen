@@ -21,6 +21,7 @@ QString kindName(Content::Kind kind)
     case Content::Kind::Timer: return QStringLiteral("timer");
     case Content::Kind::Prop: return QStringLiteral("prop");
     case Content::Kind::Composed: return QStringLiteral("composed");
+    case Content::Kind::Cued: return QStringLiteral("cued");
     case Content::Kind::Empty: break;
     }
     return QStringLiteral("empty");
@@ -44,6 +45,8 @@ std::optional<Content::Kind> kindFromName(const QString &name)
         return Content::Kind::Prop;
     if (name == QLatin1String("composed"))
         return Content::Kind::Composed;
+    if (name == QLatin1String("cued"))
+        return Content::Kind::Cued;
     return std::nullopt;
 }
 
@@ -65,6 +68,8 @@ QJsonObject contentJson(const Content &content)
         json.insert(QStringLiteral("prop"), content.prop);
     if (content.kind == Content::Kind::Composed)
         json.insert(QStringLiteral("elements"), content.elements);
+    if (content.kind == Content::Kind::Cued)
+        json.insert(QStringLiteral("timeline"), content.timeline);
     if (content.kind == Content::Kind::Timer) {
         json.insert(QStringLiteral("timer"), content.timer);
         if (!content.text.isEmpty())
@@ -102,6 +107,16 @@ std::optional<Content> contentFrom(const QJsonValue &value)
     }
     if (*kind == Content::Kind::Image)
         content.imagePath = json.value(QStringLiteral("image")).toString();
+    if (*kind == Content::Kind::Cued) {
+        content.colour = Qt::white;
+        content.timeline = json.value(QStringLiteral("timeline")).toObject();
+        // Every cue must be readable content (not cued itself).
+        for (const QJsonValue &cue : content.timeline.value(QStringLiteral("cues")).toArray()) {
+            const auto inner = contentFrom(cue.toObject().value(QStringLiteral("content")));
+            if (!inner || inner->kind == Content::Kind::Cued)
+                return std::nullopt;
+        }
+    }
     if (*kind == Content::Kind::Composed) {
         content.colour = Qt::white;
         content.elements = json.value(QStringLiteral("elements")).toArray();
@@ -240,6 +255,16 @@ QString timerText(const QJsonObject &timer, qint64 nowMs)
     if (h > 0)
         return QStringLiteral("%1:%2:%3").arg(h).arg(m, 2, 10, QLatin1Char('0')).arg(s, 2, 10, QLatin1Char('0'));
     return QStringLiteral("%1:%2").arg(m).arg(s, 2, 10, QLatin1Char('0'));
+}
+
+QJsonObject contentToJson(const Content &content)
+{
+    return contentJson(content);
+}
+
+std::optional<Content> contentFromJson(const QJsonValue &json)
+{
+    return contentFrom(json);
 }
 
 } // namespace lumen::core::show

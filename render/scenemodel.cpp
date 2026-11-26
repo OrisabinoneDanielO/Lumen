@@ -29,6 +29,7 @@ QString ContentModel::kind() const
     case Content::Kind::Timer: return QStringLiteral("timer");
     case Content::Kind::Prop: return QStringLiteral("prop");
     case Content::Kind::Composed: return QStringLiteral("composed");
+    case Content::Kind::Cued: return QStringLiteral("cued");
     case Content::Kind::Empty: break;
     }
     return QStringLiteral("empty");
@@ -142,6 +143,18 @@ void SceneModel::apply(const Scene &scene, qint64 nowMs)
     m_scene = scene;
     for (int i = 0; i < layerCount; ++i) {
         const auto &state = scene.layers[std::size_t(i)];
+        auto &runner = m_cueRunners[std::size_t(i)];
+        if (state.content.kind == Content::Kind::Cued) {
+            // A backing track with cues: shown cue by cue (batch 20).
+            if (!runner || !runner->sameRun(state.content.timeline))
+                runner = std::make_unique<CueRunner>(state.content.timeline,
+                                                     m_clock ? m_clock : std::function<qint64()>([nowMs] { return nowMs; }));
+            int cue = -1;
+            runner->update(nowMs, &cue);
+            m_layers[std::size_t(i)]->show(runner->content(runner->cueAt(runner->positionMs(nowMs))), state.transition, nowMs);
+            continue;
+        }
+        runner.reset();
         m_layers[std::size_t(i)]->show(state.content, state.transition, nowMs);
     }
     m_logo.set(scene.logoContent);
@@ -168,6 +181,26 @@ void SceneModel::setWallClock(qint64 wallMs, qint64 nowMs)
     update(nowMs);
 }
 
+QJsonObject SceneModel::timelineStatus(qint64 nowMs) const
+{
+    for (int i = 0; i < layerCount; ++i) {
+        const auto &runner = m_cueRunners[std::size_t(i)];
+        if (!runner)
+            continue;
+        const qint64 position = runner->positionMs(nowMs);
+        return {{"layer", core::show::layerName(core::show::Layer(i))},
+                {"positionMs", position},
+                {"cue", runner->cueAt(position)},
+                {"cues", runner->cueCount()},
+                {"audio", runner->audioState()},
+                {"audioPositionMs", runner->audioPositionMs()},
+                {"worstSyncMs", runner->worstSyncMs()},
+                {"audioStepMs", runner->audioStepMs()},
+                {"switches", runner->switches()}};
+    }
+    return {};
+}
+
 QString SceneModel::timerText(const QVariantMap &timer, qint64 wallMs) const
 {
     return core::show::timerText(QJsonObject::fromVariantMap(timer), wallMs);
@@ -181,6 +214,12 @@ void SceneModel::update(qint64 nowMs)
     if (wall != m_wallShownMs) {
         m_wallShownMs = wall;
         emit wallChanged();
+    }
+    // Cues come up on the first frame at or after their time, with a cut.
+    for (int i = 0; i < layerCount; ++i) {
+        int cue = -1;
+        if (auto &runner = m_cueRunners[std::size_t(i)]; runner && runner->update(nowMs, &cue))
+            m_layers[std::size_t(i)]->show(runner->content(cue), Transition::cut(), nowMs);
     }
     for (auto &layer : m_layers)
         layer->update(nowMs);

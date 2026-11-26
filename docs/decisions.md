@@ -237,3 +237,21 @@ UDP (port 8000 by default), messages and bundles, int/float/string/bool argument
 ### MIDI
 
 RtMidi 6.0.0 (MIT, `thirdparty/rtmidi`, unchanged) gives MIDI input on Linux (ALSA), Windows (Windows Multimedia) and macOS (CoreMIDI); without ALSA headers Linux builds without MIDI and the popover says so. Every MIDI input is listened to, and new devices are picked up within three seconds. Default notes (C4 next, B3 previous, D4/A3 next/previous item, E4 clear slide, F4 clear all, G4 black, A4 logo; program change N selects item N); a note acts on press, a control change on its rise past 64 (foot pedals). Learn gives an action the next message and takes that message from any other action. The test drives Lumen from a virtual MIDI device (an ALSA virtual port); no hardware controller has been tried.
+
+## Batch 20: timecode cues
+
+### The render process runs the cues
+
+The operator side sends the whole timeline at once (the track, and every cue's slide as content) as cued content on the Slide layer. The render process plays the track and, every frame, shows the cue whose time has come, with a cut: a cue appears on the first frame at or after its time, without waiting on the operator window, which could be busy. Slides only go forward within a run.
+
+### Keeping to the audio
+
+Qt's media player reports the track's position in steps of one audio buffer (about 85 ms here), each the end of the buffer just handed to the sound card. So the timeline's clock is the render clock, started when playing starts, and eased towards the middle of each step; a difference over 250 ms (a stall or a seek) is jumped. Measured here: every cue on its frame (0 to 15 ms after its time at 60 frames per second), the clock within 34 ms of the audio's reported position. The audio device's own delay is not known to Qt, so a sound system with a long delay will hear slides early by that delay; a per-output offset can be added if churches need it. Without a track, or without an audio device, the render clock alone keeps time.
+
+### Cues are kept with the item
+
+In the presentation's metadata ("timeline": the backing track's media asset and the cues as times and slides in play order). A changed arrangement can point cues at other slides; the Cues popover shows each cue's slide so this is visible. `.lumen` files carry the track and the cues.
+
+### External timecode
+
+Following an external clock (MIDI timecode or LTC from a playback system) is not in this batch; the cue runner takes its clock from one place, so MTC through the MIDI input (batch 19) is the natural next step.
