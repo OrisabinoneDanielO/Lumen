@@ -104,6 +104,20 @@ void ScriptureController::setVersesPerSlide(int count)
     emit changed();
 }
 
+QString ScriptureController::bookFor(const QString &typed) const
+{
+    const QString text = typed.trimmed();
+    if (text.isEmpty() || m_sources.empty())
+        return {};
+    const Source &source = m_sources[std::size_t(m_translation)];
+    auto books = source.store->books(source.translation.id);
+    if (!books.ok())
+        return {};
+    // The suggestion for the book alone is "<Name> 1:1".
+    const QString suggestion = completeReference(text, m_names, books.value()).suggestion;
+    return suggestion.endsWith(QLatin1String(" 1:1")) ? suggestion.chopped(4) : QString();
+}
+
 void ScriptureController::lookup(const QString &text)
 {
     m_query = text;

@@ -146,8 +146,8 @@ private slots:
         ui.settle();
         QTest::qWait(100);
         QVERIFY(window->grabWindow().save(dir + QStringLiteral("/scripture.png")));
-        // Typing ahead: "j" and the suggestion in grey.
-        ui.item("scriptureReference")->setProperty("text", QString());
+        // A new passage: Up to the book, "j" fills in John.
+        QTest::keyClick(window, Qt::Key_Up);
         QTest::keyClick(window, 'j');
         QTest::qWait(100);
         QVERIFY(window->grabWindow().save(dir + QStringLiteral("/scripture-typing.png")));
@@ -210,9 +210,11 @@ private slots:
         }
     }
 
-    // Typing ahead in the window: "j" shows John 1:1 in grey; Space takes
-    // the book, then the chapter; Enter takes the whole suggestion.
-    void typingAheadInTheWindow()
+    // The reference stays in three parts: "j" fills in John (the rest
+    // highlighted); Space goes on to the chapter and the verse; Left goes
+    // back a part at a time, each highlighted to type over; Up goes to the
+    // book. Enter: Preview; Shift+Enter: on the screen.
+    void referencePartsInTheWindow()
     {
         OperatorHarness ui;
         ui.bibles = m_store.get();
@@ -222,44 +224,74 @@ private slots:
         QTRY_VERIFY(ui.item("scriptureDialog"));
         QQuickWindow *window = ui.item("scriptureDialog")->window();
         QVERIFY(ui.click("translation-engwebp"));
-        QQuickItem *input = ui.item("scriptureReference");
-        input->forceActiveFocus();
-        QTRY_VERIFY(input->hasActiveFocus());
-        const auto typed = [input] { return input->property("text").toString(); };
-        QQuickItem *ghost = ui.item("scriptureSuggestion");
-        QVERIFY(ghost);
+        QQuickItem *book = ui.item("scriptureReference");
+        QQuickItem *chapter = ui.item("scriptureChapter");
+        QQuickItem *verse = ui.item("scriptureVerse");
+        book->forceActiveFocus();
+        QTRY_VERIFY(book->hasActiveFocus());
+        const auto text = [](QQuickItem *part) { return part->property("text").toString(); };
+        const auto selected = [](QQuickItem *part) { return part->property("selectedText").toString(); };
 
         QTest::keyClick(window, 'j');
-        QTRY_VERIFY(ghost->isVisible());
-        QCOMPARE(ghost->property("text").toString(), QStringLiteral("ohn 1:1"));
+        QCOMPARE(text(book), QStringLiteral("John"));
+        QCOMPARE(selected(book), QStringLiteral("ohn"));
         QTest::keyClick(window, Qt::Key_Space);
-        QCOMPARE(typed(), QStringLiteral("John "));
+        QVERIFY(chapter->hasActiveFocus());
         QTest::keyClick(window, '3');
-        QCOMPARE(ghost->property("text").toString(), QStringLiteral(":1"));
+        QCOMPARE(ui.scripture->label(), QStringLiteral("John 3"));
         QTest::keyClick(window, Qt::Key_Space);
-        QCOMPARE(typed(), QStringLiteral("John 3:"));
+        QVERIFY(verse->hasActiveFocus());
         QTest::keyClick(window, '1');
         QTest::keyClick(window, '6');
         QCOMPARE(ui.scripture->label(), QStringLiteral("John 3:16"));
-        QVERIFY(!ghost->isVisible()); // a verse is typed: nothing to add
-        QTest::keyClick(window, Qt::Key_Space); // an ordinary space now
-        QCOMPARE(typed(), QStringLiteral("John 3:16 "));
         QTest::keyClick(window, Qt::Key_Return);
         QVERIFY(ui.controller->previewText().startsWith(QStringLiteral("For God so loved")));
 
-        // The safety keys work from the scripture window too: F7 is Black.
+        // Back with Left: the chapter, then the book, each highlighted.
+        QTest::keyClick(window, Qt::Key_Left);
+        QVERIFY(chapter->hasActiveFocus());
+        QCOMPARE(selected(chapter), QStringLiteral("3"));
+        QTest::keyClick(window, Qt::Key_Left);
+        QVERIFY(book->hasActiveFocus());
+        QCOMPARE(selected(book), QStringLiteral("John"));
+        // A new book over it: "ro" is Romans; the chapter and verse stay to
+        // be typed over.
+        QTest::keyClick(window, 'r');
+        QTest::keyClick(window, 'o');
+        QCOMPARE(text(book), QStringLiteral("Romans"));
+        QTest::keyClick(window, Qt::Key_Space);
+        QCOMPARE(selected(chapter), QStringLiteral("3"));
+        QTest::keyClick(window, '8');
+        QTest::keyClick(window, Qt::Key_Right);
+        QCOMPARE(selected(verse), QStringLiteral("16"));
+        QTest::keyClick(window, '2');
+        QTest::keyClick(window, '8');
+        QCOMPARE(ui.scripture->label(), QStringLiteral("Romans 8:28"));
+        // Shift+Enter: on the screen now.
+        QTest::keyClick(window, Qt::Key_Return, Qt::ShiftModifier);
+        QVERIFY(ui.controller->liveText().startsWith(QStringLiteral("We know that all things")));
+        // Up: straight to the book.
+        QTest::keyClick(window, Qt::Key_Up);
+        QVERIFY(book->hasActiveFocus());
+        QCOMPARE(selected(book), QStringLiteral("Romans"));
+
+        // Backspace takes back the filled-in rest and keeps the letter typed
+        // ("J", not John again).
+        QTest::keyClick(window, 'j');
+        QTest::keyClick(window, Qt::Key_Backspace);
+        QCOMPARE(text(book), QStringLiteral("J"));
+        // "j" and Enter: John 1:1.
+        verse->setProperty("text", QString());
+        chapter->setProperty("text", QString());
+        QTest::keyClick(window, Qt::Key_Return);
+        QCOMPARE(ui.scripture->label(), QStringLiteral("John 1:1"));
+        QVERIFY(ui.controller->previewText().startsWith(QStringLiteral("In the beginning")));
+
+        // The safety keys work from here too: F7 is Black.
         QTest::keyClick(window, Qt::Key_F7);
         QVERIFY(ui.show.scene().black);
         QTest::keyClick(window, Qt::Key_F7);
         QVERIFY(!ui.show.scene().black);
-
-        // "j" and Enter: John 1:1.
-        input->setProperty("text", QString());
-        QTest::keyClick(window, 'j');
-        QTest::keyClick(window, Qt::Key_Return);
-        QCOMPARE(typed(), QStringLiteral("John 1:1"));
-        QCOMPARE(ui.scripture->label(), QStringLiteral("John 1:1"));
-        QVERIFY(ui.controller->previewText().startsWith(QStringLiteral("In the beginning")));
     }
 };
 

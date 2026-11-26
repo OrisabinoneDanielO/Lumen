@@ -123,7 +123,7 @@ The [user guide](docs/user-guide.md) explains every part. To get going:
    | C, B, P, E / V and a number | jump to Chorus, Bridge, Pre-chorus, Ending / Verse *n* |
    | F1 to F5 | clear background, slide, props, messages, everything |
    | F6 / F7 | Logo / Black |
-   | Ctrl+B (Cmd+B on a Mac) | scripture, in its own window: type `jn 3 16-18` (or just `j` and Space to complete), Enter for Preview, Shift+Enter to show it now |
+   | Ctrl+B (Cmd+B on a Mac) | scripture, in its own window: book, chapter and verse (`j` Space `3` Space `16`), ← and ↑ to go back, Enter for Preview, Shift+Enter to show it now |
 
 6. **More:** in the toolbar, **Timers** (countdowns and clocks), **Message** (for example "Parent of 42, please come to the nursery") and **Props** (lower thirds and logos). The **Stage** and **Stream** lights beside **Main** set up a screen for the musicians and the speaker, and an output with transparency for live streams. **Plan ▾ → Remote control and MIDI…** sets up the phone remote, MIDI and OSC; **Plan ▾ → Share with other computers…** shares plans and songs on the local network. Each of these is off until you turn it on.
 
