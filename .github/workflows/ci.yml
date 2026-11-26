@@ -36,7 +36,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libfontconfig1-dev \
-            libpulse0 libva2 libva-drm2 libva-x11-2 strace
+            libpulse0 libva2 libva-drm2 libva-x11-2 strace libasound2-dev
 
       - name: Set up MSVC
         if: runner.os == 'Windows'
@@ -74,7 +74,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libfontconfig1-dev \
-            libpulse0 libva2 libva-drm2 libva-x11-2 libfuse2
+            libpulse0 libva2 libva-drm2 libva-x11-2 libfuse2 libasound2-dev
 
       - name: Install CMake and Ninja
         uses: lukka/get-cmake@latest

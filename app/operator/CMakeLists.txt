@@ -43,7 +43,25 @@ add_library(lumen_operator STATIC
     editorcontroller.cpp
     sharing.h
     sharing.cpp
+    livecontrol.h
+    livecontrol.cpp
+    remoteserver.h
+    remoteserver.cpp
+    oscserver.h
+    oscserver.cpp
+    midiinput.h
+    midiinput.cpp
 )
+# The phone remote's page (batch 19).
+qt_add_resources(lumen_operator "remote_page"
+    PREFIX "/lumen/remote"
+    BASE remote
+    FILES remote/remote.html)
+# MIDI control needs RtMidi (thirdparty/), built when a MIDI backend exists.
+if(TARGET lumen_rtmidi)
+    target_link_libraries(lumen_operator PRIVATE lumen_rtmidi)
+    target_compile_definitions(lumen_operator PRIVATE LUMEN_HAVE_MIDI)
+endif()
 add_library(Lumen::Operator ALIAS lumen_operator)
 target_include_directories(lumen_operator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(lumen_operator

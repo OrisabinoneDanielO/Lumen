@@ -13,6 +13,7 @@ Rectangle {
     required property QtObject controller
     signal itemClicked(int index)
     signal shareRequested() // batch 18: the Share popover
+    signal remoteRequested() // batch 19: the Remote control popover
 
     // The plan menu's page: "" (closed), "main", "open", "restore", or
     // "input" (a name, header or notes, for inputAction).
@@ -358,6 +359,14 @@ Rectangle {
                         onTriggered: {
                             root.menuPage = ""
                             root.shareRequested()
+                        }
+                    }
+                    MenuEntry {
+                        objectName: "planRemote"
+                        text: qsTr("Remote control and MIDI…")
+                        onTriggered: {
+                            root.menuPage = ""
+                            root.remoteRequested()
                         }
                     }
                     MenuEntry {

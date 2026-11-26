@@ -32,6 +32,7 @@ else()
     target_compile_options(lumen_warnings INTERFACE -Wall -Wextra -Wpedantic)
 endif()
 
+add_subdirectory(thirdparty)
 add_subdirectory(core)
 add_subdirectory(tools)
 add_subdirectory(app)
