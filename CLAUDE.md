@@ -2,6 +2,10 @@
 
 Lumen Presenter is a free, offline, cross-platform desktop app for showing lyrics, scripture, media and slides in worship services (in the space of EasyWorship and ProPresenter).
 
+## For human contributors
+
+This file guides Claude Code (an AI coding assistant) when it works on Lumen; people should start with `README.md` and `CONTRIBUTING.md`. The rules below apply to everyone.
+
 ## Source of truth
 
 - `docs/design-doc.md` is the full design: goals, features, architecture, data model, rendering, integrations, requirements and the **Build plan**. Read it before any work. If code and the doc disagree, stop and ask.
