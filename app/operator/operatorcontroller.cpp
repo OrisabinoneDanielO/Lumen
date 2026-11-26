@@ -1244,6 +1244,23 @@ bool OperatorController::removeItem(int index)
     return true;
 }
 
+bool OperatorController::addToPlanAt(const QString &source, int row, int at)
+{
+    bool added = false;
+    if (source == QLatin1String("song"))
+        added = addSongToPlan(row);
+    else if (source == QLatin1String("media"))
+        added = addMediaToPlan(row);
+    else if (source == QLatin1String("deck"))
+        added = addDeckToPlan(row);
+    if (!added || !m_plan)
+        return added;
+    const int last = int(m_plan->items.size()) - 1;
+    if (at >= 0 && at < last)
+        moveItem(last, at);
+    return true;
+}
+
 bool OperatorController::moveItem(int from, int to)
 {
     if (!m_db || !m_plan || from == to)

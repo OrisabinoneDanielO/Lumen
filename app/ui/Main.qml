@@ -187,6 +187,13 @@ Window {
                     onScreensRequested: if (window.screenSetup) window.screenSetup.openSetup()
                     onUpdatesRequested: updatePopover.active = window.updates !== null
                     updateVersion: window.updates && window.updates.available ? window.updates.latestVersion : ""
+                    dragGhost: dragGhost
+                    onAddRequested: what => {
+                        if (what === "scripture")
+                            window.controller.scriptureRequested()
+                        else
+                            library.showPage(what === "media" ? 2 : what === "decks" ? 3 : 0)
+                    }
                 }
                 DragHandle {
                     objectName: "planHandle"
@@ -253,6 +260,7 @@ Window {
                 Layout.fillWidth: true
                 Layout.preferredHeight: window.libraryHeight
                 controller: window.controller
+                dragGhost: dragGhost
                 onSearchDone: keyRoot.forceActiveFocus()
                 // A row or card clicked: the keyboard goes back to the show.
                 onPicked: keyRoot.forceActiveFocus()
@@ -545,5 +553,11 @@ Window {
             visible = false
             keyRoot.forceActiveFocus()
         }
+    }
+
+    // Follows the pointer while something is dragged onto the service plan.
+    DragGhost {
+        id: dragGhost
+        objectName: "dragGhost"
     }
 }

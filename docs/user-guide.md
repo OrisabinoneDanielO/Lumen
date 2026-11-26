@@ -77,7 +77,7 @@ The **Presentations** tab imports PowerPoint (`.pptx`, `.ppt`, `.odp`) and PDF f
 
 ## Plans and backups
 
-The **Plan** menu above the service plan makes, opens, renames and duplicates plans, adds headers, and exports or imports a plan as a `.lumen` file (the plan, its slides and its media in one file, for the booth PC or another church). Right-click an item to move it, add notes or remove it. Everything is saved as you go; the open plan and item are remembered every 30 seconds, so Lumen reopens where you were after a crash. A backup of the library is made daily (the newest 14 are kept, in `backups` beside the library), and **Restore a backup** puts one back (Lumen restarts; the current library is kept beside it).
+The **Plan** menu above the service plan makes, opens, renames and duplicates plans, adds headers, and exports or imports a plan as a `.lumen` file (the plan, its slides and its media in one file, for the booth PC or another church). Drag a song, video, picture or presentation from the library onto the plan to put it there (a line shows where it will go), and drag plan items up or down to reorder them; **+ Add** opens the library tab for songs, media or presentations, the scripture window, or a new header. Right-click an item to move it, add notes or remove it. Everything is saved as you go; the open plan and item are remembered every 30 seconds, so Lumen reopens where you were after a crash. A backup of the library is made daily (the newest 14 are kept, in `backups` beside the library), and **Restore a backup** puts one back (Lumen restarts; the current library is kept beside it).
 
 ## Timers and messages
 
