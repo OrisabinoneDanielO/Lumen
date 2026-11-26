@@ -184,7 +184,9 @@ private slots:
     void showsOnASecondScreen()
     {
         // Two virtual screens, side by side.
-        QTemporaryFile config(QDir::temp().filePath(QStringLiteral("lumen-screens-XXXXXX.json")));
+        // In the working folder, given as a relative path: Qt splits platform
+        // options at ':', which would cut a Windows path at its drive letter.
+        QTemporaryFile config(QStringLiteral("lumen-screens-XXXXXX.json"));
         QVERIFY(config.open());
         config.write(R"({"screens": [
             {"name": "Operator", "x": 0, "y": 0, "width": 1440, "height": 900, "logicalDpi": 96, "logicalBaseDpi": 96, "dpr": 1},
@@ -192,7 +194,8 @@ private slots:
         ]})");
         config.close();
         const QByteArray platform = qgetenv("QT_QPA_PLATFORM");
-        qputenv("QT_QPA_PLATFORM", "offscreen:configfile=" + config.fileName().toLocal8Bit());
+        qputenv("QT_QPA_PLATFORM",
+                "offscreen:configfile=" + QDir::current().relativeFilePath(config.fileName()).toLocal8Bit());
 
         RenderLink::Options options;
         options.serverName = QStringLiteral("lumen-stage-test-") + QUuid::createUuid().toString(QUuid::Id128).left(12);

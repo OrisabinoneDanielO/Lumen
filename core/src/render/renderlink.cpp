@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QDeadlineTimer>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QProcess>
 #include <QThread>
@@ -98,9 +99,16 @@ Status RenderLink::start()
             return success();
         QThread::msleep(50);
     }
-    return linkError(QStringLiteral("lumen-render did not start within %1 ms (log: %2)")
+    // The end of the renderer's own output says why, if it said anything.
+    QString said;
+    if (QFile file(log); file.open(QIODevice::ReadOnly)) {
+        if (file.size() > 2000)
+            file.seek(file.size() - 2000);
+        said = QString::fromUtf8(file.readAll()).trimmed();
+    }
+    return linkError(QStringLiteral("lumen-render did not start within %1 ms (log: %2)%3")
                          .arg(m_options.startTimeoutMs)
-                         .arg(log));
+                         .arg(log, said.isEmpty() ? QString() : QStringLiteral(":\n") + said));
 }
 
 void RenderLink::drain()
