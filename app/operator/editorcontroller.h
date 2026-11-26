@@ -44,6 +44,12 @@ class EditorController : public QObject
     Q_PROPERTY(bool isSong READ isSong NOTIFY changed)
     Q_PROPERTY(bool canInsert READ canInsert NOTIFY changed)
     Q_PROPERTY(QString lyrics READ lyrics WRITE setLyrics NOTIFY changed)
+    // A song's play order (group labels, repeats allowed), the groups its
+    // lyrics have, and whether the order was set by hand (else it follows
+    // the lyrics as written).
+    Q_PROPERTY(QStringList arrangement READ arrangement NOTIFY changed)
+    Q_PROPERTY(QStringList groupLabels READ groupLabels NOTIFY changed)
+    Q_PROPERTY(bool arrangementCustom READ arrangementCustom NOTIFY changed)
     Q_PROPERTY(QObject *slides READ slides CONSTANT)
     Q_PROPERTY(int slide READ slide WRITE selectSlide NOTIFY changed)
     Q_PROPERTY(QVariantList elements READ elements NOTIFY changed)
@@ -67,6 +73,9 @@ public:
     bool isSong() const { return m_presentation.kind == core::data::PresentationKind::Song; }
     bool canInsert() const { return isOpen() && m_presentation.kind == core::data::PresentationKind::Slides; }
     QString lyrics() const { return m_lyrics; }
+    QStringList arrangement() const;
+    QStringList groupLabels() const;
+    bool arrangementCustom() const { return m_arrangementCustom; }
     void setLyrics(const QString &lyrics);
     QObject *slides() { return &m_slideModel; }
     int slide() const { return m_slide; }
@@ -108,6 +117,13 @@ public:
     Q_INVOKABLE bool setBackground(const QUrl &media);
     Q_INVOKABLE void setTheme(int row); // -1: no theme of its own
 
+    // Songs: each group's lines in even slides of "lines per slide"
+    // (songs/linesPerSlide), in the lyrics.
+    Q_INVOKABLE void autoSplit();
+    Q_INVOKABLE void addToArrangement(const QString &label);
+    Q_INVOKABLE void removeFromArrangement(int index);
+    Q_INVOKABLE void moveInArrangement(int from, int to);
+    Q_INVOKABLE void resetArrangement(); // back to the lyrics as written
     Q_INVOKABLE bool save();
     Q_INVOKABLE void cancel();
 
@@ -156,6 +172,12 @@ private:
     std::vector<DraftSlide> m_draft;
     QString m_lyrics;
     bool m_lyricsChanged = false;
+    QStringList m_arrangement; // set by hand (m_arrangementCustom)
+    bool m_arrangementCustom = false;
+    bool m_arrangementChanged = false;
+    QStringList writtenOrder() const; // play order from the lyrics
+    void arrangementEdited();
+    core::Status saveArrangement(const QHash<QString, QString> &groupIds, const QStringList &order);
     bool m_dirty = false;
     int m_slide = 0;
     int m_element = -1;
