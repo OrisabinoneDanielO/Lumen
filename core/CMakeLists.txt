@@ -7,14 +7,30 @@ add_library(lumen_core STATIC
     include/lumen/core/render/protocol.h
     include/lumen/core/show/scene.h
     include/lumen/core/show/textstyle.h
+    include/lumen/core/show/timecode.h
     include/lumen/core/textfold.h
     src/buildinfo.cpp
     src/render/protocol.cpp
     src/show/scene.cpp
     src/show/textstyle.cpp
+    src/show/timecode.cpp
     src/textfold.cpp
 )
 add_library(Lumen::Core ALIAS lumen_core)
+
+# MIDI timecode input, for the render process and the operator (RtMidi when
+# a MIDI system exists; without one it opens nothing).
+add_library(lumen_mtcinput STATIC
+    include/lumen/core/midi/mtcinput.h
+    src/midi/mtcinput.cpp)
+add_library(Lumen::MtcInput ALIAS lumen_mtcinput)
+target_include_directories(lumen_mtcinput PUBLIC include)
+target_link_libraries(lumen_mtcinput PUBLIC Qt6::Core PRIVATE lumen_warnings)
+set_target_properties(lumen_mtcinput PROPERTIES AUTOMOC ON)
+if(TARGET lumen_rtmidi)
+    target_link_libraries(lumen_mtcinput PRIVATE lumen_rtmidi)
+    target_compile_definitions(lumen_mtcinput PRIVATE LUMEN_HAVE_MIDI)
+endif()
 
 target_include_directories(lumen_core PUBLIC include)
 target_compile_definitions(lumen_core PRIVATE LUMEN_VERSION="${PROJECT_VERSION}")

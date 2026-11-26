@@ -3,6 +3,7 @@
 #include "rowmodel.h"
 
 #include "lumen/core/data/database.h"
+#include "lumen/core/show/timecode.h"
 
 #include <QElapsedTimer>
 #include <QJsonObject>
@@ -15,6 +16,10 @@
 
 class QAudioOutput;
 class QMediaPlayer;
+
+namespace lumen::core::midi {
+class MtcInput;
+}
 
 namespace lumen::app {
 
@@ -31,6 +36,12 @@ class OperatorController;
 // operator sends live becomes a cue at that moment. Cues can then be nudged
 // a frame at a time. Play sends the whole timeline to the output, where the
 // render process plays the track and changes slides on the frame.
+//
+// Or, instead of a track, the item follows MIDI timecode from another device
+// (a lighting desk, a playback rig): "source": "mtc", with the device
+// ("mtcDevice", part of its name; empty: any) and the timecode of cue time 0
+// ("mtcStart", e.g. 01:00:00:00). Recording then times each slide by the
+// timecode, and on Play the output follows it.
 class CueController : public QObject
 {
     Q_OBJECT
@@ -42,6 +53,10 @@ class CueController : public QObject
     Q_PROPERTY(bool playing READ playing NOTIFY changed)
     Q_PROPERTY(QString position READ position NOTIFY ticked)
     Q_PROPERTY(QString message READ message NOTIFY changed)
+    Q_PROPERTY(bool followTimecode READ followTimecode WRITE setFollowTimecode NOTIFY changed)
+    Q_PROPERTY(QString timecodeDevice READ timecodeDevice WRITE setTimecodeDevice NOTIFY changed)
+    Q_PROPERTY(QString timecodeStart READ timecodeStart WRITE setTimecodeStart NOTIFY changed)
+    Q_PROPERTY(bool timecodeAvailable READ timecodeAvailable CONSTANT)
 
 public:
     // One frame at 60 frames per second, the nudge step.
@@ -60,6 +75,18 @@ public:
     bool playing() const;
     QString position() const;
     QString message() const { return m_message; }
+
+    bool followTimecode() const { return m_timeline.value("source").toString() == QLatin1String("mtc"); }
+    void setFollowTimecode(bool on);
+    QString timecodeDevice() const { return m_timeline.value("mtcDevice").toString(); }
+    void setTimecodeDevice(const QString &device);
+    QString timecodeStart() const;
+    // A timecode such as 01:00:00:00; anything else is refused.
+    void setTimecodeStart(const QString &start);
+    // Built with a MIDI system.
+    static bool timecodeAvailable();
+    // A MIDI message received now (from the MIDI input, or a test).
+    void feedMidi(const QByteArray &bytes);
 
     Q_INVOKABLE bool setTrack(const QUrl &file);
     Q_INVOKABLE void clearTrack();
@@ -104,6 +131,10 @@ private:
     std::function<qint64()> m_clock;
     QTimer m_tick;
     QString m_message;
+    // Recording against MIDI timecode.
+    std::unique_ptr<core::midi::MtcInput> m_mtcInput;
+    core::show::MtcDecoder m_mtc;
+    QElapsedTimer m_mtcClock;
     RowModel m_model{{"time", "ms", "slide", "label", "text"}};
 };
 

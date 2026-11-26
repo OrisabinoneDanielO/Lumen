@@ -50,8 +50,35 @@ Rectangle {
                 }
             }
 
+            // What keeps time: a backing track played here, or MIDI
+            // timecode from another device.
             RowLayout {
                 Layout.fillWidth: true
+                spacing: 4
+                LText {
+                    Layout.fillWidth: true
+                    text: qsTr("Follow")
+                    font.pixelSize: 12
+                    color: Theme.textMuted
+                }
+                Small {
+                    objectName: "cuesFollowTrack"
+                    text: qsTr("Backing track")
+                    variant: root.cues.followTimecode ? "default" : "primary"
+                    onClicked: root.cues.followTimecode = false
+                }
+                Small {
+                    objectName: "cuesFollowTimecode"
+                    visible: root.cues.timecodeAvailable
+                    text: qsTr("MIDI timecode")
+                    variant: root.cues.followTimecode ? "primary" : "default"
+                    onClicked: root.cues.followTimecode = true
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                visible: !root.cues.followTimecode
                 LText {
                     Layout.fillWidth: true
                     text: root.cues.trackName !== "" ? qsTr("Backing track: %1").arg(root.cues.trackName)
@@ -63,6 +90,42 @@ Rectangle {
                     objectName: "cuesTrack"
                     text: qsTr("Choose track…")
                     onClicked: trackDialog.active = true
+                }
+            }
+
+            GridLayout {
+                Layout.fillWidth: true
+                visible: root.cues.followTimecode
+                columns: 2
+                columnSpacing: 8
+                rowSpacing: 4
+                LText {
+                    text: qsTr("Device")
+                    font.pixelSize: 12
+                }
+                SearchField {
+                    id: deviceField
+                    objectName: "cuesTimecodeDevice"
+                    inputName: "cuesTimecodeDeviceInput"
+                    Layout.fillWidth: true
+                    placeholder: qsTr("Any MIDI input (or part of its name)")
+                    text: root.cues.timecodeDevice
+                    onAccepted: root.cues.timecodeDevice = text
+                    onInputFocusedChanged: if (!inputFocused) root.cues.timecodeDevice = text
+                }
+                LText {
+                    text: qsTr("Cue 0:00 at")
+                    font.pixelSize: 12
+                }
+                SearchField {
+                    id: startField
+                    objectName: "cuesTimecodeStart"
+                    inputName: "cuesTimecodeStartInput"
+                    Layout.fillWidth: true
+                    placeholder: "01:00:00:00"
+                    text: root.cues.timecodeStart
+                    onAccepted: root.cues.timecodeStart = text
+                    onInputFocusedChanged: if (!inputFocused) root.cues.timecodeStart = text
                 }
             }
 

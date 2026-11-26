@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lumen/core/show/scene.h"
+#include "lumen/core/show/timecode.h"
 
 #include <QElapsedTimer>
 #include <QJsonArray>
@@ -14,6 +15,10 @@
 class QAudioOutput;
 class QMediaPlayer;
 
+namespace lumen::core::midi {
+class MtcInput;
+}
+
 namespace lumen::render {
 
 // Plays a backing track and says which cue is due (batch 20), for one layer
@@ -22,6 +27,11 @@ namespace lumen::render {
 // position (small differences are eased out, large ones jumped), so cues
 // change on the first frame at or after their time. Without a track (or
 // with no audio device) the render clock alone keeps time.
+//
+// With "source": "mtc" the timeline follows MIDI timecode from another
+// device instead: cue time 0 is the timecode "mtcStart" (for example
+// 01:00:00:00), the clock runs while the timecode runs and stops when it
+// stops, and a jump in the timecode (a locate) may take cues back.
 class CueRunner : public QObject
 {
     Q_OBJECT
@@ -43,9 +53,17 @@ public:
     qint64 cueMs(int cue) const;
     int cueCount() const { return int(m_cues.size()); }
 
-    // "none" (no track), "waiting", "playing", "paused", "unavailable".
+    // "none" (no track), "waiting", "playing", "paused", "unavailable";
+    // following timecode: "timecode-waiting", "timecode", "timecode-stopped".
     QString audioState() const { return m_audioState; }
     qint64 audioPositionMs() const;
+
+    // Following timecode: one MIDI message received at render-clock nowMs
+    // (from MtcInput, or a test).
+    void feedMidi(const QByteArray &bytes, qint64 nowMs);
+    bool followsTimecode() const { return m_timecode; }
+    // The timecode last received, as hh:mm:ss:ff (empty before any).
+    QString timecodeText(qint64 nowMs) const;
 
     // Called each frame: follows the audio; true if the due cue changed
     // (*cue set).
@@ -85,6 +103,11 @@ private:
     qint64 m_runningSince = 0;
     qint64 m_worstSync = 0;
     bool m_jumped = false;    // a stall or seek: cues may go back
+    // Following MIDI timecode.
+    bool m_timecode = false;
+    QString m_mtcStart;
+    core::show::MtcDecoder m_mtc;
+    std::unique_ptr<core::midi::MtcInput> m_mtcInput;
 };
 
 } // namespace lumen::render

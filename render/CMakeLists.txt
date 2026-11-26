@@ -50,6 +50,7 @@ target_include_directories(lumen_render_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(lumen_render_lib
     PUBLIC
         Lumen::Core
+        Lumen::MtcInput
         lumen_render_libplugin
         lumen_slides
         lumen_slidesplugin
@@ -58,6 +59,7 @@ target_link_libraries(lumen_render_lib
         Qt6::Network
         Qt6::Multimedia
     PRIVATE lumen_warnings)
+
 
 qt_add_executable(lumen-render main.cpp)
 target_link_libraries(lumen-render PRIVATE lumen_render_lib lumen_warnings)

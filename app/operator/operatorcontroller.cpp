@@ -1340,7 +1340,8 @@ namespace lumen::app {
 
 bool OperatorController::playCues(const QJsonObject &timeline, qint64 offsetMs)
 {
-    // timeline: the item's {"audio", "cues": [{"ms", "slide"}]}.
+    // timeline: the item's {"audio", "cues": [{"ms", "slide"}]}, or with
+    // "source": "mtc", "mtcDevice" and "mtcStart" to follow MIDI timecode.
     const ItemView *view = selected();
     if (m_editMode || !view)
         return false;
@@ -1355,11 +1356,18 @@ bool OperatorController::playCues(const QJsonObject &timeline, qint64 offsetMs)
     if (cues.isEmpty())
         return false;
     static int runs = 0;
-    const QJsonObject live{{"id", QStringLiteral("%1-%2").arg(view->presentationId).arg(++runs)},
-                           {"audio", timeline.value("audio").toString()},
-                           {"playing", true},
-                           {"offsetMs", offsetMs},
-                           {"cues", cues}};
+    QJsonObject live{{"id", QStringLiteral("%1-%2").arg(view->presentationId).arg(++runs)},
+                     {"audio", timeline.value("audio").toString()},
+                     {"playing", true},
+                     {"offsetMs", offsetMs},
+                     {"cues", cues}};
+    const bool timecode = timeline.value("source").toString() == QLatin1String("mtc");
+    if (timecode) {
+        live.insert("source", QStringLiteral("mtc"));
+        live.insert("mtcDevice", timeline.value("mtcDevice").toString());
+        live.insert("mtcStart", timeline.value("mtcStart").toString());
+        live.remove("audio");
+    }
     std::vector<std::pair<Layer, Content>> changes{{Layer::Slide, Content::cued(live)}};
     if (!m_show.scene().layer(Layer::Media).content.isEmpty())
         changes.push_back({Layer::Media, Content::empty()});
@@ -1368,7 +1376,7 @@ bool OperatorController::playCues(const QJsonObject &timeline, qint64 offsetMs)
     m_positionItem = m_current;
     m_positionKey = keyOf(*view);
     m_positionSlide = -1;
-    m_positionLabel = tr("Following the backing track");
+    m_positionLabel = timecode ? tr("Following MIDI timecode") : tr("Following the backing track");
     m_onAir = true;
     m_show.setContents(changes);
     return true;

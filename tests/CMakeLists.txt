@@ -275,3 +275,16 @@ set_tests_properties(tst_screens PROPERTIES TIMEOUT 120)
 # nonsense and no answer, against a local stand-in for GitHub.
 lumen_add_test(tst_updates tst_updates.cpp operatorharness.h)
 target_link_libraries(tst_updates PRIVATE lumen_ui lumen_uiplugin Lumen::Operator lumen_test_support Qt6::Quick Qt6::QuickTest Qt6::Network)
+
+# MIDI timecode: arithmetic (drop-frame too) and the quarter-frame decoder.
+lumen_add_test(tst_mtc tst_mtc.cpp)
+target_link_libraries(tst_mtc PRIVATE Lumen::Core)
+
+# Timecode cues following MIDI timecode: frame by frame on a stepped clock,
+# stopping, locating back, and a real virtual MIDI device.
+lumen_add_test(tst_mtc_cues tst_mtc_cues.cpp)
+target_link_libraries(tst_mtc_cues PRIVATE lumen_render_lib Qt6::Quick)
+if(TARGET lumen_rtmidi)
+    target_link_libraries(tst_mtc_cues PRIVATE lumen_rtmidi)
+    target_compile_definitions(tst_mtc_cues PRIVATE LUMEN_HAVE_MIDI)
+endif()

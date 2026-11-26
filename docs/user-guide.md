@@ -93,6 +93,8 @@ No internet needed: **Plan ▾ → Share with other computers…**. On the compu
 
 **Cues** above the slides gives the selected item a backing track (an audio file) and cues: times in the track, each with a slide. **Record** plays the track and turns each slide you send live into a cue at that moment; nudge any cue a frame earlier or later; **Play on output** has the output play the track and change slides on the frame. The cues and the track travel in `.lumen` files.
 
+**Following MIDI timecode.** When a lighting desk, playback rig or DAW sends MIDI timecode (MTC), choose **Follow: MIDI timecode** instead of a backing track. **Device** is part of the MIDI input's name (empty: any input); **Cue 0:00 at** is the timecode where the song starts (often `01:00:00:00`). **Record**, then start the timecode on the other device and send each slide live at its moment: each cue is timed by the timecode. **Play on output**: the output follows the timecode on its own, changes slides on the frame, stops when the timecode stops, and goes back when the other device jumps back. 24, 25, 29.97 drop-frame and 30 fps are understood.
+
 ## Offline
 
 Lumen makes no internet connections (sharing, when turned on, talks only to computers on the local network). `tests/offline_check.sh` checks this on Linux by tracing the app and its output, and by running them with no network at all.

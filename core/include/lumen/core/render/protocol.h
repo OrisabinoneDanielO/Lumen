@@ -53,7 +53,9 @@ namespace lumen::core::render {
 // v9 (batch 20): cued content (slides following a backing track); "status"
 //     reports "timeline".
 // v10: the screen setup: "identify" labels and "screen" moves an output;
-//     "status" reports "identify".
+//     "status" reports "identify". Cued content may follow MIDI timecode
+//     ("source": "mtc", "mtcDevice", "mtcStart"); its status reports
+//     "timecode".
 inline constexpr int protocolVersion = 10;
 
 // Longest line either side accepts, to bound memory use.
