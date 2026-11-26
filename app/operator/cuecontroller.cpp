@@ -20,6 +20,7 @@ CueController::CueController(OperatorController &op, QObject *parent) : QObject(
 {
     connect(&m_op, &OperatorController::stateChanged, this, &CueController::follow);
     connect(&m_op, &OperatorController::slideSentLive, this, &CueController::onSlideSent);
+    m_soundDelayMs = std::clamp(QSettings().value(QStringLiteral("cues/soundDelayMs"), 0).toInt(), 0, 2000);
     m_tick.setInterval(100);
     connect(&m_tick, &QTimer::timeout, this, &CueController::ticked);
 }
@@ -102,16 +103,12 @@ void CueController::setTimecodeStart(const QString &start)
     save();
 }
 
-int CueController::soundDelayMs() const
-{
-    return std::clamp(QSettings().value(QStringLiteral("cues/soundDelayMs"), 0).toInt(), 0, 2000);
-}
-
 void CueController::setSoundDelayMs(int ms)
 {
     ms = std::clamp(ms, 0, 2000);
-    if (ms == soundDelayMs())
+    if (ms == m_soundDelayMs)
         return;
+    m_soundDelayMs = ms;
     QSettings().setValue(QStringLiteral("cues/soundDelayMs"), ms);
     emit changed();
 }

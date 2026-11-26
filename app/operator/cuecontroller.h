@@ -79,7 +79,7 @@ public:
     QString position() const;
     QString message() const { return m_message; }
 
-    int soundDelayMs() const;
+    int soundDelayMs() const { return m_soundDelayMs; }
     void setSoundDelayMs(int ms);
     bool followTimecode() const { return m_timeline.value("source").toString() == QLatin1String("mtc"); }
     void setFollowTimecode(bool on);
@@ -136,6 +136,7 @@ private:
     std::function<qint64()> m_clock;
     QTimer m_tick;
     QString m_message;
+    int m_soundDelayMs = 0; // also kept in the settings ("cues/soundDelayMs")
     // Recording against MIDI timecode.
     std::unique_ptr<core::midi::MtcInput> m_mtcInput;
     core::show::MtcDecoder m_mtc;
