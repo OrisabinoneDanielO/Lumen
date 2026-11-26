@@ -1307,3 +1307,16 @@ void OperatorController::refreshAfterEdit()
 }
 
 } // namespace lumen::app
+
+namespace lumen::app {
+
+void OperatorController::refreshLibrary()
+{
+    searchSongs(m_search);
+    refreshSavedPlans();
+    refreshMedia();
+    refreshDecks();
+    emit stateChanged();
+}
+
+} // namespace lumen::app

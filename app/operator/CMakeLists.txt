@@ -41,9 +41,11 @@ add_library(lumen_operator STATIC
     streamcontroller.cpp
     editorcontroller.h
     editorcontroller.cpp
+    sharing.h
+    sharing.cpp
 )
 add_library(Lumen::Operator ALIAS lumen_operator)
 target_include_directories(lumen_operator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(lumen_operator
-    PUBLIC Lumen::Data Lumen::Show Lumen::Songs Lumen::Scripture Qt6::Core Qt6::Gui Qt6::Multimedia
+    PUBLIC Lumen::Data Lumen::Show Lumen::Songs Lumen::Scripture Qt6::Core Qt6::Gui Qt6::Multimedia Qt6::Network
     PRIVATE Qt6::Pdf Qt6::Xml Qt6::GuiPrivate lumen_warnings)

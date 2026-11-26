@@ -55,7 +55,9 @@ Stage display: click **Stage** in the toolbar to turn on a confidence monitor fo
 
 Stream output: click **Stream** in the toolbar for an output with only the slide text and props, on transparency, for streaming software and video switchers. It shows as key and fill (the picture over black and its transparency as grey, in two windows, or fullscreen on two spare screens) for switchers that take key and fill over HDMI. NDI is experimental (setting `experimental/ndi`): with the free NDI Runtime installed (from ndi.video) the stream is sent as an NDI source with its transparency. Nothing from NDI ships with Lumen. SDI cards (DeckLink) are not supported yet.
 
-Offline: Lumen makes no network connections. `tests/offline_check.sh` checks this on Linux by tracing the app and its output, and by running them with no network at all.
+Sharing between computers (no internet needed): **Plan ▾ → Share with other computers…**. On the computer to share, press **Share this computer**; it shows a six-digit code and its address. On the other, pick it from the list (computers on the same network find each other) or type its address, enter the code, and copy its plans or songs, or send it the open plan. Media come along. Sharing is off until turned on; a firewall must allow Lumen (TCP on the port shown, and UDP 45459 for finding each other).
+
+Offline: Lumen makes no internet connections (sharing, when turned on, talks only to computers on the local network). `tests/offline_check.sh` checks this on Linux by tracing the app and its output, and by running them with no network at all.
 
 Linux AppImage: see `packaging/README.md`.
 
