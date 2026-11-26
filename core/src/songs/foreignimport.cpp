@@ -9,7 +9,6 @@
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
-#include <QStringDecoder>
 #include <QUuid>
 #include <QXmlStreamReader>
 
@@ -188,8 +187,7 @@ QString rtfToText(const QByteArray &rtf)
     auto flush = [&] {
         if (pending.isEmpty())
             return;
-        QStringDecoder decoder("Windows-1252");
-        out += decoder.isValid() ? decoder.decode(pending) : QString::fromLatin1(pending);
+        out += decodeWindows1252(pending);
         pending.clear();
     };
     struct State

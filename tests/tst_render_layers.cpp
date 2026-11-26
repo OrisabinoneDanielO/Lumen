@@ -39,7 +39,9 @@ private:
 private slots:
     void init()
     {
-        QTest::failOnWarning(QRegularExpression(QStringLiteral(".*")));
+        // Any warning fails, except Qt's note that a missing font family
+        // made font lookup slow (macOS, where "Sans Serif" does not exist).
+        QTest::failOnWarning(QRegularExpression(QStringLiteral("^(?!Populating font family aliases took ).*")));
         m_output = std::make_unique<OutputWindow>();
         QVERIFY(m_output->create());
         m_output->place(QGuiApplication::primaryScreen(), false, QSize(480, 270));

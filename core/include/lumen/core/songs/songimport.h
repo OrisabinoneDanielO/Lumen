@@ -51,6 +51,11 @@ struct ParsedSong
 // Windows-1252, the usual encoding of older Windows tools.
 QString decodeText(const QByteArray &bytes);
 
+// Windows-1252 bytes to text. Written out rather than through QStringDecoder,
+// which only knows the codepage where Qt was built with ICU (not on macOS
+// or Windows).
+QString decodeWindows1252(const QByteArray &bytes);
+
 // "my_song-title.txt" -> "My Song Title".
 QString titleFromFileName(const QString &fileName);
 

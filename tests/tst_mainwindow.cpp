@@ -98,7 +98,9 @@ private slots:
     void init()
     {
         // Any QML warning (bad binding, binding loop, missing type) fails the test.
-        QTest::failOnWarning(QRegularExpression(QStringLiteral(".*")));
+        // Any warning fails, except Qt's note that a missing font family
+        // made font lookup slow (macOS, where "Sans Serif" does not exist).
+        QTest::failOnWarning(QRegularExpression(QStringLiteral("^(?!Populating font family aliases took ).*")));
     }
 
     void cleanup()
