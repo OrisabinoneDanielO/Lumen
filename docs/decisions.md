@@ -272,3 +272,11 @@ Which screen shows the main output and which the stage display used to follow a 
 
 The design doc makes update checks optional and forbids updating during a service. Lumen's check is off by default (so a fresh install makes no network connection: `offline_check` still passes) and runs only when the operator asks or turns on "Check when Lumen starts". It reads GitHub's "latest release" for the repository (drafts and pre-releases are left out) and compares versions. It never downloads or installs: "Download" opens the release page in the browser, and the operator installs the new version when it suits them, never in the middle of a service. The request carries only a `LumenPresenter/<version>` user agent. Rolling back is installing the previous release from the Releases page.
 
+## Following MIDI timecode
+
+Production teams run backing tracks and lights from one timecode, so timecode cues can follow MIDI timecode (MTC) from another device instead of Lumen's own track. The render process listens to MIDI and decodes the timecode itself (`core/midi/mtcinput`, `core/show/timecode`), following the design rule that whatever counts time for the audience lives there: the slides keep following even if the operator window freezes. The operator window listens only while recording cues, to time them by the timecode.
+
+- The decoder takes eight quarter frames (two frames' worth) for a position and adds the 1¾ frames they took to arrive; between positions the render clock carries on, and small differences are eased out as with audio. A gap of more than 250 ms means the timecode stopped, and the timeline stops with it. A full-frame message, or a position more than four frames from the expected one, is a locate: cues may then go back.
+- Cue time 0 is a timecode the operator gives (usually 01:00:00:00, the convention for program start). Pieces arriving out of order, as when the sender plays backwards, are ignored until a clean run.
+- LTC (timecode as audio) is not read yet.
+

@@ -165,6 +165,9 @@ public:
     void setClock(std::function<qint64()> clock) { m_clock = std::move(clock); }
     // Cued content (batch 20): where its timeline is, for status.
     QJsonObject timelineStatus(qint64 nowMs) const;
+    // MIDI bytes for the timelines that follow timecode (tests feed them
+    // here; MtcInput feeds each runner itself).
+    void feedMidi(const QByteArray &bytes, qint64 nowMs);
 
     QVariantMap identify() const { return m_identify.toVariantMap(); }
     void setIdentify(const QJsonObject &identify)

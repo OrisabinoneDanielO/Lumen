@@ -181,6 +181,14 @@ void SceneModel::setWallClock(qint64 wallMs, qint64 nowMs)
     update(nowMs);
 }
 
+void SceneModel::feedMidi(const QByteArray &bytes, qint64 nowMs)
+{
+    for (const auto &runner : m_cueRunners) {
+        if (runner && runner->followsTimecode())
+            runner->feedMidi(bytes, nowMs);
+    }
+}
+
 QJsonObject SceneModel::timelineStatus(qint64 nowMs) const
 {
     for (int i = 0; i < layerCount; ++i) {
@@ -196,7 +204,8 @@ QJsonObject SceneModel::timelineStatus(qint64 nowMs) const
                 {"audioPositionMs", runner->audioPositionMs()},
                 {"worstSyncMs", runner->worstSyncMs()},
                 {"audioStepMs", runner->audioStepMs()},
-                {"switches", runner->switches()}};
+                {"switches", runner->switches()},
+                {"timecode", runner->timecodeText(nowMs)}};
     }
     return {};
 }

@@ -3,6 +3,7 @@
 #include "outputwindow.h"
 
 #include "lumenfile.h"
+#include "lumen/core/show/timecode.h"
 #include "planstore.h"
 
 #include "lumen/core/data/repository.h"
@@ -68,6 +69,21 @@ QString onScreen(render::OutputWindow &output)
     };
     find(output.window()->contentItem());
     return text;
+}
+
+// The eight quarter frames of hh:mm:ss:ff at 25 fps.
+QList<QByteArray> quarterFrames25(int h, int m, int s, int f)
+{
+    const int values[8] = {f & 0x0F, (f >> 4) & 1, s & 0x0F, (s >> 4) & 3, m & 0x0F, (m >> 4) & 3, h & 0x0F,
+                           ((h >> 4) & 1) | (int(MtcRate::Fps25) << 1)};
+    QList<QByteArray> out;
+    for (int piece = 0; piece < 8; ++piece) {
+        QByteArray message(2, 0);
+        message[0] = char(0xF1);
+        message[1] = char((piece << 4) | values[piece]);
+        out << message;
+    }
+    return out;
 }
 
 } // namespace
@@ -187,6 +203,71 @@ private slots:
     }
 
     // Recording, nudging and playing cues from the operator window.
+    // Following MIDI timecode instead of a track: the choice is kept with the
+    // song, recording times each slide by the timecode from the start
+    // timecode, and Play sends the output a timeline that follows it.
+    void recordAgainstMidiTimecode()
+    {
+        test::OperatorHarness ui;
+        QString error;
+        QVERIFY2(ui.load(true, &error), qPrintable(error));
+        ui.controller->selectItem(2); // Amazing Grace
+        CueController &cues = *ui.cues;
+        QVERIFY(!cues.followTimecode());
+        cues.setFollowTimecode(true);
+        QVERIFY(cues.followTimecode());
+        QCOMPARE(cues.timecodeStart(), QStringLiteral("01:00:00:00"));
+        cues.setTimecodeStart(QStringLiteral("not a time"));
+        QCOMPARE(cues.timecodeStart(), QStringLiteral("01:00:00:00"));
+        cues.setTimecodeStart(QStringLiteral("02:00:00:00"));
+        cues.setTimecodeDevice(QStringLiteral("Lighting desk"));
+
+        QVERIFY(cues.startRecording());
+        // Before any timecode a slide cannot be timed.
+        QVERIFY(ui.controller->goLive(0));
+        QCOMPARE(qobject_cast<RowModel *>(cues.cues())->rowCount(), 0);
+        QVERIFY(cues.message().contains(QStringLiteral("No timecode")));
+        // The desk runs from 02:00:05:00.
+        for (const QByteArray &m : quarterFrames25(2, 0, 5, 0))
+            cues.feedMidi(m);
+        QVERIFY(cues.position().startsWith(QStringLiteral("02:00:05:")));
+        QVERIFY(ui.controller->goLive(1));
+        for (const QByteArray &m : quarterFrames25(2, 0, 9, 10))
+            cues.feedMidi(m);
+        QVERIFY(ui.controller->next());
+        cues.stopRecording();
+        auto *rows = qobject_cast<RowModel *>(cues.cues());
+        QCOMPARE(rows->rowCount(), 2);
+        // 02:00:05:00 + 1.75 frames (+ the moments in between).
+        QVERIFY2(rows->get(0).value("ms").toLongLong() >= 5070 && rows->get(0).value("ms").toLongLong() < 5300,
+                 qPrintable(rows->get(0).value("time").toString()));
+        QVERIFY(rows->get(1).value("ms").toLongLong() >= 9470 && rows->get(1).value("ms").toLongLong() < 9700);
+
+        // Kept with the song, and what the output gets.
+        const auto stored = Repository<Presentation>(ui.database()).get(ui.controller->selectedPresentationId());
+        const QJsonObject kept = stored.value().metadata.value("timeline").toObject();
+        QCOMPARE(kept.value("source").toString(), QStringLiteral("mtc"));
+        QCOMPARE(kept.value("mtcStart").toString(), QStringLiteral("02:00:00:00"));
+        QCOMPARE(kept.value("mtcDevice").toString(), QStringLiteral("Lighting desk"));
+        const QJsonObject live = cues.liveTimeline();
+        QCOMPARE(live.value("source").toString(), QStringLiteral("mtc"));
+        QVERIFY(!live.contains("audio"));
+        QVERIFY(cues.play());
+        const Content onAir = ui.show.scene().layer(Layer::Slide).content;
+        QCOMPARE(onAir.kind, Content::Kind::Cued);
+        QCOMPARE(onAir.timeline.value("source").toString(), QStringLiteral("mtc"));
+        QCOMPARE(onAir.timeline.value("mtcStart").toString(), QStringLiteral("02:00:00:00"));
+        QCOMPARE(onAir.timeline.value("mtcDevice").toString(), QStringLiteral("Lighting desk"));
+        QVERIFY(!onAir.timeline.contains("audio"));
+        QCOMPARE(onAir.timeline.value("cues").toArray().size(), 2);
+        cues.stop();
+
+        // Back to a track: the timecode settings stay for next time.
+        cues.setFollowTimecode(false);
+        QVERIFY(!cues.liveTimeline().contains("source"));
+        QCOMPARE(cues.timecodeStart(), QStringLiteral("02:00:00:00"));
+    }
+
     void recordAndPlay()
     {
         test::OperatorHarness ui;

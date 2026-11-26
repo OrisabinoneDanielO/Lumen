@@ -4,6 +4,7 @@
 #include "operatorcontroller.h"
 
 #include "lumen/core/data/repository.h"
+#include "lumen/core/midi/mtcinput.h"
 
 #include <QAudioOutput>
 #include <QFileInfo>
@@ -51,7 +52,65 @@ bool CueController::playing() const
 
 QString CueController::position() const
 {
-    return m_recording ? timeText(recordingPosition()) : QString();
+    if (!m_recording)
+        return QString();
+    if (followTimecode() && !m_clock) {
+        const auto at = m_mtc.position(m_mtcClock.elapsed());
+        return at ? core::show::formatTimecode(*at, m_mtc.rate()) : tr("Waiting for timecode");
+    }
+    return timeText(recordingPosition());
+}
+
+void CueController::setFollowTimecode(bool on)
+{
+    if (on == followTimecode() || m_presentationId.isEmpty())
+        return;
+    if (on) {
+        m_timeline.insert("source", QStringLiteral("mtc"));
+        if (!m_timeline.contains("mtcStart"))
+            m_timeline.insert("mtcStart", QStringLiteral("01:00:00:00"));
+    } else {
+        m_timeline.remove("source");
+    }
+    save();
+}
+
+void CueController::setTimecodeDevice(const QString &device)
+{
+    if (device.trimmed() == timecodeDevice())
+        return;
+    m_timeline.insert("mtcDevice", device.trimmed());
+    save();
+}
+
+QString CueController::timecodeStart() const
+{
+    return m_timeline.value("mtcStart").toString(QStringLiteral("01:00:00:00"));
+}
+
+void CueController::setTimecodeStart(const QString &start)
+{
+    // Any rate's frames up to 29 are accepted here; the received rate decides.
+    if (!core::show::parseTimecode(start, core::show::MtcRate::Fps30)) {
+        m_message = tr("Type the start as hours:minutes:seconds:frames, e.g. 01:00:00:00");
+        emit changed();
+        return;
+    }
+    m_timeline.insert("mtcStart", start.trimmed());
+    m_message.clear();
+    save();
+}
+
+bool CueController::timecodeAvailable()
+{
+    return core::midi::MtcInput::available();
+}
+
+void CueController::feedMidi(const QByteArray &bytes)
+{
+    if (!m_mtcClock.isValid())
+        m_mtcClock.start();
+    m_mtc.feed(reinterpret_cast<const unsigned char *>(bytes.constData()), std::size_t(bytes.size()), m_mtcClock.elapsed());
 }
 
 // Keeps to the item selected in the operator window.
@@ -171,6 +230,13 @@ qint64 CueController::recordingPosition() const
 {
     if (m_clock)
         return m_clock();
+    if (followTimecode()) {
+        // Timecode time from the start timecode; -1 before any timecode.
+        const auto at = m_mtc.position(m_mtcClock.elapsed());
+        if (!at)
+            return -1;
+        return *at - core::show::parseTimecode(timecodeStart(), m_mtc.rate()).value_or(0);
+    }
     if (m_player)
         return m_player->position();
     return m_elapsed.isValid() ? m_elapsed.elapsed() : 0;
@@ -184,7 +250,15 @@ bool CueController::startRecording()
     m_timeline.insert("cues", QJsonArray{});
     m_recording = true;
     m_elapsed.start();
-    if (!m_trackPath.isEmpty() && !m_clock) {
+    if (followTimecode()) {
+        m_mtc = {};
+        m_mtcClock.start();
+        if (!m_clock) {
+            m_mtcInput = std::make_unique<core::midi::MtcInput>(timecodeDevice());
+            connect(m_mtcInput.get(), &core::midi::MtcInput::midi, this,
+                    [this](const QByteArray &bytes) { feedMidi(bytes); });
+        }
+    } else if (!m_trackPath.isEmpty() && !m_clock) {
         m_player = std::make_unique<QMediaPlayer>();
         m_output = std::make_unique<QAudioOutput>();
         m_player->setAudioOutput(m_output.get());
@@ -192,7 +266,8 @@ bool CueController::startRecording()
         m_player->play();
     }
     m_tick.start();
-    m_message = tr("Recording: send each slide live when its moment comes");
+    m_message = followTimecode() ? tr("Recording: start the timecode, then send each slide live when its moment comes")
+                                 : tr("Recording: send each slide live when its moment comes");
     refresh();
     return true;
 }
@@ -203,6 +278,7 @@ void CueController::stopRecording()
         return;
     m_recording = false;
     m_tick.stop();
+    m_mtcInput.reset();
     if (m_player)
         m_player->stop();
     m_player.reset();
@@ -215,8 +291,14 @@ void CueController::onSlideSent(int index)
 {
     if (!m_recording)
         return;
+    const qint64 at = recordingPosition();
+    if (at < 0) {
+        m_message = tr("No timecode yet: start the timecode, then send the slide again");
+        emit changed();
+        return;
+    }
     QJsonArray cues = m_timeline.value("cues").toArray();
-    cues.append(QJsonObject{{"ms", recordingPosition()}, {"slide", index}});
+    cues.append(QJsonObject{{"ms", at}, {"slide", index}});
     m_timeline.insert("cues", cues);
     refresh();
 }
@@ -245,6 +327,12 @@ void CueController::removeCue(int row)
 
 QJsonObject CueController::liveTimeline() const
 {
+    if (followTimecode()) {
+        return {{"source", "mtc"},
+                {"mtcDevice", timecodeDevice()},
+                {"mtcStart", timecodeStart()},
+                {"cues", m_timeline.value("cues").toArray()}};
+    }
     return {{"audio", m_trackPath}, {"cues", m_timeline.value("cues").toArray()}};
 }
 

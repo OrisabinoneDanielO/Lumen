@@ -1,4 +1,5 @@
 #include "cuerunner.h"
+#include "lumen/core/midi/mtcinput.h"
 
 #include <QAudioOutput>
 #include <QMediaPlayer>
@@ -34,6 +35,19 @@ CueRunner::CueRunner(const QJsonObject &timeline, std::function<qint64()> clock,
     }
     std::stable_sort(m_cues.begin(), m_cues.end(), [](const auto &a, const auto &b) { return a.first < b.first; });
     anchor(m_offsetMs, nowMs);
+
+    if (timeline.value("source").toString() == QLatin1String("mtc")) {
+        // The other device's timecode keeps time; nothing plays here.
+        m_timecode = true;
+        m_mtcStart = timeline.value("mtcStart").toString();
+        m_audioState = QStringLiteral("timecode-waiting");
+        anchor(-1, nowMs); // nothing until the timecode says where it is
+        if (m_playing && !timeline.value("testFeed").toBool()) {
+            m_mtcInput = std::make_unique<core::midi::MtcInput>(timeline.value("mtcDevice").toString());
+            connect(m_mtcInput.get(), &core::midi::MtcInput::midi, this, [this](const QByteArray &bytes) { feedMidi(bytes, m_clock()); });
+        }
+        return;
+    }
 
     const QString audio = timeline.value("audio").toString();
     if (audio.isEmpty()) {
@@ -78,7 +92,10 @@ CueRunner::~CueRunner()
 bool CueRunner::sameRun(const QJsonObject &timeline) const
 {
     return timeline.value("id") == m_timeline.value("id") && timeline.value("playing") == m_timeline.value("playing")
-           && timeline.value("offsetMs") == m_timeline.value("offsetMs");
+           && timeline.value("offsetMs") == m_timeline.value("offsetMs")
+           && timeline.value("source") == m_timeline.value("source")
+           && timeline.value("mtcStart") == m_timeline.value("mtcStart")
+           && timeline.value("mtcDevice") == m_timeline.value("mtcDevice");
 }
 
 void CueRunner::anchor(qint64 positionMs, qint64 nowMs)
@@ -138,9 +155,54 @@ void CueRunner::onAudioPosition(qint64 audioMs)
     }
 }
 
+void CueRunner::feedMidi(const QByteArray &bytes, qint64 nowMs)
+{
+    if (!m_timecode || !m_playing)
+        return;
+    if (!m_mtc.feed(reinterpret_cast<const unsigned char *>(bytes.constData()), std::size_t(bytes.size()), nowMs))
+        return;
+    const qint64 start = core::show::parseTimecode(m_mtcStart, m_mtc.rate()).value_or(0);
+    const qint64 position = *m_mtc.position(nowMs) - start;
+    const bool located = m_mtc.takeJump();
+    if (!m_mtc.running(nowMs)) {
+        // A full-frame locate: stand at that time until the timecode runs.
+        anchor(position, nowMs);
+        m_running = false;
+        m_jumped = true;
+        m_audioState = QStringLiteral("timecode-stopped");
+        return;
+    }
+    if (!m_running || located || std::abs(position - positionMs(nowMs)) > jumpMs) {
+        anchor(position, nowMs);
+        m_jumped = m_jumped || located || m_running;
+        if (!m_running)
+            m_runningSince = nowMs;
+        m_running = true;
+    } else {
+        // Quarter frames come every two frames; ease out the jitter.
+        const qint64 error = position - positionMs(nowMs);
+        if (nowMs - m_runningSince > 1000)
+            m_worstSync = std::max(m_worstSync, std::abs(error));
+        m_anchorPos += error / 4;
+    }
+    m_audioState = QStringLiteral("timecode");
+}
+
+QString CueRunner::timecodeText(qint64 nowMs) const
+{
+    const auto position = m_mtc.position(nowMs);
+    return position ? core::show::formatTimecode(*position, m_mtc.rate()) : QString();
+}
+
 bool CueRunner::update(qint64 nowMs, int *cue)
 {
     m_lastNow = nowMs;
+    // The timecode stopped: the clock stops where it is.
+    if (m_timecode && m_running && !m_mtc.running(nowMs)) {
+        anchor(positionMs(nowMs), nowMs);
+        m_running = false;
+        m_audioState = QStringLiteral("timecode-stopped");
+    }
     if (m_audioState == QLatin1String("waiting") && nowMs - m_startNow > audioWaitMs) {
         m_audioState = QStringLiteral("unavailable");
         m_running = true;
