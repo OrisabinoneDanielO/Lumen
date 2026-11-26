@@ -18,6 +18,10 @@ Start Lumen from the Start menu, Applications or your desktop's app list (or `lu
 
 Drag the borders between the service plan, the slides, the Preview and Live column and the library to give each the room you want; double-click a border for the default. On smaller windows the toolbar shortens its labels (the F-key shortcuts still work), and Preview, Live and the Previous / Next buttons always stay in view; the layers and controls below them scroll.
 
+## Transitions
+
+The **Transition** box under Previous and Next chooses how slides and full-screen media change: **Cut** (at once), **Fade**, **Push** (the new slide slides in from the right), **Push up**, **Wipe** or **Zoom**, at Fast, Normal or Slow speed. The choice is remembered.
+
 ## Screens
 
 The first time Lumen starts with more than one screen connected (and whenever a new screen is plugged in), each screen shows its number, name and role in large type, and the **Screens** panel opens:
@@ -47,7 +51,7 @@ In Show mode, click a slide to send it live, or use the keyboard: Space or → n
 
 ## Scripture
 
-Press **Ctrl+B** (Cmd+B on macOS), type a reference such as `jn 3 16-18`, `rom 8:28-30`, `ps 23` or a translation's own book name (`Johanu 3:16`), pick a translation and press Enter. Ten free Bibles are bundled (English WEB, KJV, BSB and ASV; Yoruba, Hausa, Igbo and Swahili; French LSG; Spanish RV1909); see `bibles/README.md` for their licences. The build imports them into `bibles.db`. Other USFM or USFX Bibles can be added from a folder.
+Press **Ctrl+B** (Cmd+B on macOS): Scripture opens in a window of its own beside the operator window, and stays open, so you can keep working and look up one passage after another. Type a reference such as `jn 3 16-18`, `rom 8:28-30`, `ps 23` or a translation's own book name (`Johanu 3:16`) and pick a translation. As you type, the passage you are most likely after shows in grey (`j` shows John 1:1): **Space** takes the book, then the chapter, then the verse; **Enter** puts the passage in **Preview**, and **Shift+Enter** (or a double-click on the slide preview) puts it on the screen now. Ten free Bibles are bundled (English WEB, KJV, BSB and ASV; Yoruba, Hausa, Igbo and Swahili; French LSG; Spanish RV1909); see `bibles/README.md` for their licences. The build imports them into `bibles.db`. Other USFM or USFX Bibles can be added from a folder.
 
 ## Themes
 
@@ -59,7 +63,7 @@ Press **Ctrl+B** (Cmd+B on macOS), type a reference such as `jn 3 16-18`, `rom 8
 
 ## Media
 
-The **Media** tab in the library imports videos (`.mp4`, `.mov`, `.webm`, `.mkv` and more) and pictures. Each gets a thumbnail; videos of a minute or less are marked as loops. Click a card and it goes on the screen at once (a video starts playing; Clear Slide or F2 stops it); a media item in the service plan does the same when clicked. Pointing at a video card opens it on the output ahead of time, so it starts without a pause. Videos are decoded in the render process with hardware decoding where the system offers it. The video in Preview is opened ahead of time, so it starts at once when it goes live.
+The **Media** tab in the library imports videos (`.mp4`, `.mov`, `.webm`, `.mkv` and more) and pictures. Each gets a thumbnail; videos of a minute or less are marked as loops. Click a card to put it in **Preview**; double-click it to put it on the screen at once (a video starts playing; Clear Slide or F2 stops it). Items in the service plan and songs in the library work the same way: a click shows them, a double-click sends the first slide live. Pointing at a video card opens it on the output ahead of time, so it starts without a pause. Above the slides, **Play once** (stops on the last frame) or **Loop** (until cleared) is kept with each video; a video that is playing takes the choice at once. Videos are decoded in the render process with hardware decoding where the system offers it. The video in Preview is opened ahead of time, so it starts at once when it goes live.
 
 ## Presentations
 

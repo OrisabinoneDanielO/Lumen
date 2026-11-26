@@ -91,15 +91,34 @@ Window {
                             Accessible.role: Accessible.EditableText
                             Accessible.name: qsTr("Scripture reference")
                             onTextChanged: root.scripture.lookup(text)
-                            // Enter: in Preview. Shift+Enter: on the screen now.
+                            // The typing finished by its suggestion when it is not a
+                            // passage yet ("j" + Enter is John 1:1).
+                            function completed() {
+                                if (root.scripture.label === "" && root.scripture.suggestion !== "") {
+                                    text = root.scripture.suggestion
+                                    cursorPosition = text.length
+                                }
+                            }
+                            // Space: the next step of the suggestion (the book, then
+                            // the chapter, then the verse). Enter: in Preview.
+                            // Shift+Enter: on the screen now.
                             Keys.onPressed: event => {
-                                if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
-                                    && (event.modifiers & Qt.ShiftModifier)) {
+                                if (event.key === Qt.Key_Space && root.scripture.completionStep !== ""
+                                    && cursorPosition === text.length && selectedText === "") {
+                                    text = root.scripture.completionStep
+                                    cursorPosition = text.length
+                                    event.accepted = true
+                                } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                                           && (event.modifiers & Qt.ShiftModifier)) {
+                                    completed()
                                     root.scripture.showNow()
                                     event.accepted = true
                                 }
                             }
-                            onAccepted: root.scripture.preview()
+                            onAccepted: {
+                                completed()
+                                root.scripture.preview()
+                            }
                             Keys.onEscapePressed: root.close()
 
                             LText {
@@ -107,6 +126,19 @@ Window {
                                 verticalAlignment: Text.AlignVCenter
                                 visible: reference.text === ""
                                 text: qsTr("e.g. jn 3 16-18")
+                                color: Theme.textMuted
+                                font.pixelSize: 16
+                            }
+                            // The suggestion, in grey after the typing: the rest of
+                            // it when the typing is its start, else the whole of it.
+                            LText {
+                                objectName: "scriptureSuggestion"
+                                x: reference.contentWidth + (ghostRest ? 0 : 12)
+                                anchors.verticalCenter: parent.verticalCenter
+                                readonly property string suggestion: root.scripture.suggestion
+                                readonly property bool ghostRest: suggestion.toLowerCase().startsWith(reference.text.toLowerCase())
+                                visible: reference.text !== "" && suggestion !== "" && reference.cursorPosition === reference.text.length
+                                text: ghostRest ? suggestion.substring(reference.text.length) : "→ " + suggestion
                                 color: Theme.textMuted
                                 font.pixelSize: 16
                             }

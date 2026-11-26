@@ -114,7 +114,7 @@ The [user guide](docs/user-guide.md) explains every part. To get going:
 2. **Add songs.** In the library, **Import songs…** reads plain-text lyrics, OpenLyrics, and libraries from OpenLP, EasyWorship 6/7 and ProPresenter 5/6. **Import folder…** reads a whole folder. Sections are split into slides automatically.
 3. **Add media and slides.** The **Media** tab takes videos and pictures (as slides or looping backgrounds). The **Presentations** tab takes PowerPoint and PDF files.
 4. **Make a service plan.** Choose **Plan ▾ → New plan…** above the service plan. In the library, pick each song, media item or presentation and click **Add to plan**, then drag items into service order. **Plan ▾ → Add header…** separates parts of the service (Worship, Sermon). Everything is saved as you go, with a daily backup.
-5. **Run the service.** Click a slide to send it live, or use the keyboard:
+5. **Run the service.** Click a slide to send it live, or use the keyboard. Clicking a song, video, picture or plan item puts it in Preview; double-clicking puts it on the screen at once. The **Transition** box chooses cut, fade, push, wipe or zoom.
 
    | Key | Does |
    | --- | --- |
@@ -123,7 +123,7 @@ The [user guide](docs/user-guide.md) explains every part. To get going:
    | C, B, P, E / V and a number | jump to Chorus, Bridge, Pre-chorus, Ending / Verse *n* |
    | F1 to F5 | clear background, slide, props, messages, everything |
    | F6 / F7 | Logo / Black |
-   | Ctrl+B (Cmd+B on a Mac) | scripture: type `jn 3 16-18` and press Enter |
+   | Ctrl+B (Cmd+B on a Mac) | scripture, in its own window: type `jn 3 16-18` (or just `j` and Space to complete), Enter for Preview, Shift+Enter to show it now |
 
 6. **More:** in the toolbar, **Timers** (countdowns and clocks), **Message** (for example "Parent of 42, please come to the nursery") and **Props** (lower thirds and logos). The **Stage** and **Stream** lights beside **Main** set up a screen for the musicians and the speaker, and an output with transparency for live streams. **Plan ▾ → Remote control and MIDI…** sets up the phone remote, MIDI and OSC; **Plan ▾ → Share with other computers…** shares plans and songs on the local network. Each of these is off until you turn it on.
 

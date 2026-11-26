@@ -202,6 +202,52 @@ private slots:
             QCOMPARE(ui.controller->slides()->property("count").toInt(), 3);
         }
     }
+
+    // Typing ahead in the window: "j" shows John 1:1 in grey; Space takes
+    // the book, then the chapter; Enter takes the whole suggestion.
+    void typingAheadInTheWindow()
+    {
+        OperatorHarness ui;
+        ui.bibles = m_store.get();
+        QString error;
+        QVERIFY2(ui.load(false, &error), qPrintable(error));
+        QTest::keyClick(ui.window, Qt::Key_B, Qt::ControlModifier);
+        QTRY_VERIFY(ui.item("scriptureDialog"));
+        QQuickWindow *window = ui.item("scriptureDialog")->window();
+        QVERIFY(ui.click("translation-engwebp"));
+        QQuickItem *input = ui.item("scriptureReference");
+        input->forceActiveFocus();
+        QTRY_VERIFY(input->hasActiveFocus());
+        const auto typed = [input] { return input->property("text").toString(); };
+        QQuickItem *ghost = ui.item("scriptureSuggestion");
+        QVERIFY(ghost);
+
+        QTest::keyClick(window, 'j');
+        QTRY_VERIFY(ghost->isVisible());
+        QCOMPARE(ghost->property("text").toString(), QStringLiteral("ohn 1:1"));
+        QTest::keyClick(window, Qt::Key_Space);
+        QCOMPARE(typed(), QStringLiteral("John "));
+        QTest::keyClick(window, '3');
+        QCOMPARE(ghost->property("text").toString(), QStringLiteral(":1"));
+        QTest::keyClick(window, Qt::Key_Space);
+        QCOMPARE(typed(), QStringLiteral("John 3:"));
+        QTest::keyClick(window, '1');
+        QTest::keyClick(window, '6');
+        QCOMPARE(ui.scripture->label(), QStringLiteral("John 3:16"));
+        QVERIFY(!ghost->isVisible()); // a verse is typed: nothing to add
+        QTest::keyClick(window, Qt::Key_Space); // an ordinary space now
+        QCOMPARE(typed(), QStringLiteral("John 3:16 "));
+        QTest::keyClick(window, Qt::Key_Return);
+        QVERIFY(ui.controller->previewText().startsWith(QStringLiteral("For God so loved")));
+
+        // "j" and Enter: John 1:1.
+        input->setProperty("text", QString());
+        QTest::keyClick(window, 'j');
+        QTest::keyClick(window, Qt::Key_Return);
+        QCOMPARE(typed(), QStringLiteral("John 1:1"));
+        QCOMPARE(ui.scripture->label(), QStringLiteral("John 1:1"));
+        QVERIFY(ui.controller->previewText().startsWith(QStringLiteral("In the beginning")));
+    }
 };
 
 QTEST_MAIN(TestScriptureBundled)

@@ -288,3 +288,12 @@ After trying 0.1.0 the user asked that a chosen video start at once, found timec
 - The Cues button is hidden unless `experimental/timecodeCues` is on; the feature, its timecode following (MIDI) and tests are kept. LTC following was built on a branch (`ltc-follow`) and is parked there, not merged.
 - Panel sizes follow the window, and the borders between panels drag (double-click: default). The toolbar drops its F-key hints below 1500 px and shortens the Clear buttons below 1250 px, so all buttons and the output lights fit down to the 1024 x 640 minimum (they used to hide the output lights below 1360 px). Preview and Live shrink so the Previous / Next buttons always show. Buttons and slide thumbnails react to the pointer. `tst_mainwindow` checks the layout at five sizes.
 
+## Preview first; scripture beside the window; transitions
+
+A second round of the user's testing:
+
+- A click puts a song, video, picture, scripture or plan item in Preview; a double-click (Shift+Enter for scripture) puts it on the screen at once. This replaces one-click-live for media, which the user found too quick.
+- Scripture opens in a window of its own and stays open, so the operator window stays usable and passages can be looked up one after another. Typing ahead suggests the passage (`completeReference`): exact names and abbreviations first, then the most read book whose name starts with the typing (so `j` is John); Space takes the book, chapter and verse in turn, and types an ordinary space once a verse is typed (so `jn 3 16-18` still works).
+- Each video plays once (stopping on its last frame) or loops until cleared. The choice is the presentation's `videoLoop`, Play once by default; the import's own "short clip" flag still marks motion backgrounds.
+- Transitions: Fade, Push, Push up, Wipe and Zoom, drawn by the renderer from each layer's progress, chosen in the Transition box (which only showed "Cut" before) and remembered. Only a real change of transition changes the scene, so a cut at start sends nothing.
+

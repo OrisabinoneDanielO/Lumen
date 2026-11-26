@@ -33,6 +33,10 @@ class ScriptureController : public QObject
     Q_PROPERTY(QString previewText READ previewText NOTIFY changed)
     Q_PROPERTY(QString previewReference READ previewReference NOTIFY changed)
     Q_PROPERTY(QString addSummary READ addSummary NOTIFY changed)
+    // Typing ahead (see completeReference): the passage the typing most
+    // likely leads to, and what Space turns the typing into.
+    Q_PROPERTY(QString suggestion READ suggestion NOTIFY changed)
+    Q_PROPERTY(QString completionStep READ completionStep NOTIFY changed)
 
 public:
     explicit ScriptureController(OperatorController &op, QObject *parent = nullptr);
@@ -55,6 +59,8 @@ public:
     QString previewText() const;
     QString previewReference() const;
     QString addSummary() const { return m_addSummary; }
+    QString suggestion() const { return m_completion.suggestion; }
+    QString completionStep() const { return m_completion.step; }
 
     // The passage as slides: one or two verses each, themed, with the
     // reference and copyright in the footer. Verses too long for one slide
@@ -76,6 +82,7 @@ signals:
     void changed();
 
 private:
+    core::scripture::Completion m_completion;
     struct Source
     {
         core::scripture::BibleStore *store;
