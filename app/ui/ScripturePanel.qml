@@ -23,17 +23,73 @@ Window {
     visible: false
     color: Theme.panel
 
-    // While the typing is not a passage yet but leads to one, say how to
-    // finish it rather than show an error.
-    readonly property bool suggesting: root.scripture.label === "" && root.scripture.suggestion !== ""
-    readonly property string hint: qsTr("Space to complete, Enter for %1").arg(root.scripture.suggestion)
+    // The reference as the three parts make it: "John 3:16-18". (A function,
+    // read fresh: a binding may not have caught up within a key press.)
+    function composed() {
+        const book = bookInput.text.trim()
+        if (book === "")
+            return ""
+        const chapter = chapterInput.text.trim()
+        if (chapter === "")
+            return book
+        const verse = verseInput.text.trim()
+        return verse === "" ? book + " " + chapter : book + " " + chapter + ":" + verse
+    }
+    readonly property string referenceText: root.scripture.query
+    // Only the book so far: say how to go on rather than show an error.
+    readonly property bool suggesting: chapterInput.text === "" && root.scripture.bookFor(bookInput.text) !== ""
+    readonly property string hint: qsTr("%1: Space for the chapter").arg(root.scripture.bookFor(bookInput.text))
+
+    function refresh() { root.scripture.lookup(root.composed()) }
+    // Into a part, all of it highlighted to type over.
+    function focusPart(part) {
+        part.forceActiveFocus()
+        part.selectAll()
+    }
+    // The book typed becomes its full name; on to the chapter.
+    function acceptBook() {
+        const full = root.scripture.bookFor(bookInput.text)
+        if (full !== "")
+            bookInput.text = full
+        focusPart(chapterInput)
+        refresh()
+    }
+    // Keys every part shares: Up to the book, Enter for Preview, Shift+Enter
+    // to show it now, Escape to close.
+    function handleCommonKey(event) {
+        if (event.key === Qt.Key_Up) {
+            focusPart(bookInput)
+            return true
+        }
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            if (bookInput.activeFocus && root.scripture.bookFor(bookInput.text) !== "")
+                bookInput.text = root.scripture.bookFor(bookInput.text)
+            // Only a book: its first verse ("j" and Enter is John 1:1).
+            if (chapterInput.text === "") {
+                chapterInput.text = "1"
+                if (verseInput.text === "")
+                    verseInput.text = "1"
+            }
+            refresh()
+            if (event.modifiers & Qt.ShiftModifier)
+                root.scripture.showNow()
+            else
+                root.scripture.preview()
+            return true
+        }
+        if (event.key === Qt.Key_Escape) {
+            root.close()
+            return true
+        }
+        return false
+    }
 
     function show() {
         visible = true
         raise()
         requestActivate()
-        reference.selectAll()
-        reference.forceActiveFocus()
+        // The last passage stays; the book is highlighted for a new one.
+        focusPart(bookInput)
     }
     function close() {
         visible = false
@@ -72,7 +128,7 @@ Window {
                     radius: 8
                     color: Theme.window
                     border.width: 2
-                    border.color: root.scripture.error !== "" && reference.text !== "" && !root.suggesting ? Theme.live : Theme.next
+                    border.color: root.scripture.error !== "" && root.referenceText !== "" && !root.suggesting ? Theme.live : Theme.next
 
                     RowLayout {
                         anchors.fill: parent
@@ -84,75 +140,194 @@ Window {
                             font.pixelSize: 12
                             color: Theme.textMuted
                         }
-                        TextInput {
-                            id: reference
-                            objectName: "scriptureReference"
+                        // The reference in three parts that stay put: book,
+                        // chapter, verse(s). Typing the book fills in its name
+                        // ("j" -> John); Space, Tab or Right moves on to the
+                        // chapter and then the verse, each highlighted to type
+                        // over; Left goes back one part, Up to the book.
+                        RowLayout {
                             Layout.fillWidth: true
-                            color: Theme.text
-                            selectionColor: Theme.next
-                            font.family: Theme.fontFamily
-                            font.pixelSize: 16
-                            clip: true
-                            Accessible.role: Accessible.EditableText
-                            Accessible.name: qsTr("Scripture reference")
-                            onTextChanged: root.scripture.lookup(text)
-                            // The typing finished by its suggestion when it is not a
-                            // passage yet ("j" + Enter is John 1:1).
-                            function completed() {
-                                if (root.scripture.label === "" && root.scripture.suggestion !== "") {
-                                    text = root.scripture.suggestion
-                                    cursorPosition = text.length
-                                }
-                            }
-                            // Space: the next step of the suggestion (the book, then
-                            // the chapter, then the verse). Enter: in Preview.
-                            // Shift+Enter: on the screen now.
-                            Keys.onPressed: event => {
-                                if (event.key === Qt.Key_Space && root.scripture.completionStep !== ""
-                                    && cursorPosition === text.length && selectedText === "") {
-                                    text = root.scripture.completionStep
-                                    cursorPosition = text.length
-                                    event.accepted = true
-                                } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
-                                           && (event.modifiers & Qt.ShiftModifier)) {
-                                    completed()
-                                    root.scripture.showNow()
-                                    event.accepted = true
-                                }
-                            }
-                            onAccepted: {
-                                completed()
-                                root.scripture.preview()
-                            }
-                            Keys.onEscapePressed: root.close()
+                            spacing: 0
 
-                            LText {
-                                anchors.fill: parent
-                                verticalAlignment: Text.AlignVCenter
-                                visible: reference.text === ""
-                                text: qsTr("e.g. jn 3 16-18")
-                                color: Theme.textMuted
+                            TextInput {
+                                id: bookInput
+                                objectName: "scriptureReference"
+                                Layout.preferredWidth: Math.max(contentWidth + 2, 40)
+                                Layout.leftMargin: 5
+                                color: Theme.text
+                                selectionColor: Theme.next
+                                selectedTextColor: Theme.text
+                                font.family: Theme.fontFamily
                                 font.pixelSize: 16
+                                Accessible.role: Accessible.EditableText
+                                Accessible.name: qsTr("Book")
+                                // Each part looks like one: a quiet field, brighter
+                                // while it has the keyboard.
+                                Rectangle {
+                                    z: -1
+                                    anchors.fill: parent
+                                    anchors.leftMargin: -5
+                                    anchors.rightMargin: -5
+                                    anchors.topMargin: -4
+                                    anchors.bottomMargin: -4
+                                    radius: 5
+                                    color: parent.activeFocus ? Theme.selected : Theme.raised
+                                    border.color: parent.activeFocus ? Theme.next : "transparent"
+                                }
+                                property bool skipFill: false
+                                // Fills in the rest of the book's name, highlighted,
+                                // so typing on simply replaces it.
+                                onTextEdited: {
+                                    if (skipFill) {
+                                        skipFill = false
+                                    } else {
+                                        const full = root.scripture.bookFor(text)
+                                        const n = text.length
+                                        if (full !== "" && n < full.length && full.toLowerCase().startsWith(text.toLowerCase())) {
+                                            text = full
+                                            select(n, full.length)
+                                        }
+                                    }
+                                    root.refresh()
+                                }
+                                Keys.onPressed: event => {
+                                    if (event.key === Qt.Key_Backspace || event.key === Qt.Key_Delete) {
+                                        skipFill = true
+                                    } else if (event.key === Qt.Key_Space || event.key === Qt.Key_Tab
+                                               || (event.key === Qt.Key_Right && (selectedText !== "" || cursorPosition === text.length))) {
+                                        root.acceptBook()
+                                        event.accepted = true
+                                    } else if (/^[0-9]$/.test(event.text) && /[A-Za-z\u00C0-\u024F\u1E00-\u1EFF]/.test(text)) {
+                                        // "jn3": the number is the chapter.
+                                        root.acceptBook()
+                                        chapterInput.text = event.text
+                                        root.refresh()
+                                        event.accepted = true
+                                    } else if (root.handleCommonKey(event)) {
+                                        event.accepted = true
+                                    }
+                                }
+
+                                LText {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    visible: bookInput.text === ""
+                                    text: qsTr("Book")
+                                    color: Theme.textMuted
+                                    font.pixelSize: 16
+                                }
                             }
-                            // The suggestion, in grey after the typing: the rest of
-                            // it when the typing is its start, else the whole of it.
+                            // An abbreviation ("jn"): the book it means.
                             LText {
                                 objectName: "scriptureSuggestion"
-                                x: reference.contentWidth + (ghostRest ? 0 : 12)
-                                anchors.verticalCenter: parent.verticalCenter
-                                readonly property string suggestion: root.scripture.suggestion
-                                readonly property bool ghostRest: suggestion.toLowerCase().startsWith(reference.text.toLowerCase())
-                                visible: reference.text !== "" && suggestion !== "" && reference.cursorPosition === reference.text.length
-                                text: ghostRest ? suggestion.substring(reference.text.length) : "→ " + suggestion
+                                readonly property string full: bookInput.activeFocus ? root.scripture.bookFor(bookInput.text) : ""
+                                visible: full !== "" && !full.toLowerCase().startsWith(bookInput.text.toLowerCase())
+                                text: "→ " + full + "  "
                                 color: Theme.textMuted
                                 font.pixelSize: 16
                             }
+                            TextInput {
+                                id: chapterInput
+                                objectName: "scriptureChapter"
+                                Layout.preferredWidth: Math.max(contentWidth + 2, 12)
+                                Layout.leftMargin: 14
+                                color: Theme.text
+                                selectionColor: Theme.next
+                                selectedTextColor: Theme.text
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 16
+                                validator: RegularExpressionValidator { regularExpression: /[0-9]{0,3}/ }
+                                Accessible.role: Accessible.EditableText
+                                Accessible.name: qsTr("Chapter")
+                                // Each part looks like one: a quiet field, brighter
+                                // while it has the keyboard.
+                                Rectangle {
+                                    z: -1
+                                    anchors.fill: parent
+                                    anchors.leftMargin: -5
+                                    anchors.rightMargin: -5
+                                    anchors.topMargin: -4
+                                    anchors.bottomMargin: -4
+                                    radius: 5
+                                    color: parent.activeFocus ? Theme.selected : Theme.raised
+                                    border.color: parent.activeFocus ? Theme.next : "transparent"
+                                }
+                                onTextEdited: root.refresh()
+                                Keys.onPressed: event => {
+                                    if (event.key === Qt.Key_Space || event.key === Qt.Key_Tab || event.key === Qt.Key_Right
+                                        || event.text === ":" || event.text === ".") {
+                                        root.focusPart(verseInput)
+                                        event.accepted = true
+                                    } else if (event.key === Qt.Key_Left || (event.key === Qt.Key_Backspace && text === "")) {
+                                        root.focusPart(bookInput)
+                                        event.accepted = true
+                                    } else if (root.handleCommonKey(event)) {
+                                        event.accepted = true
+                                    }
+                                }
+                                LText {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    visible: chapterInput.text === ""
+                                    text: "1"
+                                    color: Theme.border
+                                    font.pixelSize: 16
+                                }
+                            }
+                            LText {
+                                Layout.leftMargin: 7
+                                Layout.rightMargin: 7
+                                text: ":"
+                                color: Theme.textMuted
+                                font.pixelSize: 16
+                            }
+                            TextInput {
+                                id: verseInput
+                                objectName: "scriptureVerse"
+                                Layout.preferredWidth: Math.max(contentWidth + 2, 28)
+                                color: Theme.text
+                                selectionColor: Theme.next
+                                selectedTextColor: Theme.text
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 16
+                                validator: RegularExpressionValidator { regularExpression: /[0-9:\-–]{0,12}/ }
+                                Accessible.role: Accessible.EditableText
+                                Accessible.name: qsTr("Verses")
+                                // Each part looks like one: a quiet field, brighter
+                                // while it has the keyboard.
+                                Rectangle {
+                                    z: -1
+                                    anchors.fill: parent
+                                    anchors.leftMargin: -5
+                                    anchors.rightMargin: -5
+                                    anchors.topMargin: -4
+                                    anchors.bottomMargin: -4
+                                    radius: 5
+                                    color: parent.activeFocus ? Theme.selected : Theme.raised
+                                    border.color: parent.activeFocus ? Theme.next : "transparent"
+                                }
+                                onTextEdited: root.refresh()
+                                Keys.onPressed: event => {
+                                    if (event.key === Qt.Key_Left || (event.key === Qt.Key_Backspace && text === "")) {
+                                        root.focusPart(chapterInput)
+                                        event.accepted = true
+                                    } else if (root.handleCommonKey(event)) {
+                                        event.accepted = true
+                                    }
+                                }
+                                LText {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    visible: verseInput.text === ""
+                                    text: qsTr("all")
+                                    color: Theme.border
+                                    font.pixelSize: 16
+                                }
+                            }
+                            Item { Layout.fillWidth: true }
                         }
                         LText {
                             objectName: "scriptureLabel"
                             Layout.maximumWidth: 320
                             text: root.suggesting ? root.hint
-                                  : root.scripture.error !== "" && reference.text !== "" ? root.scripture.error
+                                  : root.scripture.error !== "" && root.referenceText !== "" ? root.scripture.error
                                                                                        : root.scripture.label
                             color: root.scripture.error !== "" && !root.suggesting ? Theme.warnText : Theme.textMuted
                             font.pixelSize: 12
@@ -219,7 +394,7 @@ Window {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 root.scripture.selectTranslation(chip.index)
-                                reference.forceActiveFocus()
+                                verseInput.forceActiveFocus()
                             }
                         }
                     }
@@ -284,7 +459,7 @@ Window {
                         LText {
                             width: parent.width
                             visible: root.scripture.verses.length === 0
-                            text: reference.text === "" ? qsTr("Type a reference above, e.g. John 3:16-18 or ps 23.")
+                            text: root.referenceText === "" ? qsTr("Type a book above (j for John), then the chapter and verse.")
                                   : root.suggesting ? root.hint
                                   : root.scripture.error
                             wrapMode: Text.WordWrap
@@ -400,7 +575,7 @@ Window {
                                 variant: root.scripture.versesPerSlide === modelData ? "primary" : "default"
                                 onClicked: {
                                     root.scripture.versesPerSlide = modelData
-                                    reference.forceActiveFocus()
+                                    verseInput.forceActiveFocus()
                                 }
                             }
                         }

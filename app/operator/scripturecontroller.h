@@ -68,6 +68,9 @@ public:
     const ItemView &item() const { return m_item; }
 
     Q_INVOKABLE void lookup(const QString &text);
+    // The book a typing means, by its name in the chosen translation ("j" ->
+    // "John", "1 c" -> "1 Corinthians"); empty if none.
+    Q_INVOKABLE QString bookFor(const QString &typed) const;
     Q_INVOKABLE void selectTranslation(int index) { setTranslation(index); }
     // Sends the first slide live and shows the passage in the slide grid.
     Q_INVOKABLE bool showNow();
