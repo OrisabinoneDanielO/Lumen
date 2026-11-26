@@ -259,7 +259,7 @@ set_tests_properties(lumen_check_install PROPERTIES
 
 # Speed checks against the reference hardware (support/timing.h): CI's macOS
 # job runs these separately, as advisory.
-set_tests_properties(tst_render_scene tst_video_start tst_rehearsal tst_timecode PROPERTIES LABELS timing)
+set_tests_properties(tst_render_scene tst_video_start tst_video_soak tst_rehearsal tst_timecode PROPERTIES LABELS timing)
 
 # The screen setup: which screen is the main output and which the stage
 # display, on three virtual screens; the renderer moves and labels itself.

@@ -1,3 +1,4 @@
+#include "support/timing.h"
 #include "lumen/core/render/renderlink.h"
 #include "lumen/core/show/scene.h"
 #include "lumen/core/show/textstyle.h"
@@ -39,6 +40,7 @@ class TestVideoSoak : public QObject
 private slots:
     void loopPlaysWithoutDroppedFrames()
     {
+        LUMEN_TIMING_CHECK();
         const int seconds = qEnvironmentVariableIntValue("LUMEN_SOAK_SECONDS") > 0
                                 ? qEnvironmentVariableIntValue("LUMEN_SOAK_SECONDS") : 120;
         const bool requireHardware = qEnvironmentVariableIntValue("LUMEN_REQUIRE_HW") == 1;
