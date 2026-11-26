@@ -34,6 +34,7 @@ qt_add_qml_module(lumen_render_lib
         Stage.qml
         LayerStack.qml
         StreamScene.qml
+        IdentifyLabel.qml
 )
 # The stage display uses the operator UI's font (Inter, SIL OFL 1.1, see
 # app/ui/fonts/OFL.txt), as in design/mockups/Stage.html.

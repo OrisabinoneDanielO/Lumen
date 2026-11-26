@@ -260,3 +260,13 @@ set_tests_properties(lumen_check_install PROPERTIES
 # Speed checks against the reference hardware (support/timing.h): CI's macOS
 # job runs these separately, as advisory.
 set_tests_properties(tst_render_scene tst_video_start tst_rehearsal tst_timecode PROPERTIES LABELS timing)
+
+# The screen setup: which screen is the main output and which the stage
+# display, on three virtual screens; the renderer moves and labels itself.
+lumen_add_test(tst_screens tst_screens.cpp operatorharness.h)
+target_link_libraries(tst_screens PRIVATE lumen_ui lumen_uiplugin Lumen::Operator lumen_test_support Lumen::RenderLink Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(tst_screens PRIVATE
+    LUMEN_RENDER_PATH="$<TARGET_FILE:lumen-render>"
+    LUMEN_APP_PATH="$<TARGET_FILE:lumen>")
+add_dependencies(tst_screens lumen-render lumen)
+set_tests_properties(tst_screens PROPERTIES TIMEOUT 120)

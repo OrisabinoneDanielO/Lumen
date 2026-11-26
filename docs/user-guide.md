@@ -14,9 +14,20 @@ Step-by-step instructions for each system are in the [README](../README.md#insta
 
 Start Lumen from the Start menu, Applications or your desktop's app list (or `lumen` in a terminal). The first time, the library is empty: import songs (from files or another program), add media and decks, and make a plan for the service. The bundled Bibles are there from the start.
 
+## Screens
+
+The first time Lumen starts with more than one screen connected (and whenever a new screen is plugged in), each screen shows its number, name and role in large type, and the **Screens** panel opens:
+
+- The screen with the operator window is marked **this screen**.
+- For each other screen choose **Main output** (the audience), **Stage** (the stage display: current and next slide, clock, timers and messages) or **Not used**. Each role goes to one screen; giving it to another screen takes it from the first.
+- The outputs move as you choose. Giving a screen the Stage role turns the stage display on; taking it away turns it off.
+- **Done** closes the panel. Lumen remembers the roles for this set of screens and puts the outputs back on them at the next start without asking.
+
+Open it again any time with **Plan ▾ → Screens…**.
+
 ## The audience output
 
-The audience output runs in its own process, `lumen-render`, so a crash in the operator UI never freezes the screen. It starts with the app: with one screen it opens as a window; with more it goes fullscreen on the first screen that is not the operator's (`--render-option=--screen=N` to choose). Click **Main** in the toolbar to turn it off or on (remembered), or start with `--no-output`.
+The audience output runs in its own process, `lumen-render`, so a crash in the operator UI never freezes the screen. It starts with the app, fullscreen on the screen chosen in **Screens** (at first, the first screen that is not the operator's); with one screen it opens as a window. `--render-option=--screen=N` overrides the choice. Click **Main** in the toolbar to turn it off or on (remembered), or start with `--no-output`.
 
 ## Running a service
 

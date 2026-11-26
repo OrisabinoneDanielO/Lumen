@@ -273,4 +273,9 @@ Window {
             }
         }
     }
+
+    // While the operator sets up the screens: which screen this is.
+    IdentifyLabel {
+        identify: stageWindow.scene.identify
+    }
 }

@@ -6,7 +6,10 @@
 #include "lumen/core/show/scene.h"
 
 #include <QCoreApplication>
+#include <QGuiApplication>
 #include <QLocalSocket>
+#include <QQuickWindow>
+#include <QScreen>
 #include <QTimer>
 
 namespace lumen::render {
@@ -121,6 +124,32 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
         return okReply();
     }
 
+    if (command == QLatin1String("identify")) {
+        m_output.setIdentify(request.value(QStringLiteral("identify")).toObject());
+        return okReply();
+    }
+
+    // Moves the window to screen "index" (fullscreen), or to a window on the
+    // operator's screen with "windowed": true. The scene stays as it is.
+    if (command == QLatin1String("screen")) {
+        if (m_output.kind() == OutputWindow::Kind::Stream)
+            return errorReply(QStringLiteral("a stream output has no screen"));
+        const QList<QScreen *> screens = QGuiApplication::screens();
+        if (request.value(QStringLiteral("windowed")).toBool()) {
+            m_output.place(QGuiApplication::primaryScreen(), false);
+            return okReply();
+        }
+        const int index = request.value(QStringLiteral("index")).toInt(-1);
+        if (index < 0 || index >= screens.size())
+            return errorReply(QStringLiteral("There is no screen %1").arg(index));
+        // Already there: nothing to do, so the picture does not flicker.
+        if (QQuickWindow *window = m_output.window();
+            window && window->screen() == screens.at(index) && window->visibility() == QWindow::FullScreen)
+            return okReply();
+        m_output.place(screens.at(index), true);
+        return okReply();
+    }
+
     if (command == QLatin1String("stage")) {
         if (m_output.kind() != OutputWindow::Kind::Stage)
             return errorReply(QStringLiteral("\"stage\" is for stage displays (lumen-render --stage)"));
@@ -194,6 +223,7 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
                         {QStringLiteral("stream"), m_output.streamStatus()},
                         {QStringLiteral("timeline"), timeline},
                         {QStringLiteral("screen"), m_output.screenName()},
+                        {QStringLiteral("identify"), m_output.identify()},
                         {QStringLiteral("server"), m_server.serverName()}});
     }
 

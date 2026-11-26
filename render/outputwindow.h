@@ -74,6 +74,9 @@ public:
 
     // The stage display's state (stage windows only).
     void setStage(const QJsonObject &stage) { m_model.setStage(stage); }
+    // The screen-setup label (empty object: none).
+    void setIdentify(const QJsonObject &identify) { m_model.setIdentify(identify); }
+    QJsonObject identify() const { return QJsonObject::fromVariantMap(m_model.identify()); }
     // Test support: the text of every visible item whose name starts with
     // `prefix`, by name.
     QVariantMap visibleTexts(const QString &prefix) const;
