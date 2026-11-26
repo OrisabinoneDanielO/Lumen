@@ -312,6 +312,43 @@ private slots:
 #endif
     }
 
+    // The app itself, first start with these screens: the setup opens by
+    // itself, so the main output (on the projector) shows its label.
+    void appAsksOnNewScreens()
+    {
+#if !defined(Q_OS_LINUX)
+        QSKIP("the app's settings can only be redirected on Linux");
+#else
+        QTemporaryDir home;
+        QVERIFY(home.isValid());
+        const QString server = QStringLiteral("lumen-screens-new-") + QUuid::createUuid().toString(QUuid::Id128).left(12);
+        QProcess lumen;
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        env.insert(QStringLiteral("XDG_CONFIG_HOME"), home.filePath(QStringLiteral("config")));
+        env.insert(QStringLiteral("XDG_DATA_HOME"), home.filePath(QStringLiteral("data")));
+        lumen.setProcessEnvironment(env);
+        lumen.setProcessChannelMode(QProcess::ForwardedErrorChannel);
+        lumen.start(QStringLiteral(LUMEN_APP_PATH),
+                    {QStringLiteral("--render-server=%1").arg(server),
+                     QStringLiteral("--render-executable=%1").arg(QStringLiteral(LUMEN_RENDER_PATH)),
+                     QStringLiteral("--quit-after=15000")});
+        QVERIFY(lumen.waitForStarted());
+
+        RenderLink::Options options;
+        options.serverName = server;
+        RenderLink main(options);
+        QTRY_VERIFY_WITH_TIMEOUT(main.connectToRunning(200).ok(), 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(status(main).value("screen").toString(), QStringLiteral("Projector"), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(status(main).value("identify").toObject().value("number").toInt(), 2, 5000);
+        QCOMPARE(status(main).value("identify").toObject().value("role").toString(), QStringLiteral("Main output"));
+
+        lumen.terminate();
+        if (!lumen.waitForFinished(5000))
+            lumen.kill();
+        (void)main.quit();
+#endif
+    }
+
     void cleanupTestCase() { forgetSetups(); }
 };
 
