@@ -22,6 +22,13 @@ Rectangle {
     implicitHeight: 58
     color: Theme.panel
 
+    // Narrower windows: first the F-key hints go (the keys still work and
+    // are named for screen readers), then the Clear buttons shorten to
+    // "Clear: BG Slide Props Msg All" and the name next to the logo goes.
+    // Every button and the output lights stay on screen.
+    readonly property bool compact: width < 1500
+    readonly property bool narrow: width < 1250
+
     Rectangle {
         anchors.bottom: parent.bottom
         width: parent.width
@@ -70,6 +77,7 @@ Rectangle {
             }
             LText {
                 anchors.verticalCenter: parent.verticalCenter
+                visible: !root.narrow
                 text: "Lumen"
                 font.pixelSize: 16
                 font.bold: true
@@ -108,7 +116,7 @@ Rectangle {
         ColumnLayout {
             spacing: 2
             Layout.fillWidth: true
-            Layout.minimumWidth: 80
+            Layout.minimumWidth: root.narrow ? 40 : 80
 
             LText {
                 Layout.fillWidth: true
@@ -142,40 +150,47 @@ Rectangle {
                 onClicked: root.messageRequested()
             }
             Item { width: 6; height: 1 }
+            LText {
+                visible: root.narrow
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Clear")
+                font.pixelSize: 12
+                color: Theme.textMuted
+            }
             LButton {
                 objectName: "clearBackground"
-                text: qsTr("Clear BG"); hint: "F1"
+                text: root.narrow ? qsTr("BG") : qsTr("Clear BG"); hint: "F1"; showHint: !root.compact
                 onClicked: root.controller.clearLayer("background")
             }
             LButton {
                 objectName: "clearSlide"
-                text: qsTr("Clear Slide"); hint: "F2"
+                text: root.narrow ? qsTr("Slide") : qsTr("Clear Slide"); hint: "F2"; showHint: !root.compact
                 onClicked: root.controller.clearLayer("slide")
             }
             LButton {
                 objectName: "clearProps"
-                text: qsTr("Clear Props"); hint: "F3"
+                text: root.narrow ? qsTr("Props") : qsTr("Clear Props"); hint: "F3"; showHint: !root.compact
                 onClicked: root.controller.clearLayer("props")
             }
             LButton {
                 objectName: "clearMessages"
-                text: qsTr("Clear Msg"); hint: "F4"
+                text: root.narrow ? qsTr("Msg") : qsTr("Clear Msg"); hint: "F4"; showHint: !root.compact
                 onClicked: root.controller.clearLayer("messages")
             }
             LButton {
                 objectName: "clearAll"
-                text: qsTr("Clear All"); hint: "F5"; variant: "warn"
+                text: root.narrow ? qsTr("All") : qsTr("Clear All"); hint: "F5"; showHint: !root.compact; variant: "warn"
                 onClicked: root.controller.clearAll()
             }
             LButton {
                 objectName: "logo"
-                text: qsTr("Logo"); hint: "F6"
+                text: qsTr("Logo"); hint: "F6"; showHint: !root.compact
                 variant: root.controller.logoOn ? "primary" : "default"
                 onClicked: root.controller.toggleLogo()
             }
             LButton {
                 objectName: "black"
-                text: qsTr("Black"); hint: "F7"
+                text: qsTr("Black"); hint: "F7"; showHint: !root.compact
                 variant: root.controller.blackOn ? "primary" : "black"
                 onClicked: root.controller.toggleBlack()
             }
@@ -184,8 +199,7 @@ Rectangle {
         // Main, Stage (batch 13) and Stream (batch 15): click Main to turn
         // the output off or on, Stage or Stream for their settings.
         Row {
-            spacing: 12
-            visible: root.width >= 1360
+            spacing: root.narrow ? 8 : 12
 
             Repeater {
                 model: [
