@@ -16,6 +16,7 @@
 #include <memory>
 #include <vector>
 
+class QQuickRenderControl;
 class QQuickWindow;
 class QScreen;
 
@@ -31,13 +32,24 @@ class OutputWindow : public QObject
 public:
     // Audience: the layered scene. Stage (batch 13): the stage display, drawn
     // from a stage state (current and next slide, clock, timer, message).
-    enum class Kind { Audience, Stage };
+    // Stream (batch 15): only the Slide and Props layers, drawn off screen on
+    // transparency into a picture each frame (streamFrame), for NDI and key
+    // and fill; it has no window of its own.
+    enum class Kind { Audience, Stage, Stream };
     explicit OutputWindow(Kind kind = Kind::Audience, QObject *parent = nullptr);
     Kind kind() const { return m_kind; }
     ~OutputWindow() override;
 
     // Loads the scene. Returns false if it could not be created.
     bool create();
+
+    // Stream outputs: the picture size (before create(); 1920 x 1080 by
+    // default) and frames per second.
+    void setStreamFormat(QSize size, int fps);
+    QSize streamSize() const { return m_streamSize; }
+    // Where the stream's frames go (for status): "key and fill; NDI: ...".
+    void setStreamStatus(const QString &status) { m_streamStatus = status; }
+    QString streamStatus() const { return m_streamStatus; }
 
     // Fullscreen: borderless, always on top, no cursor, covering the screen.
     // Windowed: an ordinary window of windowedSize, centred on the screen.
@@ -88,11 +100,26 @@ public:
     QImage grab();
     QQuickWindow *window() const { return m_window; }
 
+signals:
+    // Stream outputs: a new frame (premultiplied ARGB, transparent where
+    // nothing is drawn), sent when the picture changes.
+    void streamFrame(const QImage &frame);
+
 private:
+    bool createStream();
+    void renderStream();
+
     void tick();
     void watchVideos();
 
     Kind m_kind;
+    std::unique_ptr<QQuickRenderControl> m_control;
+    std::unique_ptr<QQuickWindow> m_offscreen;
+    QImage m_frame;
+    QSize m_streamSize{1920, 1080};
+    int m_streamFps = 30;
+    QString m_streamStatus;
+    bool m_dirty = true;
     RenderClock m_clock;
     SceneModel m_model;
     QQmlApplicationEngine m_engine;

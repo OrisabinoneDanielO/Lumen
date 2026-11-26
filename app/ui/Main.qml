@@ -19,6 +19,8 @@ Window {
     // Props and message templates (batch 14); optional.
     property QtObject propsController: null
     property QtObject messageTemplates: null
+    // The stream output (batch 15); optional.
+    property QtObject streamController: null
 
     width: 1440
     height: 900
@@ -53,25 +55,37 @@ Window {
                 controller: window.controller
                 timerSummary: window.timerController ? window.timerController.summary : ""
                 stageConnected: window.stageController ? window.stageController.connected : false
+                streamConnected: window.streamController ? window.streamController.connected : false
+                onStreamRequested: {
+                    timersPopover.active = false
+                    messagePopover.visible = false
+                    stagePopover.active = false
+                    propsPopover.active = false
+                    streamPopover.active = window.streamController !== null && !streamPopover.active
+                }
                 onPropsRequested: {
+                    streamPopover.active = false
                     timersPopover.active = false
                     messagePopover.visible = false
                     stagePopover.active = false
                     propsPopover.active = window.propsController !== null && !propsPopover.active
                 }
                 onStageRequested: {
+                    streamPopover.active = false
                     propsPopover.active = false
                     timersPopover.active = false
                     messagePopover.visible = false
                     stagePopover.active = window.stageController !== null && !stagePopover.active
                 }
                 onTimersRequested: {
+                    streamPopover.active = false
                     propsPopover.active = false
                     messagePopover.visible = false
                     stagePopover.active = false
                     timersPopover.active = window.timerController !== null && !timersPopover.active
                 }
                 onMessageRequested: {
+                    streamPopover.active = false
                     propsPopover.active = false
                     timersPopover.active = false
                     stagePopover.active = false
@@ -174,6 +188,18 @@ Window {
             timers: window.timerController
             controller: window.controller
             onCloseRequested: timersPopover.active = false
+        }
+    }
+    Loader {
+        id: streamPopover
+        objectName: "streamPopover"
+        active: false
+        x: window.width - width - 16
+        y: 62
+        z: 50
+        sourceComponent: StreamPopover {
+            stream: window.streamController
+            onCloseRequested: streamPopover.active = false
         }
     }
     Loader {

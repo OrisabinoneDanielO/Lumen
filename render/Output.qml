@@ -16,55 +16,9 @@ Window {
     title: "Lumen Output"
     color: "#000000" // an output starts black
 
-    Repeater {
-        model: output.scene.layers
-
-        delegate: Item {
-            id: layer
-
-            required property QtObject modelData
-
-            anchors.fill: parent
-            z: modelData.index
-
-            // Outgoing content: stays fully up under an opaque fill fading in
-            // (an exact crossfade), otherwise fades out.
-            SlideContent {
-                readonly property QtObject content: layer.modelData.previous
-                anchors.fill: parent
-                kind: content.kind
-                colour: content.colour
-                text: content.text
-                image: content.image
-                style: content.style
-                footer: content.footer
-                video: content.video
-                loop: content.loop
-                volume: content.volume
-                timerText: content.kind === "timer" ? output.scene.timerText(content.timer, output.scene.wallMs) : ""
-                prop: content.prop
-                layerName: layer.modelData.name
-                opacity: layer.modelData.current.opaque ? 1.0 : 1.0 - layer.modelData.progress
-                visible: opacity > 0 && layer.modelData.progress < 1.0
-            }
-            SlideContent {
-                readonly property QtObject content: layer.modelData.current
-                anchors.fill: parent
-                kind: content.kind
-                colour: content.colour
-                text: content.text
-                image: content.image
-                style: content.style
-                footer: content.footer
-                video: content.video
-                loop: content.loop
-                volume: content.volume
-                timerText: content.kind === "timer" ? output.scene.timerText(content.timer, output.scene.wallMs) : ""
-                prop: content.prop
-                layerName: layer.modelData.name
-                opacity: layer.modelData.progress
-            }
-        }
+    LayerStack {
+        anchors.fill: parent
+        scene: output.scene
     }
 
     // Logo: the logo content on black, above every layer.
