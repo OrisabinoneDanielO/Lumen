@@ -77,13 +77,15 @@ target_link_libraries(lumen_show
 add_library(lumen_songs STATIC
     include/lumen/core/songs/songimport.h
     include/lumen/core/songs/songlibrary.h
+    include/lumen/core/songs/foreignimport.h
     src/songs/songimport.cpp
     src/songs/songlibrary.cpp
+    src/songs/foreignimport.cpp
 )
 add_library(Lumen::Songs ALIAS lumen_songs)
 target_link_libraries(lumen_songs
     PUBLIC lumen_data
-    PRIVATE lumen_warnings)
+    PRIVATE Qt6::Xml lumen_warnings)
 
 # Scripture: USFM/USFX import, the Bible store and the reference parser.
 add_library(lumen_scripture STATIC

@@ -163,6 +163,38 @@ QString sectionLabelFromHeader(const QString &line)
     return extra ? base + u' ' + number : base;
 }
 
+QString slideBreaksFromBlankLines(const QString &text)
+{
+    const QStringList lines = QString(text).replace(QStringLiteral("\r\n"), QStringLiteral("\n")).split(u'\n');
+    QStringList out;
+    bool inSection = false;
+    for (qsizetype i = 0; i < lines.size(); ++i) {
+        const QString line = lines[i].trimmed();
+        if (!sectionLabelFromHeader(line).isEmpty()) {
+            inSection = true;
+            out << QString() << line;
+            continue;
+        }
+        if (line.isEmpty()) {
+            // The next line with text decides: lyrics continue the section.
+            qsizetype next = i + 1;
+            while (next < lines.size() && lines[next].trimmed().isEmpty())
+                ++next;
+            const bool header = next < lines.size() && !sectionLabelFromHeader(lines[next].trimmed()).isEmpty();
+            if (inSection && next < lines.size() && !header) {
+                if (out.isEmpty() || out.last() != QLatin1String("---"))
+                    out << QStringLiteral("---");
+            } else {
+                out << QString();
+            }
+            i = next - 1;
+            continue;
+        }
+        out << line;
+    }
+    return out.join(u'\n');
+}
+
 // ---- plain text ------------------------------------------------------------
 //
 // Accepted layouts, freely mixed:

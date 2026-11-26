@@ -52,6 +52,7 @@ constexpr auto streamKeyFillKey = "stream/keyFill";
 constexpr auto streamNdiKey = "stream/ndi";
 constexpr auto streamNdiNameKey = "stream/ndiName";
 constexpr auto experimentalNdiKey = "experimental/ndi"; // untested: off by default
+// The slide editor: on by default since batch 16 (set to false to hide Edit).
 constexpr auto experimentalEditorKey = "experimental/editor";
 constexpr auto linesPerSlideKey = "songs/linesPerSlide"; // auto-split limit, 2 by default
 constexpr auto backupFolderKey = "backups/folder"; // default: "backups" beside the library
@@ -233,7 +234,7 @@ int main(int argc, char *argv[])
     if (auto themed = app::ensureDefaultThemes(*library); !themed.ok())
         qWarning("Default themes not set up: %s", qPrintable(themed.error().message));
 
-    app::OperatorController controller(show, settings.value(QLatin1String(experimentalEditorKey), false).toBool());
+    app::OperatorController controller(show, settings.value(QLatin1String(experimentalEditorKey), true).toBool());
     songs::SongLibrary songLibrary(*library, settings.value(QLatin1String(linesPerSlideKey), 2).toInt());
     if (auto indexed = songLibrary.indexMissing(); !indexed.ok())
         qWarning("Song search index not updated: %s", qPrintable(indexed.error().message));
