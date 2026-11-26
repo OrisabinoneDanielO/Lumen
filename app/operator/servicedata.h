@@ -47,6 +47,7 @@ struct ItemView
 {
     QString planItemId;     // empty for a song shown from the library
     QString notes;          // the plan item's notes
+    QString key;            // a song's key ("G"), for the stage display
     QString presentationId; // empty for a header
     QString kind;     // "SONG", "BIBLE", "SLIDES", "MEDIA", "TIMER"; empty for a header
     QString title;

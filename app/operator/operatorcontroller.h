@@ -129,6 +129,11 @@ public:
     using TimerSource = std::function<std::optional<QJsonObject>(const QString &name)>;
     void setTimerSource(TimerSource source) { m_timerSource = std::move(source); }
 
+    // What the stage display shows (batch 13): the item and slide on air, the
+    // slide Space sends next, the arrangement with the current part marked,
+    // and the item's key and notes. See protocol.h for the fields.
+    QJsonObject stageState() const;
+
     // Messages: a line of text in the banner, without touching the slide.
     Q_INVOKABLE bool showMessage(const QString &text);
     Q_INVOKABLE void hideMessage();

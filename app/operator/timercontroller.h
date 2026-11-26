@@ -60,12 +60,17 @@ public:
     // countdown to a time if the name is empty or unknown).
     std::optional<QJsonObject> spec(const QString &name) const;
     QJsonObject specFor(const QString &id) const;
+    // The timer for the stage display: the one in the banner, else the first
+    // started countdown or clock, else the first countdown to a time.
+    // {"label": name, "spec": ...}, or nothing if there are no timers.
+    std::optional<QJsonObject> stageTimer() const;
 
     // Test support: the wall clock (ms since 1970 UTC) used for new states.
     void setClock(std::function<qint64()> clock) { m_now = std::move(clock); }
 
 signals:
     void changed();
+    void statesChanged(); // a timer started, paused, reset, was shown, added or removed
 
 private:
     struct State

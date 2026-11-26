@@ -14,6 +14,8 @@ Window {
     property QtObject themes: null
     // Timers (batch 12); optional.
     property QtObject timerController: null
+    // The stage display (batch 13); optional.
+    property QtObject stageController: null
 
     width: 1440
     height: 900
@@ -47,12 +49,20 @@ Window {
                 Layout.preferredHeight: implicitHeight
                 controller: window.controller
                 timerSummary: window.timerController ? window.timerController.summary : ""
+                stageConnected: window.stageController ? window.stageController.connected : false
+                onStageRequested: {
+                    timersPopover.active = false
+                    messagePopover.visible = false
+                    stagePopover.active = window.stageController !== null && !stagePopover.active
+                }
                 onTimersRequested: {
                     messagePopover.visible = false
+                    stagePopover.active = false
                     timersPopover.active = window.timerController !== null && !timersPopover.active
                 }
                 onMessageRequested: {
                     timersPopover.active = false
+                    stagePopover.active = false
                     messagePopover.visible = !messagePopover.visible
                     if (messagePopover.visible)
                         messagePopover.focusInput()
@@ -152,6 +162,18 @@ Window {
             timers: window.timerController
             controller: window.controller
             onCloseRequested: timersPopover.active = false
+        }
+    }
+    Loader {
+        id: stagePopover
+        objectName: "stagePopover"
+        active: false
+        x: window.width - width - 16
+        y: 62
+        z: 50
+        sourceComponent: StagePopover {
+            stage: window.stageController
+            onCloseRequested: stagePopover.active = false
         }
     }
     MessagePopover {

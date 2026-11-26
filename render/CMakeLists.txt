@@ -25,7 +25,18 @@ qt_add_qml_module(lumen_render_lib
     OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml/Lumen/Render
     QML_FILES
         Output.qml
+        Stage.qml
 )
+# The stage display uses the operator UI's font (Inter, SIL OFL 1.1, see
+# app/ui/fonts/OFL.txt), as in design/mockups/Stage.html.
+qt_add_resources(lumen_render_lib "stage_fonts"
+    PREFIX "/lumen/stage"
+    BASE ${CMAKE_SOURCE_DIR}/app/ui
+    FILES
+        ${CMAKE_SOURCE_DIR}/app/ui/fonts/Inter-Regular.ttf
+        ${CMAKE_SOURCE_DIR}/app/ui/fonts/Inter-Medium.ttf
+        ${CMAKE_SOURCE_DIR}/app/ui/fonts/Inter-SemiBold.ttf
+        ${CMAKE_SOURCE_DIR}/app/ui/fonts/Inter-Bold.ttf)
 target_include_directories(lumen_render_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(lumen_render_lib
     PUBLIC

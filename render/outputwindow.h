@@ -29,7 +29,11 @@ class OutputWindow : public QObject
     Q_OBJECT
 
 public:
-    explicit OutputWindow(QObject *parent = nullptr);
+    // Audience: the layered scene. Stage (batch 13): the stage display, drawn
+    // from a stage state (current and next slide, clock, timer, message).
+    enum class Kind { Audience, Stage };
+    explicit OutputWindow(Kind kind = Kind::Audience, QObject *parent = nullptr);
+    Kind kind() const { return m_kind; }
     ~OutputWindow() override;
 
     // Loads the scene. Returns false if it could not be created.
@@ -54,6 +58,13 @@ public:
 
     // Sequence number of the scene shown in the most recently presented frame.
     quint64 presentedSequence() const { return m_presentedSequence.load(); }
+
+    // The stage display's state (stage windows only).
+    void setStage(const QJsonObject &stage) { m_model.setStage(stage); }
+    // Test support: the text of every visible item whose name starts with
+    // `prefix`, by name.
+    QVariantMap visibleTexts(const QString &prefix) const;
+    QString screenName() const;
 
     // Opens a video ahead of use so it starts at once when sent live.
     void preload(const QString &path) { m_model.preload(path); }
@@ -81,6 +92,7 @@ private:
     void tick();
     void watchVideos();
 
+    Kind m_kind;
     RenderClock m_clock;
     SceneModel m_model;
     QQmlApplicationEngine m_engine;

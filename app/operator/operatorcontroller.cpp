@@ -11,6 +11,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QLocale>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSaveFile>
@@ -1178,6 +1179,57 @@ void OperatorController::hideMessage()
     if (!m_show.scene().layer(Layer::Messages).content.isEmpty())
         m_show.setContent(Layer::Messages, Content::empty());
     emit stateChanged();
+}
+
+} // namespace lumen::app
+
+namespace lumen::app {
+
+// ---- Stage display (batch 13) ----
+
+QJsonObject OperatorController::stageState() const
+{
+    QJsonObject state;
+    // On air: the item and slide last sent live, while something shows.
+    const ItemView *live = m_onAir ? item(m_positionItem) : nullptr;
+    if (live && keyOf(*live) != m_positionKey)
+        live = nullptr;
+    const bool slideShowing = !m_show.scene().layer(Layer::Slide).content.isEmpty()
+                              || !m_show.scene().layer(Layer::Media).content.isEmpty();
+    if (live && slideShowing && m_positionSlide >= 0 && m_positionSlide < int(live->slides.size())) {
+        const SlideView &slide = live->slides[size_t(m_positionSlide)];
+        state.insert("item", live->title);
+        QStringList detail;
+        if (!live->key.isEmpty())
+            detail << tr("Key of %1").arg(live->key);
+        if (!live->notes.isEmpty())
+            detail << live->notes;
+        state.insert("detail", detail.join(QStringLiteral(" · ")));
+        state.insert("group", slide.group);
+        QString now = slide.text;
+        if (now.isEmpty() && slide.mediaKind == QLatin1String("video"))
+            now = tr("[Video] %1").arg(live->title);
+        else if (now.isEmpty() && slide.mediaKind == QLatin1String("image"))
+            now = tr("[Picture] %1").arg(live->title);
+        state.insert("now", now);
+        // The arrangement, with the part on air marked: each change of group
+        // in play order is the next chip.
+        int chip = 0;
+        for (int i = 1; i <= m_positionSlide; ++i)
+            chip += live->slides[size_t(i)].group != live->slides[size_t(i - 1)].group ? 1 : 0;
+        QJsonArray chips;
+        for (int i = 0; i < int(live->chips.size()); ++i)
+            chips.append(QJsonObject{{"label", live->chips[size_t(i)].label}, {"current", i == chip}});
+        if (chips.size() > 1)
+            state.insert("arrangement", chips);
+    }
+    // Next: what Space sends.
+    if (const ItemView *view = selected(); view && previewSlide() >= 0) {
+        const SlideView &next = view->slides[size_t(previewSlide())];
+        state.insert("next", next.text.isEmpty() && !next.mediaKind.isEmpty() ? view->title : next.text);
+        state.insert("nextGroup", next.group);
+    }
+    return state;
 }
 
 } // namespace lumen::app

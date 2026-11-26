@@ -121,6 +121,20 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
         return okReply();
     }
 
+    if (command == QLatin1String("stage")) {
+        if (m_output.kind() != OutputWindow::Kind::Stage)
+            return errorReply(QStringLiteral("\"stage\" is for stage displays (lumen-render --stage)"));
+        m_output.setStage(request.value(QStringLiteral("stage")).toObject());
+        return okReply();
+    }
+
+    if (command == QLatin1String("texts")) {
+        if (!m_testMode)
+            return errorReply(QStringLiteral("\"texts\" is only available with --test-mode"));
+        return okReply({{QStringLiteral("texts"),
+                         QJsonObject::fromVariantMap(m_output.visibleTexts(request.value(QStringLiteral("prefix")).toString()))}});
+    }
+
     if (command == QLatin1String("preload")) {
         const QString path = request.value(QStringLiteral("video")).toString();
         if (path.isEmpty())
@@ -173,6 +187,8 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
                         {QStringLiteral("timing"), timingJson},
                         {QStringLiteral("presentedSequence"), qint64(m_output.presentedSequence())},
                         {QStringLiteral("pid"), QCoreApplication::applicationPid()},
+                        {QStringLiteral("kind"), m_output.kind() == OutputWindow::Kind::Stage ? QStringLiteral("stage") : QStringLiteral("audience")},
+                        {QStringLiteral("screen"), m_output.screenName()},
                         {QStringLiteral("server"), m_server.serverName()}});
     }
 

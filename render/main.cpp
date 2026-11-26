@@ -39,6 +39,8 @@ int main(int argc, char *argv[])
                                           QStringLiteral("index"));
     const QCommandLineOption windowedOption(QStringLiteral("windowed"),
                                             QStringLiteral("Open a window instead of going fullscreen."));
+    const QCommandLineOption stageOption(QStringLiteral("stage"),
+                                         QStringLiteral("Be a stage display instead of the audience output."));
     const QCommandLineOption testModeOption(QStringLiteral("test-mode"),
                                             QStringLiteral("Allow the \"grab\" command (for automated tests)."));
     // For tests only: a renderer normally outlives a crashed UI (that is the
@@ -47,7 +49,7 @@ int main(int argc, char *argv[])
     const QCommandLineOption watchPidOption(QStringLiteral("watch-pid"),
                                             QStringLiteral("Exit when process <pid> has ended (for tests)."),
                                             QStringLiteral("pid"));
-    parser.addOptions({serverOption, screenOption, windowedOption, testModeOption, watchPidOption});
+    parser.addOptions({serverOption, screenOption, windowedOption, stageOption, testModeOption, watchPidOption});
     parser.process(app);
 
     QTimer watchdog;
@@ -62,7 +64,8 @@ int main(int argc, char *argv[])
         watchdog.start(1000);
     }
 
-    lumen::render::OutputWindow output;
+    lumen::render::OutputWindow output(parser.isSet(stageOption) ? lumen::render::OutputWindow::Kind::Stage
+                                                                  : lumen::render::OutputWindow::Kind::Audience);
     if (!output.create()) {
         qCritical("lumen-render: could not create the output window");
         return 1;

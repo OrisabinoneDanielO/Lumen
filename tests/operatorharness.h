@@ -14,6 +14,7 @@
 #include "servicedata.h"
 #include "themecontroller.h"
 #include "themes.h"
+#include "stagecontroller.h"
 #include "timercontroller.h"
 
 #include "lumen/core/data/database.h"
@@ -42,6 +43,7 @@ public:
     ~OperatorHarness()
     {
         engine.reset();
+        stage.reset();
         timers.reset();
         themes.reset();
         scripture.reset();
@@ -89,6 +91,7 @@ public:
         themes->attach(*m_db);
         timers = std::make_unique<app::TimerController>(*controller, show);
         timers->attach(*m_db);
+        stage = std::make_unique<app::StageController>(*controller, *timers);
         media = std::make_unique<app::MediaLibrary>(*m_db, thumbnails.path());
         controller->attachMedia(*media);
         decks = std::make_unique<app::PresentationLibrary>(*m_db, slidePictures.path());
@@ -101,7 +104,8 @@ public:
             {{QStringLiteral("controller"), QVariant::fromValue<QObject *>(controller.get())},
              {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(scripture.get())},
              {QStringLiteral("themes"), QVariant::fromValue<QObject *>(themes.get())},
-             {QStringLiteral("timerController"), QVariant::fromValue<QObject *>(timers.get())}});
+             {QStringLiteral("timerController"), QVariant::fromValue<QObject *>(timers.get())},
+             {QStringLiteral("stageController"), QVariant::fromValue<QObject *>(stage.get())}});
         engine->loadFromModule("Lumen.Ui", "Main");
         if (engine->rootObjects().isEmpty()) {
             *error = QStringLiteral("Main.qml did not load");
@@ -181,6 +185,7 @@ public:
     std::unique_ptr<app::ScriptureController> scripture;
     std::unique_ptr<app::ThemeController> themes;
     std::unique_ptr<app::TimerController> timers;
+    std::unique_ptr<app::StageController> stage;
     std::unique_ptr<app::OperatorController> controller;
     std::unique_ptr<QQmlApplicationEngine> engine;
     QQuickWindow *window = nullptr;
