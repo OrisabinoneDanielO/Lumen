@@ -193,7 +193,20 @@ private slots:
         QCOMPARE(target.date(), QDate::currentDate());
         QVERIFY(!ui.controller->liveTimerText().isEmpty());
         QCOMPARE(ui.controller->liveText(), QStringLiteral("Service starts soon"));
-        QTRY_VERIFY(ui.item("frameTimer") && ui.item("frameTimer")->isVisible());
+        // Visible timers in the Preview and Live frames.
+        const auto frames = [&](QQuickItem *item, auto &&self) -> int {
+            int shown = item->objectName() == QLatin1String("frameTimer") && item->isVisible() ? 1 : 0;
+            for (QQuickItem *child : item->childItems())
+                shown += self(child, self);
+            return shown;
+        };
+        QTRY_VERIFY(frames(ui.window->contentItem(), frames) >= 1); // Live shows it
+
+        // A song next: no timer left in the frames.
+        ui.controller->selectItem(2);
+        QVERIFY(ui.controller->goLive(0));
+        QVERIFY(ui.controller->liveTimerText().isEmpty());
+        QTRY_COMPARE(frames(ui.window->contentItem(), frames), 0);
     }
 
     void messages()
