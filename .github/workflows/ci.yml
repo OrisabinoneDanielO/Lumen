@@ -22,7 +22,7 @@ jobs:
             os: ubuntu-24.04
             qt_arch: linux_gcc_64
           - name: macOS
-            os: macos-14
+            os: macos-15
             qt_arch: clang_64
           - name: Windows
             os: windows-2022
@@ -61,6 +61,22 @@ jobs:
 
       - name: Test
         run: ctest --preset release
+
+      # A test that crashes loses its buffered output (on Windows
+      # especially); run the failed ones again writing to a file as they go.
+      - name: Rerun failed tests with full output
+        if: failure()
+        shell: bash
+        run: |
+          cd build/release
+          for t in $(ctest --show-only=json-v1 | python3 -c "import json,sys; print(' '.join(t['name'] for t in json.load(sys.stdin)['tests'] if t['name'].startswith('tst_')))"); do
+            if grep -q "^$t\$" Testing/Temporary/LastTestsFailed.log 2>/dev/null || grep -q ":$t\$" Testing/Temporary/LastTestsFailed.log 2>/dev/null; then
+              echo "::group::$t"
+              QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./bin/$t -o $t.txt,txt -v1 ; echo "exit code $?"
+              cat $t.txt || true
+              echo "::endgroup::"
+            fi
+          done
 
   # The Linux AppImage (batch 12), built on the oldest supported Ubuntu so it
   # runs on as many distributions as possible.
