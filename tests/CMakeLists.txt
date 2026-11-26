@@ -1,3 +1,12 @@
+# Tests run offscreen with the software Qt Quick renderer. On Windows the
+# offscreen platform reads fonts from a folder
+# (Qt's lib/fonts by default, which Qt no longer ships); give it Windows'.
+set(lumen_test_env QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software)
+if(WIN32)
+    file(TO_CMAKE_PATH "$ENV{WINDIR}/Fonts" windows_fonts)
+    list(APPEND lumen_test_env "QT_QPA_FONTDIR=${windows_fonts}")
+endif()
+
 # Each test is a Qt Test executable registered with CTest.
 function(lumen_add_test name)
     qt_add_executable(${name} ${ARGN})
@@ -6,7 +15,7 @@ function(lumen_add_test name)
     add_test(NAME ${name} COMMAND ${name})
     # Run without a display on every OS, with the software Qt Quick renderer.
     set_tests_properties(${name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+        ENVIRONMENT "${lumen_test_env}"
         TIMEOUT 60)
 endfunction()
 
@@ -245,5 +254,9 @@ set_tests_properties(tst_timecode PROPERTIES TIMEOUT 120)
 # where lumen-render and bibles.db sit beside lumen as in an install.
 add_test(NAME lumen_check_install COMMAND lumen --check-install)
 set_tests_properties(lumen_check_install PROPERTIES
-    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+    ENVIRONMENT "${lumen_test_env}"
     TIMEOUT 60)
+
+# Speed checks against the reference hardware (support/timing.h): CI's macOS
+# job runs these separately, as advisory.
+set_tests_properties(tst_render_scene tst_video_start tst_rehearsal tst_timecode PROPERTIES LABELS timing)

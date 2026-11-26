@@ -59,8 +59,18 @@ jobs:
       - name: Build
         run: cmake --build --preset release
 
+      # macOS runners are virtual machines without a GPU, far slower than any
+      # operator PC: speed checks (tests/support/timing.h) are skipped here and
+      # run in the advisory step below. Linux and Windows run them strictly.
       - name: Test
         run: ctest --preset release
+        env:
+          LUMEN_SKIP_TIMING: ${{ runner.os == 'macOS' && '1' || '0' }}
+
+      - name: Speed checks (advisory on macOS)
+        if: runner.os == 'macOS' && !cancelled()
+        continue-on-error: true
+        run: ctest --preset release -L timing --output-on-failure
 
       # A test that crashes loses its buffered output (on Windows
       # especially); run the failed ones again writing to a file as they go.
@@ -72,7 +82,7 @@ jobs:
           for t in $(ctest --show-only=json-v1 | python3 -c "import json,sys; print(' '.join(t['name'] for t in json.load(sys.stdin)['tests'] if t['name'].startswith('tst_')))"); do
             if grep -q "^$t\$" Testing/Temporary/LastTestsFailed.log 2>/dev/null || grep -q ":$t\$" Testing/Temporary/LastTestsFailed.log 2>/dev/null; then
               echo "::group::$t"
-              rc=0; QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./bin/$t -o $t.txt,txt -v1 || rc=$?; echo "exit code $rc"
+              rc=0; QT_QPA_FONTDIR="${WINDIR:-}/Fonts" QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./bin/$t -o $t.txt,txt -v1 || rc=$?; echo "exit code $rc"
               cat $t.txt || true
               echo "::endgroup::"
             fi

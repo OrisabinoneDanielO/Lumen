@@ -1,3 +1,4 @@
+#include "support/timing.h"
 #include "outputwindow.h"
 #include "rendercheck.h"
 
@@ -87,6 +88,7 @@ private slots:
 
     void keepsPresentingFrames()
     {
+        LUMEN_TIMING_CHECK();
         auto output = open(QSize(320, 180));
         QVERIFY(output);
         QTRY_VERIFY(output->framesPresented() > 0);

@@ -179,6 +179,11 @@ private slots:
     {
 #ifndef LUMEN_HAVE_MIDI
         QSKIP("built without MIDI");
+#elif defined(Q_OS_WIN)
+        // Windows' MIDI API cannot create virtual ports (RtMidi only warns),
+        // so there is no stand-in controller; a loopback driver such as
+        // loopMIDI would be needed. MIDI messages are still checked above.
+        QSKIP("Windows MIDI has no virtual ports");
 #else
         test::OperatorHarness ui;
         QString error;
