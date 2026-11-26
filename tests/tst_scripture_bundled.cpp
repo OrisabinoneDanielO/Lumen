@@ -214,6 +214,77 @@ private slots:
     // highlighted); Space goes on to the chapter and the verse; Left goes
     // back a part at a time, each highlighted to type over; Up goes to the
     // book. Enter: Preview; Shift+Enter: on the screen.
+    // design/mockups/Scripture.html: a second translation side by side,
+    // Fit to slide, and where the reference goes; kept when added to the plan.
+    void slideOptions()
+    {
+        using lumen::core::show::Content;
+        using lumen::core::show::Layer;
+        OperatorHarness ui;
+        ui.bibles = m_store.get();
+        QString error;
+        QVERIFY2(ui.load(false, &error), qPrintable(error));
+        QTest::keyClick(ui.window, Qt::Key_B, Qt::ControlModifier);
+        QTRY_VERIFY(ui.item("scriptureDialog"));
+        QVERIFY(ui.click("translation-engwebp"));
+        app::ScriptureController &scripture = *ui.scripture;
+        scripture.lookup(QStringLiteral("jn 3 16-18"));
+        QCOMPARE(scripture.item().slides.size(), std::size_t(3));
+        QCOMPARE(scripture.firstSlideVerses(), 1);
+
+        // Fit to slide: three short verses share a slide.
+        QVERIFY(ui.click("versesPerSlide-0"));
+        QCOMPARE(scripture.versesPerSlide(), 0);
+        QVERIFY(scripture.item().slides.size() < 3);
+        QVERIFY(scripture.firstSlideVerses() >= 2);
+        QVERIFY(scripture.item().slides.front().text.contains(QStringLiteral("17 ")));
+
+        // The reference above the text, then the lower third.
+        const auto liveStyle = [&] { return ui.show.scene().layer(Layer::Slide).content.style; };
+        QVERIFY(ui.click("referencePosition-above"));
+        QVERIFY(scripture.showNow());
+        QCOMPARE(liveStyle().value("footerPosition").toString(), QStringLiteral("above"));
+        QVERIFY(ui.click("referencePosition-lowerThird"));
+        QVERIFY(scripture.showNow());
+        QCOMPARE(liveStyle().value("valign").toString(), QStringLiteral("bottom"));
+        QVERIFY(ui.show.scene().layer(Layer::Slide).content.text.startsWith(QStringLiteral("16 For God so loved")));
+
+        // Side by side with Yoruba: two columns and a footer naming both.
+        QVERIFY(ui.click("referencePosition-below"));
+        QVERIFY(ui.click("versesPerSlide-1"));
+        QVERIFY(ui.click("second-yor"));
+        QVERIFY(scripture.secondTranslation() >= 0);
+        QVERIFY(scripture.previewSecondText().startsWith(m_expected["yor"].start));
+        QTRY_VERIFY(ui.item("scripturePreviewSecond")->isVisible());
+        QVERIFY(scripture.showNow());
+        const Content live = ui.show.scene().layer(Layer::Slide).content;
+        QCOMPARE(live.kind, Content::Kind::Composed);
+        QCOMPARE(live.elements.size(), 3);
+        QVERIFY(live.elements[0].toObject().value("text").toString().startsWith(m_expected["engwebp"].start));
+        QVERIFY(live.elements[1].toObject().value("text").toString().startsWith(m_expected["yor"].start));
+        const QString footer = live.elements[2].toObject().value("text").toString();
+        QVERIFY2(footer.startsWith(QStringLiteral("John 3:16 (WEB")) && footer.contains(QStringLiteral("Yorùbá")), qPrintable(footer));
+
+        // Added to the plan, it comes back the same.
+        QVERIFY(scripture.addToPlan());
+        const int last = ui.controller->plan()->property("count").toInt() - 1;
+        ui.controller->selectItem(last);
+        QVERIFY(ui.controller->itemTitle().contains(QStringLiteral("+")));
+        QVERIFY(ui.controller->goLive(1));
+        const Content fromPlan = ui.show.scene().layer(Layer::Slide).content;
+        QCOMPARE(fromPlan.kind, Content::Kind::Composed);
+        QCOMPARE(fromPlan.elements.size(), 3);
+
+        // Off again; the reference above, added and reloaded: still above.
+        QVERIFY(ui.click("second-off"));
+        QCOMPARE(scripture.secondTranslation(), -1);
+        QVERIFY(ui.click("referencePosition-above"));
+        QVERIFY(scripture.addToPlan());
+        ui.controller->selectItem(ui.controller->plan()->property("count").toInt() - 1);
+        QVERIFY(ui.controller->goLive(0));
+        QCOMPARE(liveStyle().value("footerPosition").toString(), QStringLiteral("above"));
+    }
+
     void referencePartsInTheWindow()
     {
         OperatorHarness ui;

@@ -5,6 +5,8 @@
 #include "lumen/core/data/repository.h"
 
 #include <QDir>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
@@ -69,6 +71,8 @@ void ScriptureController::reload()
         (void)store->addBookNames(m_names);
     }
     m_translation = qBound(0, m_translation, qMax(0, int(m_sources.size()) - 1));
+    if (m_second >= int(m_sources.size()))
+        m_second = -1;
     refresh();
 }
 
@@ -94,9 +98,36 @@ void ScriptureController::setTranslation(int index)
     refresh();
 }
 
+void ScriptureController::setReferencePosition(const QString &position)
+{
+    static const QStringList known{QStringLiteral("below"), QStringLiteral("above"), QStringLiteral("lowerThird")};
+    if (!known.contains(position) || position == m_referencePosition)
+        return;
+    m_referencePosition = position;
+    rebuild();
+    emit changed();
+}
+
+void ScriptureController::setSecondTranslation(int index)
+{
+    if (index < -1 || index >= int(m_sources.size()))
+        index = -1;
+    if (index == m_second)
+        return;
+    m_second = index;
+    refresh();
+}
+
+QString ScriptureController::previewSecondText() const
+{
+    if (m_item.slides.empty() || m_item.slides.front().elements.size() < 2)
+        return {};
+    return m_item.slides.front().elements.at(1).toObject().value(QStringLiteral("text")).toString();
+}
+
 void ScriptureController::setVersesPerSlide(int count)
 {
-    count = qBound(1, count, 2);
+    count = qBound(0, count, 2);
     if (count == m_versesPerSlide)
         return;
     m_versesPerSlide = count;
@@ -127,6 +158,7 @@ void ScriptureController::lookup(const QString &text)
 void ScriptureController::refresh()
 {
     m_passage.reset();
+    m_secondPassage.reset();
     m_error.clear();
     m_completion = {};
     if (!m_sources.empty() && !m_query.trimmed().isEmpty()) {
@@ -147,6 +179,12 @@ void ScriptureController::refresh()
                 m_passage = std::move(passage).value();
             else
                 m_error = passage.error().message;
+            // The same verses in the second translation (it may lack some).
+            if (m_passage && m_second >= 0 && m_second != m_translation) {
+                const Source &other = m_sources[std::size_t(m_second)];
+                if (auto second = other.store->passage(other.translation.id, reference.value()); second.ok())
+                    m_secondPassage = std::move(second).value();
+            }
         }
     }
     rebuild();
@@ -178,6 +216,7 @@ QString ScriptureController::copyright() const
 void ScriptureController::rebuild()
 {
     m_item = {};
+    m_firstSlideVerses = 0;
     if (!m_passage)
         return;
     const Translation &t = m_passage->translation;
@@ -195,13 +234,59 @@ void ScriptureController::rebuild()
             theme = *stored;
     }
 
+    const core::show::TextStyle style = scriptureStyle(theme.style, m_referencePosition);
+    // Side by side: each column is a little under half the width.
+    core::show::TextStyle column = style;
+    column.safeArea.setWidth(style.safeArea.width() / 2 - 0.02);
+    const bool sideBySide = m_secondPassage.has_value();
+    const Translation *second = sideBySide ? &m_secondPassage->translation : nullptr;
+
+    // The second translation's verses for the same range.
+    const auto secondText = [&](const std::vector<PassageVerse> &chunk) {
+        std::vector<PassageVerse> matching;
+        const auto key = [](const PassageVerse &v) { return std::pair(v.chapter, v.verse); };
+        for (const PassageVerse &v : m_secondPassage->verses) {
+            if (key(v) >= key(chunk.front()) && key(v) <= std::pair(chunk.back().chapter, chunk.back().last))
+                matching.push_back(v);
+        }
+        return matching.empty() ? QString() : slideText(matching);
+    };
+    const auto fits = [&](const std::vector<PassageVerse> &chunk) {
+        if (!sideBySide)
+            return core::show::fitText(slideText(chunk), style, true).fits;
+        return core::show::fitText(slideText(chunk), column, true).fits
+               && core::show::fitText(secondText(chunk), column, true).fits;
+    };
+
+    // Verses per slide: 1 or 2, or 0: as many as fit.
     const auto &verses = m_passage->verses;
-    for (std::size_t i = 0; i < verses.size(); i += std::size_t(m_versesPerSlide)) {
-        const std::vector<PassageVerse> chunk(verses.begin() + qsizetype(i),
-                                              verses.begin() + qsizetype(qMin(i + std::size_t(m_versesPerSlide), verses.size())));
+    std::vector<std::vector<PassageVerse>> chunks;
+    for (std::size_t i = 0; i < verses.size();) {
+        std::size_t end = i + 1;
+        if (m_versesPerSlide > 0) {
+            end = qMin(i + std::size_t(m_versesPerSlide), verses.size());
+        } else {
+            while (end < verses.size()
+                   && fits(std::vector<PassageVerse>(verses.begin() + qsizetype(i), verses.begin() + qsizetype(end + 1))))
+                ++end;
+        }
+        chunks.emplace_back(verses.begin() + qsizetype(i), verses.begin() + qsizetype(end));
+        i = end;
+    }
+
+    m_firstSlideVerses = chunks.empty() ? 0 : int(chunks.front().size());
+    for (const auto &chunk : chunks) {
         const QString reference = slideReference(*m_passage, chunk);
+        if (sideBySide) {
+            const QString footer = QStringLiteral("%1 (%2 · %3) · %4 · %5")
+                                       .arg(reference, t.abbreviation, second->abbreviation, t.copyright, second->copyright);
+            SlideView slide{{}, reference, scriptureColour, slideText(chunk), footer, 0, {}, {}, {}, false, {}, {}};
+            slide.elements = sideBySideElements(style, slideText(chunk), secondText(chunk), footer);
+            view.slides.push_back(std::move(slide));
+            continue;
+        }
         const QString footer = QStringLiteral("%1 (%2) · %3").arg(reference, t.abbreviation, t.copyright);
-        const QStringList parts = core::show::splitToFit(slideText(chunk), theme.style, true);
+        const QStringList parts = core::show::splitToFit(slideText(chunk), style, true);
         for (qsizetype p = 0; p < parts.size(); ++p) {
             const QString group = parts.size() > 1
                                       ? QStringLiteral("%1 (%2/%3)").arg(reference).arg(p + 1).arg(parts.size())
@@ -209,7 +294,11 @@ void ScriptureController::rebuild()
             view.slides.push_back({{}, group, scriptureColour, parts[p], footer, 0, {}, {}, {}, false, {}, {}});
         }
     }
-    applyTheme(view, theme.style, theme.background);
+    if (sideBySide) {
+        view.title = QStringLiteral("%1 (%2 + %3)").arg(m_passage->label, t.abbreviation, second->abbreviation);
+        view.detail = t.copyright + QStringLiteral(" · ") + second->copyright;
+    }
+    applyTheme(view, style, theme.background);
 }
 
 QString ScriptureController::previewText() const
@@ -243,6 +332,17 @@ bool ScriptureController::addToPlan()
     const ItemView &view = m_item;
     const Translation &t = m_passage->translation;
 
+    QJsonObject metadata{{"subtitle", t.title},           {"copyright", t.copyright},
+                         {"abbreviation", t.abbreviation}, {"translation", t.id},
+                         {"reference", m_passage->label},  {"referencePosition", m_referencePosition}};
+    if (m_secondPassage) {
+        const Translation &second = m_secondPassage->translation;
+        metadata.insert("secondTranslation", second.id);
+        metadata.insert("secondAbbreviation", second.abbreviation);
+        metadata.insert("secondCopyright", second.copyright);
+        metadata.insert("copyright", t.copyright + QStringLiteral(" · ") + second.copyright);
+    }
+
     QString presentationId;
     const Status stored = db->inTransaction([&]() -> Status {
         auto libraries = Repository<Library>(*db).list();
@@ -260,9 +360,8 @@ bool ScriptureController::addToPlan()
         auto presentation = Repository<Presentation>(*db).create(
             {.libraryId = libraryId,
              .kind = PresentationKind::Scripture,
-             .title = QStringLiteral("%1 (%2)").arg(m_passage->label, t.abbreviation),
-             .metadata = {{"subtitle", t.title}, {"copyright", t.copyright}, {"abbreviation", t.abbreviation},
-                          {"translation", t.id}, {"reference", m_passage->label}}});
+             .title = m_secondPassage ? view.title : QStringLiteral("%1 (%2)").arg(m_passage->label, t.abbreviation),
+             .metadata = metadata});
         if (!presentation.ok())
             return presentation.error();
         presentationId = presentation.value().id;
@@ -277,6 +376,24 @@ bool ScriptureController::addToPlan()
             auto stored = Repository<Slide>(*db).create({.groupId = group.value().id});
             if (!stored.ok())
                 return stored.error();
+            if (!slide.elements.isEmpty()) {
+                // Side by side: the columns and footer as placed.
+                int z = 0;
+                for (const QJsonValue &value : slide.elements) {
+                    const QJsonObject e = value.toObject();
+                    const QJsonArray f = e.value("frame").toArray();
+                    auto element = Repository<Element>(*db).create(
+                        {.slideId = stored.value().id,
+                         .type = ElementType::Text,
+                         .frame = QRectF(f.at(0).toDouble(), f.at(1).toDouble(), f.at(2).toDouble(), f.at(3).toDouble()),
+                         .style = e.value("style").toObject(),
+                         .zOrder = z++,
+                         .content = e.value("text").toString()});
+                    if (!element.ok())
+                        return element.error();
+                }
+                continue;
+            }
             auto element = Repository<Element>(*db).create({.slideId = stored.value().id,
                                                             .type = ElementType::Text,
                                                             .frame = QRectF(96, 96, 1728, 888),

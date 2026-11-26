@@ -429,6 +429,63 @@ Window {
                 }
             }
 
+            // A second translation side by side (e.g. English and Yorùbá).
+            Flow {
+                objectName: "sideBySideRow"
+                Layout.fillWidth: true
+                Layout.leftMargin: 20
+                Layout.rightMargin: 20
+                Layout.bottomMargin: 12
+                spacing: 6
+                visible: root.scripture.translations.length > 1
+
+                LText {
+                    height: 32
+                    verticalAlignment: Text.AlignVCenter
+                    rightPadding: 6
+                    text: qsTr("Side by side with")
+                    font.pixelSize: 12
+                    color: Theme.textMuted
+                }
+                Repeater {
+                    // "Off", then every translation but the chosen one.
+                    model: [{ index: -1, abbreviation: qsTr("Off"), id: "off" }].concat(
+                               root.scripture.translations.map((t, i) => ({ index: i, abbreviation: t.abbreviation, id: t.id }))
+                                   .filter(t => t.index !== root.scripture.translation))
+                    delegate: Rectangle {
+                        id: secondChip
+                        required property var modelData
+                        readonly property bool chosen: modelData.index === root.scripture.secondTranslation
+                                                       || (modelData.index === -1 && root.scripture.secondTranslation === root.scripture.translation)
+                        objectName: "second-" + modelData.id
+                        width: secondLabel.implicitWidth + 24
+                        height: 32
+                        radius: 6
+                        color: chosen ? Theme.rowSelected : Theme.raised
+                        border.color: chosen ? Theme.next : Theme.border
+                        Accessible.role: Accessible.RadioButton
+                        Accessible.name: qsTr("Side by side with %1").arg(modelData.abbreviation)
+                        Accessible.checked: chosen
+                        LText {
+                            id: secondLabel
+                            anchors.centerIn: parent
+                            text: secondChip.modelData.abbreviation
+                            font.pixelSize: 12
+                            font.weight: secondChip.chosen ? Font.DemiBold : Font.Normal
+                            color: secondChip.chosen ? "#BFD3FF" : Theme.text
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.scripture.secondTranslation = secondChip.modelData.index
+                                verseInput.forceActiveFocus()
+                            }
+                        }
+                    }
+                }
+            }
+
             Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.border }
 
             // Two equal columns: verses, then preview and options.
@@ -454,7 +511,8 @@ Window {
 
                         SectionLabel {
                             text: root.scripture.versesPerSlide === 1 ? qsTr("VERSES · ONE PER SLIDE")
-                                                                      : qsTr("VERSES · TWO PER SLIDE")
+                                  : root.scripture.versesPerSlide === 2 ? qsTr("VERSES · TWO PER SLIDE")
+                                                                        : qsTr("VERSES · AS MANY AS FIT")
                         }
                         LText {
                             width: parent.width
@@ -475,8 +533,9 @@ Window {
                                 width: verseColumn.width
                                 height: verseText.implicitHeight + 24
                                 radius: 8
-                                color: index < root.scripture.versesPerSlide ? Theme.rowSelected : Theme.raised
-                                border.color: index < root.scripture.versesPerSlide ? Theme.next : "transparent"
+                                // The verses on the first slide.
+                                color: index < root.scripture.firstSlideVerses ? Theme.rowSelected : Theme.raised
+                                border.color: index < root.scripture.firstSlideVerses ? Theme.next : "transparent"
 
                                 LText {
                                     id: verseNumber
@@ -515,7 +574,11 @@ Window {
                     Rectangle {
                         objectName: "scripturePreview"
                         Layout.fillWidth: true
-                        Layout.preferredHeight: width * 9 / 16
+                        // 16:9 when there is room; smaller so the options
+                        // below always stay in view.
+                        Layout.fillHeight: true
+                        Layout.maximumHeight: width * 9 / 16
+                        Layout.minimumHeight: 90
                         radius: 8
                         color: "#1B1F2B"
                         // Click: in Preview. Double-click: on the screen now.
@@ -531,16 +594,40 @@ Window {
                             width: parent.width - 48
                             spacing: 10
                             LText {
+                                visible: root.scripture.referencePosition === "above"
+                                text: root.scripture.previewReference
+                                color: "#F2C38B"
+                                font.pixelSize: 12
+                                font.weight: Font.DemiBold
+                            }
+                            Row {
                                 width: parent.width
-                                text: root.scripture.previewText
-                                color: "#FFFFFF"
-                                font.pixelSize: 15
-                                wrapMode: Text.WordWrap
-                                elide: Text.ElideNone
-                                maximumLineCount: 6
-                                lineHeight: 1.4
+                                spacing: 16
+                                LText {
+                                    width: root.scripture.previewSecondText === "" ? parent.width : (parent.width - 16) / 2
+                                    text: root.scripture.previewText
+                                    color: "#FFFFFF"
+                                    font.pixelSize: root.scripture.previewSecondText === "" ? 15 : 12
+                                    wrapMode: Text.WordWrap
+                                    elide: Text.ElideNone
+                                    maximumLineCount: 6
+                                    lineHeight: 1.4
+                                }
+                                LText {
+                                    objectName: "scripturePreviewSecond"
+                                    visible: text !== ""
+                                    width: (parent.width - 16) / 2
+                                    text: root.scripture.previewSecondText
+                                    color: "#FFFFFF"
+                                    font.pixelSize: 12
+                                    wrapMode: Text.WordWrap
+                                    elide: Text.ElideNone
+                                    maximumLineCount: 6
+                                    lineHeight: 1.4
+                                }
                             }
                             LText {
+                                visible: root.scripture.referencePosition !== "above"
                                 text: root.scripture.previewReference
                                 color: "#F2C38B"
                                 font.pixelSize: 12
@@ -565,13 +652,13 @@ Window {
                             rightPadding: 6
                         }
                         Repeater {
-                            model: [1, 2]
+                            model: [1, 2, 0]
                             delegate: LButton {
                                 required property int modelData
                                 objectName: "versesPerSlide-" + modelData
                                 implicitHeight: 32
                                 radius: 6
-                                text: String(modelData)
+                                text: modelData === 0 ? qsTr("Fit to slide") : String(modelData)
                                 variant: root.scripture.versesPerSlide === modelData ? "primary" : "default"
                                 onClicked: {
                                     root.scripture.versesPerSlide = modelData
@@ -580,7 +667,32 @@ Window {
                             }
                         }
                     }
-                    Item { Layout.fillHeight: true }
+                    RowLayout {
+                        spacing: 6
+                        LText {
+                            text: qsTr("Reference")
+                            font.pixelSize: 12
+                            color: Theme.textMuted
+                            rightPadding: 6
+                        }
+                        Repeater {
+                            model: [{ value: "below", label: qsTr("Below text") },
+                                    { value: "above", label: qsTr("Above text") },
+                                    { value: "lowerThird", label: qsTr("Lower third") }]
+                            delegate: LButton {
+                                required property var modelData
+                                objectName: "referencePosition-" + modelData.value
+                                implicitHeight: 32
+                                radius: 6
+                                text: modelData.label
+                                variant: root.scripture.referencePosition === modelData.value ? "primary" : "default"
+                                onClicked: {
+                                    root.scripture.referencePosition = modelData.value
+                                    verseInput.forceActiveFocus()
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
