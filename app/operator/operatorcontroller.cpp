@@ -135,6 +135,8 @@ bool OperatorController::showSong(int row)
     auto view = loadPresentationView(*m_db, id);
     if (!view.ok()) {
         qWarning("Song not shown: %s", qPrintable(view.error().message));
+        m_planMessage = tr("The song could not be opened: %1").arg(view.error().message);
+        emit stateChanged();
         return false;
     }
     m_librarySong = std::move(view).value();
@@ -593,6 +595,8 @@ bool OperatorController::addPresentationToPlan(const QString &id)
     });
     if (!stored.ok()) {
         qWarning("Song not added to the plan: %s", qPrintable(stored.error().message));
+        m_planMessage = tr("Not added to the plan: %1").arg(stored.error().message);
+        emit stateChanged();
         return false;
     }
     auto view = loadPresentationView(*m_db, id);
@@ -930,9 +934,19 @@ bool OperatorController::next()
 
 bool OperatorController::previous()
 {
-    if (!positionIsSelected() || m_positionSlide <= 0)
+    if (m_positionSlide <= 0)
         return false;
-    return goLive(m_positionSlide - 1);
+    if (positionIsSelected())
+        return goLive(m_positionSlide - 1);
+    // The next item is shown while another plan item is live: back to the
+    // live item, a slide earlier (what the audience sees is what Previous
+    // is about).
+    if (m_positionItem >= 0 && item(m_positionItem)) {
+        const int slide = m_positionSlide - 1;
+        selectItem(m_positionItem);
+        return goLive(slide);
+    }
+    return false;
 }
 
 // Picks the first candidate after the live slide, wrapping round, so pressing

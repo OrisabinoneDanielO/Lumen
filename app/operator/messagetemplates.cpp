@@ -42,15 +42,18 @@ QStringList MessageTemplates::fieldsOf(const QString &templateText)
     return fields;
 }
 
-QString MessageTemplates::fill(const QString &templateText, const QVariantMap &values)
+QString MessageTemplates::fill(const QString &templateText, const QVariantMap &values, QString *missing)
 {
     QString out;
     qsizetype last = 0;
     for (auto it = fieldPattern.globalMatch(templateText); it.hasNext();) {
         const QRegularExpressionMatch match = it.next();
         const QString value = values.value(match.captured(1).trimmed()).toString().simplified();
-        if (value.isEmpty())
+        if (value.isEmpty()) {
+            if (missing)
+                *missing = match.captured(1).trimmed();
             return {};
+        }
         out += templateText.mid(last, match.capturedStart() - last) + value;
         last = match.capturedEnd();
     }
@@ -79,7 +82,10 @@ bool MessageTemplates::show(int row, const QVariantMap &values, bool ticker)
 {
     if (row < 0 || row >= int(m_messages.size()))
         return false;
-    const QString text = fill(m_messages[size_t(row)].templateText, values);
+    QString missing;
+    const QString text = fill(m_messages[size_t(row)].templateText, values, &missing);
+    m_message = text.isEmpty() ? tr("Fill in \"%1\" first").arg(missing) : QString();
+    emit messageChanged();
     return !text.isEmpty() && m_op.showMessage(text, ticker);
 }
 

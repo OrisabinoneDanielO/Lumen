@@ -260,6 +260,20 @@ private slots:
         QCOMPARE(onAir(), QStringLiteral("v1"));
     }
 
+    // Previous steps back on the live item even after the next item was
+    // shown (the operator prepared it, then needs the last slide again).
+    void previousWorksWhileTheNextItemIsShown()
+    {
+        m_op->goLive(3);
+        const QString live = onAir();
+        m_op->goLive(4);
+        QVERIFY(key(Qt::Key_PageDown)); // the next item, shown
+        QCOMPARE(m_op->currentItem(), 2);
+        QVERIFY(key(Qt::Key_Left));
+        QCOMPARE(m_op->currentItem(), 1); // back to the live item
+        QCOMPARE(onAir(), live);
+    }
+
     // Page Down shows the next item; Space then sends its first slide.
     void pageDownSelectsTheNextItemWithoutGoingLive()
     {

@@ -143,6 +143,17 @@ Rectangle {
                 }
             }
         }
+        // Why Show did nothing (a template field left empty).
+        LText {
+            objectName: "messageProblem"
+            Layout.fillWidth: true
+            visible: root.templateRow >= 0 && root.templates !== null && root.templates.message !== ""
+            text: root.templates ? root.templates.message : ""
+            wrapMode: Text.WordWrap
+            elide: Text.ElideNone
+            color: Theme.warnText
+            font.pixelSize: 11
+        }
         SectionLabel {
             visible: root.controller.recentMessages.length > 0
             text: qsTr("RECENT")

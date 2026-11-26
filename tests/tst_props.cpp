@@ -186,7 +186,10 @@ private slots:
         QVERIFY(nursery >= 0); // the three built-in ones
         QCOMPARE(ui.templates->fields(nursery), QStringList{"number"});
         QVERIFY(!ui.templates->show(nursery, {}, false));
+        // It says which field is missing, and stops saying so once shown.
+        QVERIFY2(ui.templates->message().contains(QStringLiteral("number")), qPrintable(ui.templates->message()));
         QVERIFY(ui.templates->show(nursery, {{"number", "42"}}, true));
+        QVERIFY(ui.templates->message().isEmpty());
         const Content shown = ui.show.scene().layer(Layer::Messages).content;
         QCOMPARE(shown.text, QStringLiteral("Parent of 42, please come to the nursery"));
         QCOMPARE(shown.style.value("ticker").toBool(), true);
@@ -209,6 +212,18 @@ private slots:
         QVERIFY(ui.click("messageShow"));
         QCOMPARE(ui.show.scene().layer(Layer::Messages).content.text, QStringLiteral("Parent of 17, please come to the nursery"));
         QVERIFY(!ui.show.scene().layer(Layer::Messages).content.style.value("ticker").toBool());
+    }
+
+    // A lower third with no name says why it was not added.
+    void lowerThirdNeedsAName()
+    {
+        test::OperatorHarness ui;
+        QString error;
+        QVERIFY2(ui.load(false, &error), qPrintable(error));
+        QVERIFY(!ui.props->addLowerThird(QString(), QStringLiteral("Lead pastor")));
+        QVERIFY(!ui.props->message().isEmpty());
+        QVERIFY(ui.props->addLowerThird(QStringLiteral("Ade Johnson"), QStringLiteral("Lead pastor")));
+        QVERIFY(ui.props->message().isEmpty());
     }
 
     void propsPopover()

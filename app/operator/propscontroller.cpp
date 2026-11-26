@@ -98,8 +98,13 @@ bool PropsController::toggle(int row)
 
 bool PropsController::addLowerThird(const QString &line1, const QString &line2)
 {
-    if (!m_db || line1.trimmed().isEmpty())
+    if (!m_db || line1.trimmed().isEmpty()) {
+        m_message = tr("Type a name for the lower third");
+        emit messageChanged();
         return false;
+    }
+    m_message.clear();
+    emit messageChanged();
     auto created = Repository<Prop>(*m_db).create({.name = line1.trimmed(),
                                                    .kind = PropKind::LowerThird,
                                                    .data = {{"line1", line1.trimmed()}, {"line2", line2.trimmed()}}});

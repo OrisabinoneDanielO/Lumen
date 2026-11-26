@@ -156,6 +156,14 @@ Rectangle {
                     }
                 }
             }
+            LText {
+                objectName: "propsProblem"
+                Layout.fillWidth: true
+                visible: root.props.message !== ""
+                text: root.props.message
+                color: Theme.warnText
+                font.pixelSize: 11
+            }
 
             SectionLabel {
                 Layout.topMargin: 6

@@ -294,6 +294,31 @@ private slots:
         QTRY_VERIFY(!m_ui->item("liveProblem")->isVisible());
     }
 
+    // Escape closes the Plan menu and the Transition list; with no plan
+    // open, the plan actions are disabled rather than doing nothing.
+    void escapeClosesMenus()
+    {
+        open();
+        QVERIFY(m_ui->click("planMenuButton"));
+        QTRY_VERIFY(m_ui->item("planMenu")->isVisible());
+        m_ui->key(Qt::Key_Escape);
+        QTRY_VERIFY(!m_ui->item("planMenu")->isVisible());
+        QVERIFY(m_ui->click("transitionBox"));
+        QTRY_VERIFY(m_ui->item("transitionMenu")->isVisible());
+        m_ui->key(Qt::Key_Escape);
+        QTRY_VERIFY(!m_ui->item("transitionMenu")->isVisible());
+
+        QVERIFY(m_ui->click("planMenuButton"));
+        QVERIFY(m_ui->click("planDelete"));
+        QVERIFY(m_ui->click("confirmDeletePlan"));
+        QTRY_VERIFY(m_ui->controller->planId().isEmpty());
+        QVERIFY(m_ui->click("planMenuButton"));
+        QTRY_VERIFY(m_ui->item("planRename"));
+        QVERIFY(!m_ui->item("planRename")->isEnabled());
+        QVERIFY(!m_ui->item("planExport")->isEnabled());
+        QVERIFY(m_ui->item("planNew")->isEnabled());
+    }
+
     // The Main light asks before turning the output off.
     void outputOffIsConfirmed()
     {
