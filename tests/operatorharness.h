@@ -16,6 +16,7 @@
 #include "themes.h"
 #include "editorcontroller.h"
 #include "messagetemplates.h"
+#include "sharing.h"
 #include "propscontroller.h"
 #include "stagecontroller.h"
 #include "timercontroller.h"
@@ -46,6 +47,7 @@ public:
     ~OperatorHarness()
     {
         engine.reset();
+        sharing.reset();
         editor.reset();
         templates.reset();
         props.reset();
@@ -104,6 +106,7 @@ public:
         templates->attach(*m_db);
         editor = std::make_unique<app::EditorController>(*controller);
         editor->attach(*m_db, songs.get());
+        sharing = std::make_unique<app::Sharing>(*m_db, QStringLiteral("Test PC"), thumbnails.path());
         media = std::make_unique<app::MediaLibrary>(*m_db, thumbnails.path());
         controller->attachMedia(*media);
         decks = std::make_unique<app::PresentationLibrary>(*m_db, slidePictures.path());
@@ -120,7 +123,8 @@ public:
              {QStringLiteral("stageController"), QVariant::fromValue<QObject *>(stage.get())},
              {QStringLiteral("propsController"), QVariant::fromValue<QObject *>(props.get())},
              {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(templates.get())},
-             {QStringLiteral("editorController"), QVariant::fromValue<QObject *>(editor.get())}});
+             {QStringLiteral("editorController"), QVariant::fromValue<QObject *>(editor.get())},
+             {QStringLiteral("sharing"), QVariant::fromValue<QObject *>(sharing.get())}});
         engine->loadFromModule("Lumen.Ui", "Main");
         if (engine->rootObjects().isEmpty()) {
             *error = QStringLiteral("Main.qml did not load");
@@ -204,6 +208,7 @@ public:
     std::unique_ptr<app::PropsController> props;
     std::unique_ptr<app::MessageTemplates> templates;
     std::unique_ptr<app::EditorController> editor;
+    std::unique_ptr<app::Sharing> sharing;
     std::unique_ptr<app::OperatorController> controller;
     std::unique_ptr<QQmlApplicationEngine> engine;
     QQuickWindow *window = nullptr;

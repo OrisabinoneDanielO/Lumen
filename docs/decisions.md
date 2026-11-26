@@ -201,3 +201,21 @@ No real libraries were available, so (as the user chose) the tests use libraries
 ### ProPresenter 7 and SongSelect
 
 ProPresenter 7 stores documents as protocol buffers with no published schema; a reader built from guesses could only be tested against files built from the same guesses. The importer says so and points to ProPresenter's text export. SongSelect waits for the CCLI partner agreement, as the design doc says.
+
+## Batch 18: sharing plans and songs on the local network
+
+### Direct, with a code, off by default
+
+Computers talk directly over TCP on the local network; there is no server and nothing leaves the building (CLAUDE.md allows LAN features). Sharing is off until the operator turns it on, and then the computer shows a six-digit code that another computer must give to see or send anything, so other people on a church's Wi-Fi cannot browse the library. After five wrong codes a computer has to wait a minute (six digits cannot be guessed like that). The offline check still passes, because a computer that is not sharing announces nothing.
+
+### Finding each other
+
+Sharing computers announce themselves every two seconds on a local multicast group (239.255.76.77, UDP 45459); the Share popover listens while it is open, so a computer can find others without sharing itself. Where multicast is blocked (some guest Wi-Fi, a loopback-only test), the address can be typed in; the popover shows it on the shared computer.
+
+### What travels
+
+A `.lumen` file (batch 11): a plan with its songs, slides and media, or chosen songs without a plan (the file then has no "plan" and importing adds none). Importing reuses songs and media the library already has, so copying next week's plan does not duplicate the songs. Transfers wait in a local event loop, so the window keeps drawing; the outputs are separate processes and are never affected.
+
+### Two PCs, no internet
+
+`tst_sharing` runs a second process with its own library as the other PC: a plan is copied from it, songs are copied, and a plan is sent to it, over TCP. CTest also runs it as `tst_sharing_offline`, inside a network namespace with nothing but loopback (`tests/no_network.sh`), where the exchange works and only multicast discovery is skipped. On the real network the discovery test found the other computer. Two physical PCs have not been tried yet.

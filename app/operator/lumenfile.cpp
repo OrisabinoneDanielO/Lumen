@@ -168,6 +168,12 @@ QString libraryId(Database &db)
 
 QString ImportReport::summary() const
 {
+    if (planId.isEmpty())
+        return QStringLiteral("Imported %1 new and %2 already in the library; %3 media files copied, %4 already here")
+            .arg(presentationsAdded)
+            .arg(presentationsReused)
+            .arg(mediaAdded)
+            .arg(mediaReused);
     return QStringLiteral("Imported \"%1\": %2 new and %3 already in the library; %4 media files copied, %5 already here")
         .arg(planName)
         .arg(presentationsAdded)
@@ -175,6 +181,52 @@ QString ImportReport::summary() const
         .arg(mediaAdded)
         .arg(mediaReused);
 }
+
+namespace {
+
+// Writes lumen.json and the media files into a .lumen archive.
+Status writeArchive(const QJsonObject &root, const QJsonArray &media, const QString &file)
+{
+    // Written to a temporary name first, so a failed export never leaves a
+    // half-written file under the real name.
+    const QString partial = file + QStringLiteral(".part");
+    QFile::remove(partial);
+    {
+        QZipWriter zip(partial);
+        if (zip.status() != QZipWriter::NoError)
+            return Error{Error::Code::Database, QStringLiteral("%1 could not be written").arg(file)};
+        zip.setCompressionPolicy(QZipWriter::AutoCompress);
+        zip.addFile(QStringLiteral("lumen.json"), QJsonDocument(root).toJson(QJsonDocument::Indented));
+        for (const QJsonValue &value : media) {
+            const QJsonObject m = value.toObject();
+            QFile source(m.value("source").toString());
+            if (!source.open(QIODevice::ReadOnly)) {
+                zip.close();
+                QFile::remove(partial);
+                return Error{Error::Code::NotFound, QStringLiteral("Media file missing: %1").arg(source.fileName())};
+            }
+            // Videos and pictures are already compressed.
+            zip.setCompressionPolicy(QZipWriter::NeverCompress);
+            zip.addFile(m.value("file").toString(), &source);
+            if (m.contains("thumbnail")) {
+                QFile thumb(m.value("thumbnailSource").toString());
+                if (thumb.open(QIODevice::ReadOnly))
+                    zip.addFile(m.value("thumbnail").toString(), &thumb);
+            }
+        }
+        zip.close();
+        if (zip.status() != QZipWriter::NoError) {
+            QFile::remove(partial);
+            return Error{Error::Code::Database, QStringLiteral("%1 could not be written").arg(file)};
+        }
+    }
+    QFile::remove(file);
+    if (!QFile::rename(partial, file))
+        return Error{Error::Code::Database, QStringLiteral("%1 could not be written").arg(file)};
+    return success();
+}
+
+} // namespace
 
 Status exportPlan(Database &db, const QString &planId, const QString &file)
 {
@@ -216,43 +268,26 @@ Status exportPlan(Database &db, const QString &planId, const QString &file)
         {"presentations", presentations},
         {"media", media}};
 
-    // Written to a temporary name first, so a failed export never leaves a
-    // half-written file under the real name.
-    const QString partial = file + QStringLiteral(".part");
-    QFile::remove(partial);
-    {
-        QZipWriter zip(partial);
-        if (zip.status() != QZipWriter::NoError)
-            return Error{Error::Code::Database, QStringLiteral("%1 could not be written").arg(file)};
-        zip.setCompressionPolicy(QZipWriter::AutoCompress);
-        zip.addFile(QStringLiteral("lumen.json"), QJsonDocument(root).toJson(QJsonDocument::Indented));
-        for (const QJsonValue &value : media) {
-            const QJsonObject m = value.toObject();
-            QFile source(m.value("source").toString());
-            if (!source.open(QIODevice::ReadOnly)) {
-                zip.close();
-                QFile::remove(partial);
-                return Error{Error::Code::NotFound, QStringLiteral("Media file missing: %1").arg(source.fileName())};
-            }
-            // Videos and pictures are already compressed.
-            zip.setCompressionPolicy(QZipWriter::NeverCompress);
-            zip.addFile(m.value("file").toString(), &source);
-            if (m.contains("thumbnail")) {
-                QFile thumb(m.value("thumbnailSource").toString());
-                if (thumb.open(QIODevice::ReadOnly))
-                    zip.addFile(m.value("thumbnail").toString(), &thumb);
-            }
-        }
-        zip.close();
-        if (zip.status() != QZipWriter::NoError) {
-            QFile::remove(partial);
-            return Error{Error::Code::Database, QStringLiteral("%1 could not be written").arg(file)};
-        }
+    return writeArchive(root, media, file);
+}
+
+Status exportPresentations(Database &db, const QStringList &presentationIds, const QString &file)
+{
+    QJsonArray media;
+    QHash<QString, QString> mediaIds;
+    QJsonArray presentations;
+    for (const QString &id : presentationIds) {
+        auto json = presentationJson(db, id, media, mediaIds);
+        if (!json.ok())
+            return json.error();
+        presentations.append(json.value());
     }
-    QFile::remove(file);
-    if (!QFile::rename(partial, file))
-        return Error{Error::Code::Database, QStringLiteral("%1 could not be written").arg(file)};
-    return success();
+    const QJsonObject root{{"format", "lumen"},
+                           {"version", formatVersion},
+                           {"app", QStringLiteral("Lumen Presenter %1").arg(core::version())},
+                           {"presentations", presentations},
+                           {"media", media}};
+    return writeArchive(root, media, file);
 }
 
 Result<ImportReport> importFile(Database &db, const QString &file, const QString &mediaFolder)
@@ -454,7 +489,10 @@ Result<ImportReport> importFile(Database &db, const QString &file, const QString
             ++report.presentationsAdded;
         }
 
-        // The plan itself, always new.
+        report.presentationIds = presentationIds.values();
+        // The plan itself, always new (a file of songs only has none).
+        if (!root.contains("plan"))
+            return success();
         const QJsonObject plan = root.value("plan").toObject();
         report.planName = plan.value("name").toString(QStringLiteral("Imported plan"));
         auto newPlan = Repository<Plan>(db).create(

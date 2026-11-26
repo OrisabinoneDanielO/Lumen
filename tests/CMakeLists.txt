@@ -209,3 +209,14 @@ target_compile_definitions(tst_editor PRIVATE LUMEN_MEDIA_DIR="${CMAKE_CURRENT_S
 lumen_add_test(tst_foreign_import tst_foreign_import.cpp)
 target_link_libraries(tst_foreign_import PRIVATE Lumen::Songs)
 target_compile_definitions(tst_foreign_import PRIVATE LUMEN_LIBRARIES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/libraries")
+
+# Library and plan sharing on the local network (batch 18). Done when: two
+# PCs exchange a plan with no internet connection.
+lumen_add_test(tst_sharing tst_sharing.cpp)
+target_link_libraries(tst_sharing PRIVATE Lumen::Operator Qt6::Test)
+if(UNIX AND NOT APPLE)
+    # The same, with no network at all but loopback.
+    add_test(NAME tst_sharing_offline COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/no_network.sh $<TARGET_FILE:tst_sharing>)
+    set_tests_properties(tst_sharing_offline PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endif()
