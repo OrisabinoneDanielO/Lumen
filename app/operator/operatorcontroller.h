@@ -79,7 +79,7 @@ class OperatorController : public QObject
     // "pushUp", "wipe", "zoom", over transitionMs (remembered).
     Q_PROPERTY(QString transition READ transition WRITE setTransition NOTIFY transitionChanged)
     Q_PROPERTY(int transitionMs READ transitionMs WRITE setTransitionMs NOTIFY transitionChanged)
-    Q_PROPERTY(QVariantList transitions READ transitions CONSTANT) // {key, name}
+    Q_PROPERTY(QVariantList transitions READ transitions NOTIFY stateChanged) // {key, name}
     Q_PROPERTY(bool shownVideoLoops READ shownVideoLoops WRITE setShownVideoLoops NOTIFY stateChanged)
     // The shown video's start and end points ("m:ss"; end empty: the end).
     // A song: its key as the band plays it, and how far it is transposed.
@@ -254,6 +254,8 @@ public:
     Q_INVOKABLE bool addDeckToPlan(int row);
     // Plans (batch 11). Each change is saved at once.
     Q_INVOKABLE void refreshSavedPlans();
+    // The language changed: words made here are made again.
+    void refreshTexts();
     Q_INVOKABLE bool newPlan(const QString &name);
     Q_INVOKABLE bool openPlan(int row);       // in savedPlans
     bool openPlanById(const QString &planId);

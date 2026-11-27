@@ -35,6 +35,8 @@ Window {
     property QtObject screenSetup: null
     // Optional update checks.
     property QtObject updates: null
+    // The window's language (Plan > Language), or null.
+    property QtObject language: null
 
     width: 1440
     height: 900
@@ -199,6 +201,7 @@ Window {
                     }
                     updateVersion: window.updates && window.updates.available ? window.updates.latestVersion : ""
                     dragGhost: dragGhost
+                    language: window.language
                     scriptureAvailable: window.scripture !== null
                     onAddRequested: what => {
                         if (what === "scripture")

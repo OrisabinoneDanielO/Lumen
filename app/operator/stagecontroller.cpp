@@ -8,6 +8,13 @@ namespace lumen::app {
 StageController::StageController(OperatorController &op, TimerController &timers, QObject *parent)
     : QObject(parent), m_op(op), m_timers(timers)
 {
+    retranslate();
+    connect(&m_op, &OperatorController::stateChanged, this, &StageController::push);
+    connect(&m_timers, &TimerController::statesChanged, this, &StageController::push);
+}
+
+void StageController::retranslate()
+{
     // Built in (a layout editor arrives with the full editor, batch 16).
     m_layouts.setRows({
         {{"name", tr("Default")}, {"key", "default"},
@@ -16,8 +23,6 @@ StageController::StageController(OperatorController &op, TimerController &timers
         {{"name", tr("Clock")}, {"key", "clock"}, {"description", tr("Time and timer, large, for the speaker")}},
         {{"name", tr("Chords")}, {"key", "chords"}, {"description", tr("Now and next with chords, for the band")}},
     });
-    connect(&m_op, &OperatorController::stateChanged, this, &StageController::push);
-    connect(&m_timers, &TimerController::statesChanged, this, &StageController::push);
 }
 
 void StageController::setLayout(int index)

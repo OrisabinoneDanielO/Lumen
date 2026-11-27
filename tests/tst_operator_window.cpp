@@ -2,6 +2,7 @@
 #include <QUrl>
 #include <QFile>
 #include "usagelog.h"
+#include "language.h"
 
 #include <QFileInfo>
 #include <QJsonArray>
@@ -429,6 +430,35 @@ private slots:
         QVERIFY(m_ui->click("planUsage"));
         QTRY_VERIFY(m_ui->item("usage-3")->isVisible());
         m_ui->key(Qt::Key_Escape);
+    }
+
+    // Plan > Language: the window changes language at once, and back.
+    void languageSwitchesInPlace()
+    {
+        open();
+        app::Language &language = *m_ui->language;
+        QCOMPARE(language.current(), QStringLiteral("en"));
+        QVERIFY(!language.choose(QStringLiteral("xx")));
+        QStringList offered;
+        for (const QVariant &l : language.languages())
+            offered << l.toMap().value("code").toString();
+        QCOMPARE(offered, (QStringList{"en", "fr", "es", "pt"})); // drafts are not offered
+        QCOMPARE(m_ui->item("black")->property("text").toString(), QStringLiteral("Black"));
+
+        QVERIFY(m_ui->click("planMenuButton"));
+        QVERIFY(m_ui->click("planLanguage"));
+        QTRY_VERIFY(m_ui->item("language-fr")->isVisible());
+        QVERIFY(m_ui->click("language-fr"));
+        QCOMPARE(language.current(), QStringLiteral("fr"));
+        QTRY_COMPARE(m_ui->item("black")->property("text").toString(), QStringLiteral("Noir"));
+        QVERIFY(m_ui->item("planMenuButton")->property("text").toString() != QStringLiteral("Plan ▾")
+                || QCoreApplication::translate("ServicePlanPanel", "Plan ▾") == QStringLiteral("Plan ▾"));
+        // C++ words follow too (the transition names).
+        const QVariantList transitions = m_ui->controller->transitions();
+        QCOMPARE(transitions.front().toMap().value("name").toString(), QCoreApplication::translate("lumen::app::OperatorController", "Cut"));
+
+        QVERIFY(language.choose(QStringLiteral("en")));
+        QTRY_COMPARE(m_ui->item("black")->property("text").toString(), QStringLiteral("Black"));
     }
 
     // The Main light asks before turning the output off.

@@ -45,3 +45,23 @@ install(TARGETS lumen
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${LUMEN_INSTALL_BINDIR})
 add_dependencies(lumen bibles)
+
+# Translations (i18n/*.ts), compiled into the operator library as
+# :/i18n/lumen_<code>.qm. Built when Qt's LinguistTools are installed;
+# without them Lumen is built in English only. "cmake --build . --target
+# update_translations" refreshes the .ts files from the sources.
+find_package(Qt6 QUIET COMPONENTS LinguistTools)
+if(Qt6LinguistTools_FOUND)
+    set(lumen_languages fr es pt yo ig ha sw)
+    set(lumen_ts_files)
+    foreach(code IN LISTS lumen_languages)
+        list(APPEND lumen_ts_files ${CMAKE_SOURCE_DIR}/i18n/lumen_${code}.ts)
+    endforeach()
+    qt_add_translations(lumen_operator
+        TS_FILES ${lumen_ts_files}
+        RESOURCE_PREFIX /i18n
+        SOURCE_TARGETS lumen lumen_ui lumen_operator
+        LUPDATE_OPTIONS -no-obsolete -locations none)
+else()
+    message(STATUS "Qt LinguistTools not found: Lumen is built in English only")
+endif()
