@@ -139,7 +139,10 @@ private slots:
         QFETCH(QString, label);
         QFETCH(QString, text);
         QFETCH(QString, footer);
-        QVERIFY(text.size() > 300); // these really are long
+        QFETCH(QString, translation);
+        // These really are long (Chinese says as much in far fewer characters).
+        const bool ideographic = translation.startsWith(QLatin1String("cmn"));
+        QVERIFY(text.size() > (ideographic ? 100 : 300));
 
         const app::ThemeView theme = app::builtInTheme(core::data::ThemeTarget::Scripture);
         const TextStyle &style = theme.style;

@@ -160,20 +160,41 @@ Result<ParsedBook> parseUsfmBook(const QString &usfm)
     // Book identity and names from the header lines.
     static const QRegularExpression header(QStringLiteral(R"(^\\(id|h|toc1|toc2|toc3)\s+(.*)$)"),
                                            QRegularExpression::MultilineOption);
+    QString runningHeader; // \h
     for (auto it = header.globalMatch(text); it.hasNext();) {
         const auto match = it.next();
         const QString marker = match.captured(1);
         const QString value = match.captured(2).trimmed();
         if (marker == QLatin1String("id"))
             book.code = value.section(u' ', 0, 0).toUpper();
-        else if (marker == QLatin1String("h") && book.name.isEmpty())
-            book.name = value;
+        else if (marker == QLatin1String("h")) {
+            runningHeader = value;
+            if (book.name.isEmpty())
+                book.name = value;
+        }
         else if (marker == QLatin1String("toc1"))
             book.longName = value;
         else if (marker == QLatin1String("toc2"))
             book.name = value;
         else if (marker == QLatin1String("toc3"))
             book.abbreviation = value;
+    }
+    // The short name (\toc2) is used unless it is really an abbreviation
+    // ("Gi", "യോഹ.") or all capitals ("JOHN"); then the running header,
+    // in normal case ("GIĂNG" -> "Giăng").
+    const auto shouting = [](const QString &s) { return s.toUpper() == s && s.toLower() != s; };
+    const auto abbreviated = [](const QString &s) { return s.size() < 3 || s.endsWith(u'.'); };
+    if (!runningHeader.isEmpty() && (abbreviated(book.name) || shouting(book.name))) {
+        QString name = runningHeader;
+        if (shouting(name)) {
+            QStringList words = name.toLower().split(u' ');
+            for (QString &w : words) {
+                if (!w.isEmpty())
+                    w[0] = w[0].toUpper();
+            }
+            name = words.join(u' ');
+        }
+        book.name = name;
     }
     if (book.code.isEmpty())
         return invalid(QStringLiteral("No \\id line: not a USFM book"));

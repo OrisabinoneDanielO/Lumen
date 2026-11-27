@@ -41,11 +41,69 @@ private:
         {"swhonmm", {"Yohana", "“Kwa maana jinsi hii Mungu aliupenda ulimwengu"}},
         {"fraLSG", {"Jean", "Car Dieu a tant aimé le monde qu’il a donné son Fils unique"}},
         {"spaRV1909", {"Juan", "Porque de tal manera amó Dios al mundo, que ha dado á su Hijo unigénito"}},
+        // Added 2026-11-27 (bibles/README.md).
+        {"engBBE", {"John", "For God had such love for"}},
+        {"engDBY", {"John", "For God so loved the world,"}},
+        {"engDRA", {"John", "For God so loved the world,"}},
+        {"enggnv", {"John", "For God so loued the worlde,"}},
+        {"engylt", {"John", "for God did so love the"}},
+        {"engwebster", {"John", "For God so loved the world,"}},
+        {"eng-rv", {"John", "For God so loved the world,"}},
+        {"engmsb", {"John", "For God so loved the world"}},
+        {"englsv", {"John", "for God so loved the world"}},
+        {"engULB", {"John", "For God so loved the world,"}},
+        {"engfbv", {"John", "For God loved the world, and"}},
+        {"twi", {"Yohane", "“Na sɛnea Onyankopɔn dɔɔ wiase ni,"}},
+        {"twiasante", {"Yohane", "“Na sɛdeɛ Onyankopɔn dɔɔ ewiase nie;"}},
+        {"ewe", {"Yohanes", "Elabena Mawu lɔ̃a xexea me ale"}},
+        {"swhonen", {"Yohana", "“Kwa maana jinsi hii Mungu aliupenda"}},
+        {"lin", {"Yoane", "Pamba te Nzambe alingaki mokili mingi"}},
+        {"lug", {"Yokaana", "“Kubanga Katonda bwe yayagala ensi, bw’atyo"}},
+        {"nya", {"Yohane", "“Pakuti Mulungu anakonda dziko lapansi, kotero"}},
+        {"sna", {"Johani", "“Nokuti Mwari akada nyika nokudaro, kuti"}},
+        {"kik", {"Johana", "“Nĩgũkorwo Ngai nĩendire kĩrĩndĩ, akĩruta Mũrũ"}},
+        {"luo", {"Johana", "“Nikech Nyasaye nohero piny ahinya, omiyo"}},
+        {"nde", {"UJohane", "UNkulunkulu walithanda ilizwe kangaka waze wanikela"}},
+        {"porbrbsl", {"João", "Porque Deus amou o mundo de"}},
+        {"deu1912", {"Johannes", "Also hat Gott die Welt geliebt,"}},
+        {"frajnd", {"Jean", "Car Dieu a tant aimé le"}},
+        {"cmn-cu89s", {"约翰福音", "「 神爱世人，甚至将他的独生子赐给他们"}},
+        {"cmn-cu89t", {"約翰福音", "「上帝愛世人，甚至將他的獨生子賜給他們"}},
+        {"kor", {"요한복음", "하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니"}},
+        {"russyn", {"Евангелие от Иоанна", "Ибо так возлюбил Бог мир, что"}},
+        {"hin2017", {"यूहन्ना", "“क्योंकि परमेश्वर ने जगत से ऐसा"}},
+        {"ita1927", {"Giovanni", "Poiché Iddio ha tanto amato il"}},
+        {"nld", {"Johannes", "Want alzo lief heeft God de"}},
+        {"vie1934", {"Giăng", "Vì Đức Chúa Trời yêu thương"}},
+        {"mal", {"യോഹന്നാന്‍", "തന്‍റെ ഏകജാതനായ പുത്രനിൽ വിശ്വസിക്കുന്ന"}},
     };
 
     QJsonArray m_manifest;
     std::unique_ptr<BibleStore> m_store;
     BookNames m_names;
+
+    // A translation's button, or (not among the eight quick ones) its row
+    // in All translations, found by typing its title in the filter.
+    static bool chooseTranslation(OperatorHarness &ui, const QString &id, const QString &title)
+    {
+        ui.settle();
+        QQuickItem *chip = ui.item("translation-" + id);
+        if (chip && chip->isVisible())
+            return ui.click("translation-" + id);
+        if (!ui.click("translationMore"))
+            return false;
+        QQuickItem *list = ui.item("translationList");
+        if (!list || !QTest::qWaitFor([&] { return list->isVisible(); }, 2000))
+            return false;
+        // As typed (titles may be in any script).
+        QQuickItem *filter = ui.item("translationFilter");
+        if (!filter || !filter->setProperty("text", title))
+            return false;
+        if (!QTest::qWaitFor([&] { return ui.item("translationItem-" + id) != nullptr; }, 2000))
+            return false;
+        ui.settle();
+        return ui.click("translationItem-" + id);
+    }
 
     QJsonObject manifestEntry(const QString &id) const
     {
@@ -62,7 +120,7 @@ private slots:
         QFile manifest(QStringLiteral(LUMEN_BIBLES_MANIFEST));
         QVERIFY(manifest.open(QIODevice::ReadOnly));
         m_manifest = QJsonDocument::fromJson(manifest.readAll()).object().value("translations").toArray();
-        QCOMPARE(m_manifest.size(), 10);
+        QCOMPARE(m_manifest.size(), 44); // 10 from batch 7, 34 added 2026-11-27
 
         auto store = BibleStore::open(QStringLiteral(LUMEN_BIBLES_DB), true);
         QVERIFY2(store.ok(), store.ok() ? "" : qPrintable(store.error().message));
@@ -182,7 +240,7 @@ private slots:
             // Type it as an operator would.
             for (const char c : QByteArray("jn 3 16-18"))
                 QTest::keyClick(scriptureWindow, c);
-            QVERIFY(ui.click("translation-" + id));
+            QVERIFY2(chooseTranslation(ui, id, value.toObject().value("title").toString()), qPrintable(id));
             QCOMPARE(ui.scripture->label(), expected.book + QStringLiteral(" 3:16–18"));
             QCOMPARE(ui.scripture->verses().size(), 3);
             QTRY_VERIFY(ui.item("verse-2"));
