@@ -249,7 +249,8 @@ private slots:
         QCOMPARE(liveStyle().value("valign").toString(), QStringLiteral("bottom"));
         QVERIFY(ui.show.scene().layer(Layer::Slide).content.text.startsWith(QStringLiteral("16 For God so loved")));
 
-        // Side by side with Yoruba: two columns and a footer naming both.
+        // Side by side with Yoruba: two columns, each with its own reference
+        // directly under it (in its own language), and the credits below.
         QVERIFY(ui.click("referencePosition-below"));
         QVERIFY(ui.click("versesPerSlide-1"));
         QVERIFY(ui.click("second-yor"));
@@ -259,11 +260,33 @@ private slots:
         QVERIFY(scripture.showNow());
         const Content live = ui.show.scene().layer(Layer::Slide).content;
         QCOMPARE(live.kind, Content::Kind::Composed);
-        QCOMPARE(live.elements.size(), 3);
-        QVERIFY(live.elements[0].toObject().value("text").toString().startsWith(m_expected["engwebp"].start));
-        QVERIFY(live.elements[1].toObject().value("text").toString().startsWith(m_expected["yor"].start));
-        const QString footer = live.elements[2].toObject().value("text").toString();
-        QVERIFY2(footer.startsWith(QStringLiteral("John 3:16 (WEB")) && footer.contains(QStringLiteral("Yorùbá")), qPrintable(footer));
+        const auto text = [](const Content &c, int i) { return c.elements[i].toObject().value("text").toString(); };
+        const auto frameOf = [](const Content &c, int i) { return c.elements[i].toObject().value("frame").toArray(); };
+        QCOMPARE(live.elements.size(), 5);
+        QVERIFY(text(live, 0).startsWith(m_expected["engwebp"].start));
+        QVERIFY(text(live, 1).startsWith(m_expected["yor"].start));
+        QCOMPARE(text(live, 2), QStringLiteral("John 3:16 (WEB)"));
+        QCOMPARE(text(live, 3), QStringLiteral("Johanu 3:16 (Yorùbá)"));
+        for (int column : {0, 1}) {
+            const QJsonArray words = frameOf(live, column);
+            const QJsonArray reference = frameOf(live, column + 2);
+            QCOMPARE(reference[0].toDouble(), words[0].toDouble()); // the same column
+            const double gap = reference[1].toDouble() - (words[1].toDouble() + words[3].toDouble());
+            QVERIFY2(gap >= 0 && gap < 20, qPrintable(QString::number(gap))); // directly under
+        }
+        QCOMPARE(live.elements[0].toObject().value("style").toObject().value("valign").toString(), QStringLiteral("bottom"));
+        const QString credit = text(live, 4);
+        QVERIFY2(credit.contains(QStringLiteral("World English Bible")) && credit.contains(QStringLiteral("Biblica")), qPrintable(credit));
+
+        // Copyright line hidden: the public-domain WEB's goes; the Yoruba
+        // Bible's stays (CC BY-SA asks for credit).
+        QVERIFY(ui.click("copyrightOff"));
+        QVERIFY(!scripture.showCopyright());
+        QVERIFY(scripture.showNow());
+        const Content hidden = ui.show.scene().layer(Layer::Slide).content;
+        QCOMPARE(hidden.elements.size(), 5);
+        QVERIFY(!text(hidden, 4).contains(QStringLiteral("World English Bible")));
+        QVERIFY(text(hidden, 4).contains(QStringLiteral("Biblica")));
 
         // Added to the plan, it comes back the same.
         QVERIFY(scripture.addToPlan());
@@ -273,11 +296,21 @@ private slots:
         QVERIFY(ui.controller->goLive(1));
         const Content fromPlan = ui.show.scene().layer(Layer::Slide).content;
         QCOMPARE(fromPlan.kind, Content::Kind::Composed);
-        QCOMPARE(fromPlan.elements.size(), 3);
+        QCOMPARE(fromPlan.elements.size(), 5);
+        QCOMPARE(text(fromPlan, 3), QStringLiteral("Johanu 3:17 (Yorùbá)"));
 
-        // Off again; the reference above, added and reloaded: still above.
+        // One public-domain translation with the line hidden: just the
+        // reference. Shown again: the copyright is back.
         QVERIFY(ui.click("second-off"));
         QCOMPARE(scripture.secondTranslation(), -1);
+        QVERIFY(scripture.showNow());
+        QCOMPARE(ui.show.scene().layer(Layer::Slide).content.footer, QStringLiteral("John 3:16 (WEB)"));
+        QVERIFY(ui.click("copyrightOn"));
+        QVERIFY(scripture.showNow());
+        QCOMPARE(ui.show.scene().layer(Layer::Slide).content.footer,
+                 QStringLiteral("John 3:16 (WEB) · World English Bible. Public domain."));
+
+        // The reference above, added and reloaded: still above.
         QVERIFY(ui.click("referencePosition-above"));
         QVERIFY(scripture.addToPlan());
         ui.controller->selectItem(ui.controller->plan()->property("count").toInt() - 1);

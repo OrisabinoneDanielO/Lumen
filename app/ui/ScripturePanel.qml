@@ -693,6 +693,39 @@ Window {
                             }
                         }
                     }
+                    RowLayout {
+                        spacing: 6
+                        LText {
+                            text: qsTr("Copyright line")
+                            font.pixelSize: 12
+                            color: Theme.textMuted
+                            rightPadding: 6
+                        }
+                        LButton {
+                            objectName: "copyrightOn"
+                            implicitHeight: 32
+                            radius: 6
+                            text: qsTr("Show")
+                            variant: root.scripture.showCopyright ? "primary" : "default"
+                            onClicked: { root.scripture.showCopyright = true; verseInput.forceActiveFocus() }
+                        }
+                        LButton {
+                            objectName: "copyrightOff"
+                            implicitHeight: 32
+                            radius: 6
+                            text: qsTr("Hide")
+                            variant: root.scripture.showCopyright ? "default" : "primary"
+                            onClicked: { root.scripture.showCopyright = false; verseInput.forceActiveFocus() }
+                        }
+                        LText {
+                            Layout.fillWidth: true
+                            visible: !root.scripture.showCopyright
+                            text: qsTr("CC BY-SA Bibles still show their credit (their licence asks for it).")
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 11
+                            color: Theme.textMuted
+                        }
+                    }
                 }
             }
 

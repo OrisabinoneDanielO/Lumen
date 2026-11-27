@@ -94,9 +94,12 @@ void applyTheme(ItemView &item, const core::show::TextStyle &style, const QJsonO
 // screen, leaving the picture (a camera, a stream) above it.
 core::show::TextStyle scriptureStyle(core::show::TextStyle style, const QString &position);
 // Two translations side by side on one slide, as composed content: a column
-// each and the footer, in the style's text areas.
-QJsonArray sideBySideElements(const core::show::TextStyle &style, const QString &left, const QString &right,
-                              const QString &footer);
+// each, with its own reference directly under its text (above it when the
+// style puts the footer above), and the copyright credit, if any, small at
+// the bottom. Elements: left text, right text, left reference, right
+// reference, then the credit.
+QJsonArray sideBySideElements(const core::show::TextStyle &style, const QString &left, const QString &leftReference,
+                              const QString &right, const QString &rightReference, const QString &credit);
 
 struct PlanView
 {

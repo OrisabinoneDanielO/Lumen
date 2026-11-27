@@ -245,42 +245,65 @@ core::show::TextStyle scriptureStyle(core::show::TextStyle style, const QString 
     return style;
 }
 
-QJsonArray sideBySideElements(const core::show::TextStyle &style, const QString &left, const QString &right,
-                              const QString &footer)
+QJsonArray sideBySideElements(const core::show::TextStyle &style, const QString &left, const QString &leftReference,
+                              const QString &right, const QString &rightReference, const QString &credit)
 {
-    const auto areas = core::show::textAreas(style, core::show::referenceSize, !footer.isEmpty());
+    // The credit takes the footer band; each column's reference sits with
+    // its text inside the body.
+    core::show::TextStyle bands = style;
+    bands.footerPosition = QStringLiteral("below");
+    bands.footerSize = qMax(16, style.footerSize * 3 / 4);
+    const auto areas = core::show::textAreas(bands, core::show::referenceSize, !credit.isEmpty());
     const auto colour = [](const QColor &c) { return c.name(c.alpha() == 255 ? QColor::HexRgb : QColor::HexArgb); };
     const auto frame = [](const QRectF &r) {
         return QJsonArray{std::round(r.x()), std::round(r.y()), std::round(r.width()), std::round(r.height())};
     };
-    const QJsonObject textStyle{{"font", style.font},
-                                {"size", style.maxSize},
-                                {"bold", style.weight >= 600},
-                                {"colour", colour(style.colour)},
-                                {"align", style.align},
-                                {"valign", style.valign},
-                                {"shadow", style.shadow},
-                                {"outline", style.outline},
-                                {"outlineColour", colour(style.outlineColour)},
-                                {"fit", true}};
+    const bool above = style.footerPosition == QLatin1String("above");
+    QJsonObject textStyle{{"font", style.font},
+                          {"size", style.maxSize},
+                          {"bold", style.weight >= 600},
+                          {"colour", colour(style.colour)},
+                          {"align", style.align},
+                          // Text hugs its reference: down onto it, or up under it.
+                          {"valign", above ? "top" : "bottom"},
+                          {"shadow", style.shadow},
+                          {"outline", style.outline},
+                          {"outlineColour", colour(style.outlineColour)},
+                          {"fit", true}};
+    QJsonObject referenceStyle = textStyle;
+    referenceStyle.insert("size", style.footerSize);
+    referenceStyle.insert("colour", colour(style.footerColour));
+    referenceStyle.insert("bold", true);
+    referenceStyle.insert("valign", above ? "bottom" : "top");
+    referenceStyle.insert("fit", true);
+
     const double gap = 64;
     const double column = (areas.body.width() - gap) / 2;
-    QJsonArray elements{
-        QJsonObject{{"type", "text"},
-                    {"frame", frame(QRectF(areas.body.left(), areas.body.top(), column, areas.body.height()))},
-                    {"style", textStyle},
-                    {"text", left}},
-        QJsonObject{{"type", "text"},
-                    {"frame", frame(QRectF(areas.body.left() + column + gap, areas.body.top(), column, areas.body.height()))},
-                    {"style", textStyle},
-                    {"text", right}}};
+    const double referenceHeight = std::ceil(style.footerSize * 1.6);
+    const double referenceGap = std::ceil(style.footerSize * 0.4);
+    const double textHeight = areas.body.height() - referenceHeight - referenceGap;
+    const double textTop = above ? areas.body.top() + referenceHeight + referenceGap : areas.body.top();
+    const double referenceTop = above ? areas.body.top() : areas.body.top() + textHeight + referenceGap;
+    const auto columnAt = [&](int i) { return areas.body.left() + i * (column + gap); };
+
+    QJsonArray elements;
+    for (const auto &[i, text] : {std::pair(0, left), std::pair(1, right)})
+        elements.append(QJsonObject{{"type", "text"},
+                                    {"frame", frame(QRectF(columnAt(i), textTop, column, textHeight))},
+                                    {"style", textStyle},
+                                    {"text", text}});
+    for (const auto &[i, reference] : {std::pair(0, leftReference), std::pair(1, rightReference)})
+        elements.append(QJsonObject{{"type", "text"},
+                                    {"frame", frame(QRectF(columnAt(i), referenceTop, column, referenceHeight))},
+                                    {"style", referenceStyle},
+                                    {"text", reference}});
     if (!areas.footer.isEmpty()) {
-        QJsonObject footerStyle = textStyle;
-        footerStyle.insert("size", style.footerSize);
-        footerStyle.insert("colour", colour(style.footerColour));
-        footerStyle.insert("bold", false);
-        footerStyle.insert("valign", "middle");
-        elements.append(QJsonObject{{"type", "text"}, {"frame", frame(areas.footer)}, {"style", footerStyle}, {"text", footer}});
+        QJsonObject creditStyle = referenceStyle;
+        creditStyle.insert("size", bands.footerSize);
+        creditStyle.insert("bold", false);
+        creditStyle.insert("align", "center");
+        creditStyle.insert("valign", "middle");
+        elements.append(QJsonObject{{"type", "text"}, {"frame", frame(areas.footer)}, {"style", creditStyle}, {"text", credit}});
     }
     return elements;
 }
