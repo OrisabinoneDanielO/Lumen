@@ -148,7 +148,11 @@ Window {
                     objectName: "stageNow"
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    text: stageWindow.stage.now || ""
+                    // The Chords layout: the lines with their chords (styled
+                    // text from the operator window, already escaped).
+                    readonly property bool chorded: stageWindow.layout === "chords" && (stageWindow.stage.nowChords || "") !== ""
+                    textFormat: chorded ? Text.StyledText : Text.PlainText
+                    text: chorded ? stageWindow.stage.nowChords : (stageWindow.stage.now || "")
                     color: "#FFFFFF"
                     wrapMode: Text.WordWrap
                     verticalAlignment: Text.AlignTop
@@ -187,7 +191,9 @@ Window {
                     objectName: "stageNext"
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    text: stageWindow.stage.next || ""
+                    readonly property bool chorded: stageWindow.layout === "chords" && (stageWindow.stage.nextChords || "") !== ""
+                    textFormat: chorded ? Text.StyledText : Text.PlainText
+                    text: chorded ? stageWindow.stage.nextChords : (stageWindow.stage.next || "")
                     color: "#C3CAD6"
                     wrapMode: Text.WordWrap
                     verticalAlignment: Text.AlignTop

@@ -2,6 +2,8 @@
 
 #include <QRegularExpression>
 
+#include "lumen/core/songs/chords.h"
+
 #include "lumenfile.h"
 #include "planstore.h"
 
@@ -299,6 +301,76 @@ qint64 OperatorController::parseTime(const QString &text)
     if (!m.captured(1).isEmpty() && m.captured(2).toDouble() >= 60)
         return -1;
     return qint64(seconds * 1000 + 0.5);
+}
+
+bool OperatorController::shownIsSong() const
+{
+    const ItemView *view = selected();
+    return view && view->kind == QLatin1String("SONG");
+}
+
+int OperatorController::shownTranspose() const
+{
+    return shownIsSong() ? selected()->transpose : 0;
+}
+
+QString OperatorController::shownKey() const
+{
+    if (!shownIsSong() || selected()->key.isEmpty())
+        return {};
+    return core::songs::transposeKey(selected()->key, selected()->transpose);
+}
+
+void OperatorController::transposeShown(int semitones)
+{
+    if (!shownIsSong() || !m_db || semitones == 0)
+        return;
+    const int transpose = std::clamp(selected()->transpose + semitones, -11, 11);
+    const QString presentationId = selected()->presentationId;
+    using core::data::Presentation;
+    using core::data::Repository;
+    if (auto p = Repository<Presentation>(*m_db).get(presentationId); p.ok()) {
+        p.value().metadata.insert(QStringLiteral("transpose"), transpose);
+        if (auto updated = Repository<Presentation>(*m_db).update(p.value()); !updated.ok())
+            qWarning("Transposition not saved: %s", qPrintable(updated.error().message));
+    }
+    const auto apply = [&](ItemView &view) {
+        if (view.presentationId == presentationId)
+            view.transpose = transpose;
+    };
+    if (m_plan) {
+        for (ItemView &item : m_plan->items)
+            apply(item);
+    }
+    if (m_librarySong)
+        apply(*m_librarySong);
+    emit stateChanged();
+}
+
+QString OperatorController::chordsForStage(const QString &chordPro, int transpose, const QString &key)
+{
+    if (chordPro.isEmpty())
+        return {};
+    const bool flats = key.isEmpty() ? chordPro.contains(QLatin1String("b]")) || chordPro.contains(QLatin1String("b/"))
+                                     : core::songs::keyUsesFlats(core::songs::transposeKey(key, transpose));
+    const QString moved = core::songs::transposeChordPro(chordPro, transpose, flats);
+    static const QRegularExpression chord(QStringLiteral(R"(\[([^\[\]\s]{1,12})\])"));
+    QStringList lines;
+    for (const QString &line : moved.split(u'\n')) {
+        QString html;
+        qsizetype from = 0;
+        auto it = chord.globalMatch(line);
+        while (it.hasNext()) {
+            const auto m = it.next();
+            if (!core::songs::isChord(m.captured(1)))
+                continue;
+            html += line.mid(from, m.capturedStart() - from).toHtmlEscaped();
+            html += QStringLiteral("<font color=\"#F2C38B\">%1</font>\u2009").arg(m.captured(1).toHtmlEscaped());
+            from = m.capturedEnd();
+        }
+        lines << html + line.mid(from).toHtmlEscaped();
+    }
+    return lines.join(QStringLiteral("<br>"));
 }
 
 QString OperatorController::shownVideoStart() const
@@ -1667,7 +1739,9 @@ QJsonObject OperatorController::stageState() const
         const SlideView &slide = live->slides[size_t(m_positionSlide)];
         state.insert("item", live->title);
         QStringList detail;
-        if (!live->key.isEmpty())
+        if (!live->key.isEmpty() && live->transpose != 0)
+            detail << tr("Key of %1 (written in %2)").arg(core::songs::transposeKey(live->key, live->transpose), live->key);
+        else if (!live->key.isEmpty())
             detail << tr("Key of %1").arg(live->key);
         if (!live->notes.isEmpty())
             detail << live->notes;
@@ -1679,6 +1753,9 @@ QJsonObject OperatorController::stageState() const
         else if (now.isEmpty() && slide.mediaKind == QLatin1String("image"))
             now = tr("[Picture] %1").arg(live->title);
         state.insert("now", now);
+        // For the band (the Chords layout): the same lines with chords.
+        if (!slide.chords.isEmpty())
+            state.insert("nowChords", chordsForStage(slide.chords, live->transpose, live->key));
         // The arrangement, with the part on air marked: each change of group
         // in play order is the next chip.
         int chip = 0;
@@ -1695,6 +1772,8 @@ QJsonObject OperatorController::stageState() const
         const SlideView &next = view->slides[size_t(previewSlide())];
         state.insert("next", next.text.isEmpty() && !next.mediaKind.isEmpty() ? view->title : next.text);
         state.insert("nextGroup", next.group);
+        if (!next.chords.isEmpty())
+            state.insert("nextChords", chordsForStage(next.chords, view->transpose, view->key));
     }
     return state;
 }

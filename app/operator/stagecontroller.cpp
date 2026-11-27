@@ -14,6 +14,7 @@ StageController::StageController(OperatorController &op, TimerController &timers
          {"description", tr("Now and next, arrangement, timer, clock and message")}},
         {{"name", tr("Lyrics")}, {"key", "lyrics"}, {"description", tr("Now and next, large, for singers")}},
         {{"name", tr("Clock")}, {"key", "clock"}, {"description", tr("Time and timer, large, for the speaker")}},
+        {{"name", tr("Chords")}, {"key", "chords"}, {"description", tr("Now and next with chords, for the band")}},
     });
     connect(&m_op, &OperatorController::stateChanged, this, &StageController::push);
     connect(&m_timers, &TimerController::statesChanged, this, &StageController::push);

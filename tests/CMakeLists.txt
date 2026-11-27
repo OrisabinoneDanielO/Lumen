@@ -288,3 +288,7 @@ if(TARGET lumen_rtmidi)
     target_link_libraries(tst_mtc_cues PRIVATE lumen_rtmidi)
     target_compile_definitions(tst_mtc_cues PRIVATE LUMEN_HAVE_MIDI)
 endif()
+
+# Chords in lyrics and transposition.
+lumen_add_test(tst_chords tst_chords.cpp)
+target_link_libraries(tst_chords PRIVATE Lumen::Songs)

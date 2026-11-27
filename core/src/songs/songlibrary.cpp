@@ -136,16 +136,11 @@ Result<ImportedSong> SongLibrary::add(const ParsedSong &song, const QString &lib
             int slidePosition = 0;
             for (const auto &block : section.blocks) {
                 for (const auto &lines : splitIntoSlides(block, m_linesPerSlide)) {
-                    QStringList texts;
-                    QStringList chords;
-                    for (const LyricLine &line : lines) {
-                        texts << line.text;
-                        if (!line.chords.isEmpty())
-                            chords << line.chords;
-                    }
                     auto slide = Repository<Slide>(m_db).create(
-                        {.groupId = group.value().id, .position = slidePosition++,
-                         .chords = chords.join(QStringLiteral(" | "))});
+                        {.groupId = group.value().id, .position = slidePosition++, .chords = slideChords(lines)});
+                    QStringList texts;
+                    for (const LyricLine &line : lines)
+                        texts << line.text;
                     if (!slide.ok())
                         return slide.error();
                     auto element = Repository<Element>(m_db).create(

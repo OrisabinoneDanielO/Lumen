@@ -82,6 +82,10 @@ class OperatorController : public QObject
     Q_PROPERTY(QVariantList transitions READ transitions CONSTANT) // {key, name}
     Q_PROPERTY(bool shownVideoLoops READ shownVideoLoops WRITE setShownVideoLoops NOTIFY stateChanged)
     // The shown video's start and end points ("m:ss"; end empty: the end).
+    // A song: its key as the band plays it, and how far it is transposed.
+    Q_PROPERTY(bool shownIsSong READ shownIsSong NOTIFY stateChanged)
+    Q_PROPERTY(QString shownKey READ shownKey NOTIFY stateChanged)
+    Q_PROPERTY(int shownTranspose READ shownTranspose NOTIFY stateChanged)
     Q_PROPERTY(QString shownVideoStart READ shownVideoStart NOTIFY stateChanged)
     Q_PROPERTY(QString shownVideoEnd READ shownVideoEnd NOTIFY stateChanged)
     // The video on the screen now (the Media layer), as its output reports.
@@ -207,6 +211,15 @@ public:
     // once and stops (kept with the video in the library).
     bool shownIsVideo() const;
     bool shownVideoLoops() const;
+    bool shownIsSong() const;
+    QString shownKey() const;
+    int shownTranspose() const;
+    // Moves the shown song's chords (and key) up or down by semitones, for
+    // the stage display; kept with the song. Within an octave either way.
+    Q_INVOKABLE void transposeShown(int semitones);
+    // ChordPro lines as styled text for the stage: chords in colour before
+    // their syllable, transposed.
+    static QString chordsForStage(const QString &chordPro, int transpose, const QString &key);
     QString shownVideoStart() const;
     QString shownVideoEnd() const;
     // Sets the shown video's start and end ("1:05", "65", "1:05.5"; an empty

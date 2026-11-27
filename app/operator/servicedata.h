@@ -48,6 +48,9 @@ struct SlideView
     // "trimOutMs"; 0: the start, the end).
     qint64 trimInMs = 0;
     qint64 trimOutMs = 0;
+    // A song slide's lines with inline chords ("[G]Amazing [C]grace"), for
+    // the stage display; empty if none.
+    QString chords{};
 };
 
 // The JSON for composed content from a slide's stored elements, bottom
@@ -70,6 +73,7 @@ struct ItemView
     QString planItemId;     // empty for a song shown from the library
     QString notes;          // the plan item's notes
     QString key;            // a song's key ("G"), for the stage display
+    int transpose = 0;      // semitones the band plays it up (+) or down (-)
     QString presentationId; // empty for a header
     QString kind;     // "SONG", "BIBLE", "SLIDES", "MEDIA", "TIMER"; empty for a header
     QString title;

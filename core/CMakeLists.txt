@@ -92,9 +92,11 @@ target_link_libraries(lumen_show
 # Song library: plain-text and OpenLyrics import, auto-split, search.
 add_library(lumen_songs STATIC
     include/lumen/core/songs/songimport.h
+    include/lumen/core/songs/chords.h
     include/lumen/core/songs/songlibrary.h
     include/lumen/core/songs/foreignimport.h
     src/songs/songimport.cpp
+    src/songs/chords.cpp
     src/songs/songlibrary.cpp
     src/songs/foreignimport.cpp
 )

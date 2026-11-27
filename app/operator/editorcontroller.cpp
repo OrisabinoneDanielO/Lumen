@@ -1,5 +1,7 @@
 #include "editorcontroller.h"
 
+#include "lumen/core/songs/chords.h"
+
 #include "medialibrary.h"
 #include "operatorcontroller.h"
 #include "servicedata.h"
@@ -101,7 +103,8 @@ void EditorController::load(const QString &presentationId)
                     slideText << e.content;
                 draft.elements.push_back(std::move(d));
             }
-            texts << slideText.join(u'\n');
+            // Songs: the lyrics show their chords inline ("[G]Amazing").
+            texts << (slide.chords.contains(u'[') ? slide.chords : slideText.join(u'\n'));
             m_draft.push_back(std::move(draft));
         }
         groupTexts.push_back({group.label, texts});
@@ -370,7 +373,8 @@ void EditorController::autoSplit()
     std::vector<std::pair<QString, QStringList>> groups{{QString(), {}}};
     for (const QString &line : m_lyrics.split(u'\n')) {
         const QString t = line.trimmed();
-        if (t.startsWith(u'[') && t.endsWith(u']'))
+        // A header is one [label] alone, not a chord ("[G]Amazing grace [D]").
+        if (t.startsWith(u'[') && t.endsWith(u']') && t.count(u'[') == 1 && !songs::isChord(t.mid(1, t.size() - 2)))
             groups.push_back({t, {}});
         else if (!t.isEmpty() && t != QLatin1String("---"))
             groups.back().second << t;
@@ -751,7 +755,8 @@ Status EditorController::saveSong()
                 QStringList texts;
                 for (const songs::LyricLine &line : lines)
                     texts << line.text;
-                auto slide = Repository<Slide>(*m_db).create({.groupId = group.value().id, .position = slidePosition++});
+                auto slide = Repository<Slide>(*m_db).create(
+                    {.groupId = group.value().id, .position = slidePosition++, .chords = songs::slideChords(lines)});
                 if (!slide.ok())
                     return slide.error();
                 auto element = Repository<Element>(*m_db).create({.slideId = slide.value().id, .type = ElementType::Text,
