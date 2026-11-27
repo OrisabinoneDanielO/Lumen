@@ -378,6 +378,13 @@ int main(int argc, char *argv[])
     }
     app::ScriptureController scriptureController(controller);
     scriptureController.setStores(bundledBibleStore.get(), userBibleStore.get());
+    // The copyright line on scripture slides (public-domain Bibles may leave
+    // it out), remembered.
+    scriptureController.setShowCopyright(settings.value(QStringLiteral("scripture/showCopyright"), true).toBool());
+    QObject::connect(&scriptureController, &app::ScriptureController::changed, &app, [&scriptureController] {
+        if (QSettings().value(QStringLiteral("scripture/showCopyright"), true).toBool() != scriptureController.showCopyright())
+            QSettings().setValue(QStringLiteral("scripture/showCopyright"), scriptureController.showCopyright());
+    });
     app::ThemeController themeController(controller);
     app::TimerController timerController(controller, show);
     timerController.attach(*library);

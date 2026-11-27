@@ -118,6 +118,30 @@ void ScriptureController::setSecondTranslation(int index)
     refresh();
 }
 
+void ScriptureController::setShowCopyright(bool show)
+{
+    if (show == m_showCopyright)
+        return;
+    m_showCopyright = show;
+    rebuild();
+    emit changed();
+}
+
+QString ScriptureController::credit() const
+{
+    QStringList lines;
+    for (const auto *passage : {m_passage ? &*m_passage : nullptr, m_secondPassage ? &*m_secondPassage : nullptr}) {
+        if (!passage)
+            continue;
+        const Translation &t = passage->translation;
+        // Public domain needs no credit; anything else (CC BY-SA) does.
+        const bool required = !t.licence.startsWith(QLatin1String("Public domain"), Qt::CaseInsensitive);
+        if ((m_showCopyright || required) && !t.copyright.isEmpty())
+            lines << t.copyright;
+    }
+    return lines.join(QStringLiteral(" · "));
+}
+
 QString ScriptureController::previewSecondText() const
 {
     if (m_item.slides.empty() || m_item.slides.front().elements.size() < 2)
@@ -278,14 +302,26 @@ void ScriptureController::rebuild()
     for (const auto &chunk : chunks) {
         const QString reference = slideReference(*m_passage, chunk);
         if (sideBySide) {
-            const QString footer = QStringLiteral("%1 (%2 · %3) · %4 · %5")
-                                       .arg(reference, t.abbreviation, second->abbreviation, t.copyright, second->copyright);
+            // Each column names its own passage, in its own language.
+            std::vector<PassageVerse> matching;
+            for (const PassageVerse &v : m_secondPassage->verses) {
+                if (std::pair(v.chapter, v.verse) >= std::pair(chunk.front().chapter, chunk.front().verse)
+                    && std::pair(v.chapter, v.verse) <= std::pair(chunk.back().chapter, chunk.back().last))
+                    matching.push_back(v);
+            }
+            const QString leftReference = QStringLiteral("%1 (%2)").arg(reference, t.abbreviation);
+            const QString rightReference = matching.empty()
+                                               ? second->abbreviation
+                                               : QStringLiteral("%1 (%2)").arg(slideReference(*m_secondPassage, matching), second->abbreviation);
+            const QString footer = credit();
             SlideView slide{{}, reference, scriptureColour, slideText(chunk), footer, 0, {}, {}, {}, false, {}, {}};
-            slide.elements = sideBySideElements(style, slideText(chunk), secondText(chunk), footer);
+            slide.elements = sideBySideElements(style, slideText(chunk), leftReference, secondText(chunk), rightReference, footer);
             view.slides.push_back(std::move(slide));
             continue;
         }
-        const QString footer = QStringLiteral("%1 (%2) · %3").arg(reference, t.abbreviation, t.copyright);
+        const QString lineCredit = credit();
+        const QString footer = lineCredit.isEmpty() ? QStringLiteral("%1 (%2)").arg(reference, t.abbreviation)
+                                                    : QStringLiteral("%1 (%2) · %3").arg(reference, t.abbreviation, lineCredit);
         const QStringList parts = core::show::splitToFit(slideText(chunk), style, true);
         for (qsizetype p = 0; p < parts.size(); ++p) {
             const QString group = parts.size() > 1
@@ -332,7 +368,7 @@ bool ScriptureController::addToPlan()
     const ItemView &view = m_item;
     const Translation &t = m_passage->translation;
 
-    QJsonObject metadata{{"subtitle", t.title},           {"copyright", t.copyright},
+    QJsonObject metadata{{"subtitle", t.title},           {"copyright", credit()},
                          {"abbreviation", t.abbreviation}, {"translation", t.id},
                          {"reference", m_passage->label},  {"referencePosition", m_referencePosition}};
     if (m_secondPassage) {
@@ -340,7 +376,6 @@ bool ScriptureController::addToPlan()
         metadata.insert("secondTranslation", second.id);
         metadata.insert("secondAbbreviation", second.abbreviation);
         metadata.insert("secondCopyright", second.copyright);
-        metadata.insert("copyright", t.copyright + QStringLiteral(" · ") + second.copyright);
     }
 
     QString presentationId;

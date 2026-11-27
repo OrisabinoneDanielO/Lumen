@@ -36,6 +36,9 @@ class ScriptureController : public QObject
     // A second translation side by side (an index in translations), or -1.
     Q_PROPERTY(int secondTranslation READ secondTranslation WRITE setSecondTranslation NOTIFY changed)
     Q_PROPERTY(QString previewSecondText READ previewSecondText NOTIFY changed)
+    // The copyright line on the slides. Off: left out for public-domain
+    // Bibles; Bibles whose licence asks for credit (CC BY-SA) keep theirs.
+    Q_PROPERTY(bool showCopyright READ showCopyright WRITE setShowCopyright NOTIFY changed)
     // How many verses the first slide holds (highlighted in the list).
     Q_PROPERTY(int firstSlideVerses READ firstSlideVerses NOTIFY changed)
     Q_PROPERTY(QString copyright READ copyright NOTIFY changed)
@@ -70,6 +73,8 @@ public:
     void setSecondTranslation(int index);
     QString previewSecondText() const;
     int firstSlideVerses() const { return m_firstSlideVerses; }
+    bool showCopyright() const { return m_showCopyright; }
+    void setShowCopyright(bool show);
     QString copyright() const;
     QString previewText() const;
     QString previewReference() const;
@@ -125,6 +130,9 @@ private:
     QString m_referencePosition = QStringLiteral("below");
     int m_second = -1;
     int m_firstSlideVerses = 0;
+    bool m_showCopyright = true;
+    // The copyright lines the slides carry (see showCopyright), joined.
+    QString credit() const;
     std::optional<core::scripture::Passage> m_passage;
     std::optional<core::scripture::Passage> m_secondPassage; // the same verses
     ItemView m_item;

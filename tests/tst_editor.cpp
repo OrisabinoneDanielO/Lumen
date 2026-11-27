@@ -1,6 +1,8 @@
 #include "operatorharness.h"
 #include "outputwindow.h"
 #include "rendercheck.h"
+#include "servicedata.h"
+#include "themes.h"
 
 #include "lumen/core/data/repository.h"
 
@@ -169,6 +171,36 @@ private slots:
         QTRY_VERIFY((frame = output.grab(), !test::near(test::colourAt(frame, 0.6, 0.6), Qt::black, 30)));
         output.advanceClock(31 * 1000);
         QCOMPARE(output.visibleTexts("elementText-").value("elementText-4").toString(), QStringLiteral("0:59"));
+    }
+
+    // Scripture side by side on the output: each translation with its own
+    // reference under it, the credit small below (LUMEN_SCREENSHOT_DIR: a
+    // picture of it).
+    void sideBySideScriptureOnTheOutput()
+    {
+        render::OutputWindow output;
+        QVERIFY(output.create());
+        output.place(QGuiApplication::primaryScreen(), false, QSize(960, 540));
+        QVERIFY(QTest::qWaitForWindowExposed(output.window()));
+        const auto theme = builtInTheme(ThemeTarget::Scripture);
+        Scene scene;
+        scene.sequence = 1;
+        scene.layer(Layer::Slide).content = Content::composed(sideBySideElements(
+            theme.style,
+            QStringLiteral("For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life."),
+            QStringLiteral("John 3:16 (KJV)"),
+            QStringLiteral("“Nítorí Ọlọ́run fẹ́ aráyé tó bẹ́ẹ̀ gẹ́ẹ́, tí ó fi ọmọ rẹ̀ kan ṣoṣo fún ni, kí ẹnikẹ́ni tí ó bá gbà á gbọ́, má bà á ṣègbé, ṣùgbọ́n kí ó lè ní ìyè àìnípẹ̀kun."),
+            QStringLiteral("Johanu 3:16 (Yorùbá)"),
+            QStringLiteral("Yoruba Bible. Copyright © 2009, 2017 Biblica, Inc. CC BY-SA 4.0.")));
+        output.setScene(scene);
+        QTRY_COMPARE(output.visibleTexts("elementText-").size(), 5);
+        const QVariantMap texts = output.visibleTexts("elementText-");
+        QCOMPARE(texts.value("elementText-2").toString(), QStringLiteral("John 3:16 (KJV)"));
+        QCOMPARE(texts.value("elementText-3").toString(), QStringLiteral("Johanu 3:16 (Yorùbá)"));
+        if (const QString dir = qEnvironmentVariable("LUMEN_SCREENSHOT_DIR"); !dir.isEmpty()) {
+            QTest::qWait(200);
+            QVERIFY(output.grab().save(dir + QStringLiteral("/scripture-side-by-side.png")));
+        }
     }
 
     void slidesBackgroundTransitionAndCancel()
