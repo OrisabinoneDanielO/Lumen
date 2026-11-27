@@ -143,8 +143,8 @@ private slots:
             expectOnScreen(QStringLiteral("countdown slide"));
             QVERIFY(timers.reset(elapsedTimer));
             QVERIFY(timers.start(elapsedTimer));
-            QVERIFY(timers.show(elapsedTimer));
-            expectOnScreen(QStringLiteral("timer banner"));
+            QVERIFY(timers.show(elapsedTimer)); // on the stage display only
+            expectOnScreen(QStringLiteral("timer on stage"));
             pace(500);
             timers.hide();
             expectOnScreen(QStringLiteral("timer hidden"));

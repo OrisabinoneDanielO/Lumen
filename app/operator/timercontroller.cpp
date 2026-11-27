@@ -169,7 +169,7 @@ bool TimerController::show(int row)
     const QString id = idAt(row);
     if (id.isEmpty())
         return false;
-    m_show.setContent(Layer::Messages, Content::timerContent(specFor(id), m_timers[size_t(row)].name));
+    m_shownId = id; // the stage display picks it up (stageTimer)
     refresh();
     emit statesChanged();
     return true;
@@ -177,8 +177,7 @@ bool TimerController::show(int row)
 
 void TimerController::hide()
 {
-    if (m_show.scene().layer(Layer::Messages).content.kind == Content::Kind::Timer)
-        m_show.setContent(Layer::Messages, Content::empty());
+    m_shownId.clear();
     refresh();
     emit statesChanged();
 }
@@ -225,6 +224,8 @@ bool TimerController::remove(int row)
             m_show.setContent(layer, Content::empty());
     }
     m_states.remove(id);
+    if (m_shownId == id)
+        m_shownId.clear();
     load();
     emit statesChanged();
     return true;
@@ -233,8 +234,7 @@ bool TimerController::remove(int row)
 // A timer on screen (banner or countdown slide) changes there at once.
 std::optional<QJsonObject> TimerController::stageTimer() const
 {
-    const Content &banner = m_show.scene().layer(Layer::Messages).content;
-    const QString shown = banner.kind == Content::Kind::Timer ? banner.timer.value("id").toString() : QString();
+    const QString &shown = m_shownId;
     const Timer *pick = nullptr;
     for (const Timer &t : m_timers)
         pick = !pick && t.id == shown ? &t : pick;
@@ -261,8 +261,7 @@ void TimerController::updateOnScreen(const QString &id)
 void TimerController::refresh()
 {
     const qint64 now = m_now();
-    const Content &banner = m_show.scene().layer(Layer::Messages).content;
-    const QString shown = banner.kind == Content::Kind::Timer ? banner.timer.value("id").toString() : QString();
+    const QString &shown = m_shownId;
     QList<QVariantMap> rows;
     QString summary;
     for (const Timer &t : m_timers) {
