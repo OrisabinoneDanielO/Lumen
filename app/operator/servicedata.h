@@ -95,12 +95,17 @@ void applyTheme(ItemView &item, const core::show::TextStyle &style, const QJsonO
 // screen, leaving the picture (a camera, a stream) above it.
 core::show::TextStyle scriptureStyle(core::show::TextStyle style, const QString &position);
 // Two translations side by side on one slide, as composed content: a column
-// each, with its own reference directly under its text (above it when the
-// style puts the footer above), and the copyright credit, if any, small at
-// the bottom. Elements: left text, right text, left reference, right
-// reference, then the credit.
+// each, and under each passage its own reference ("John 3:16 (KJV)") and its
+// own copyright line (none if empty), placed as one block where the theme
+// puts a slide's text. Elements: left text, right text, left reference,
+// right reference, then the left and right credits (each only if any).
 QJsonArray sideBySideElements(const core::show::TextStyle &style, const QString &left, const QString &leftReference,
-                              const QString &right, const QString &rightReference, const QString &credit);
+                              const QString &leftCredit, const QString &right, const QString &rightReference,
+                              const QString &rightCredit);
+// A side by side slide stored earlier (an older layout), laid out again
+// with the current one and the item's theme. metadata: the scripture
+// presentation's (credits, abbreviations). False if it is not one.
+bool relayoutSideBySide(SlideView &slide, const core::show::TextStyle &style, const QJsonObject &metadata);
 
 struct PlanView
 {

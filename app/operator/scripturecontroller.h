@@ -36,6 +36,9 @@ class ScriptureController : public QObject
     // A second translation side by side (an index in translations), or -1.
     Q_PROPERTY(int secondTranslation READ secondTranslation WRITE setSecondTranslation NOTIFY changed)
     Q_PROPERTY(QString previewSecondText READ previewSecondText NOTIFY changed)
+    // The first slide as the output will draw it (for the window's
+    // preview): {text, style (with its fitted size), footer, elements}.
+    Q_PROPERTY(QVariantMap previewSlide READ previewSlide NOTIFY changed)
     // The copyright line on the slides. Off: left out for public-domain
     // Bibles; Bibles whose licence asks for credit (CC BY-SA) keep theirs.
     Q_PROPERTY(bool showCopyright READ showCopyright WRITE setShowCopyright NOTIFY changed)
@@ -77,6 +80,7 @@ public:
     int secondTranslation() const { return m_second; }
     void setSecondTranslation(int index);
     QString previewSecondText() const;
+    QVariantMap previewSlide() const;
     int firstSlideVerses() const { return m_firstSlideVerses; }
     bool showCopyright() const { return m_showCopyright; }
     QString wordQuery() const { return m_wordQuery; }
@@ -148,6 +152,8 @@ private:
     // in full, on every slide. Hidden: only Bibles whose licence asks for
     // credit (CC BY-SA), shortened, on the passage's first slide.
     QString credit(bool firstSlide = true) const;
+    // One translation's line (side by side: under its own passage).
+    QString creditFor(const core::scripture::Translation &t, bool firstSlide) const;
 public:
     // "Yorùbá © Biblica, CC BY-SA 4.0" from "Yoruba Bible. Copyright © 2009,
     // 2017 Biblica, Inc. CC BY-SA 4.0." (the full line if it does not read so).

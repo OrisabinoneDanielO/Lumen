@@ -777,51 +777,18 @@ Window {
                             onClicked: root.scripture.preview()
                             onDoubleClicked: root.scripture.showNow()
                         }
-                        Column {
-                            anchors.verticalCenter: parent.verticalCenter
-                            x: 24
-                            width: parent.width - 48
-                            spacing: 10
-                            LText {
-                                visible: root.scripture.referencePosition === "above"
-                                text: root.scripture.previewReference
-                                color: "#F2C38B"
-                                font.pixelSize: 12
-                                font.weight: Font.DemiBold
-                            }
-                            Row {
-                                width: parent.width
-                                spacing: 16
-                                LText {
-                                    width: root.scripture.previewSecondText === "" ? parent.width : (parent.width - 16) / 2
-                                    text: root.scripture.previewText
-                                    color: "#FFFFFF"
-                                    font.pixelSize: root.scripture.previewSecondText === "" ? 15 : 12
-                                    wrapMode: Text.WordWrap
-                                    elide: Text.ElideNone
-                                    maximumLineCount: 6
-                                    lineHeight: 1.4
-                                }
-                                LText {
-                                    objectName: "scripturePreviewSecond"
-                                    visible: text !== ""
-                                    width: (parent.width - 16) / 2
-                                    text: root.scripture.previewSecondText
-                                    color: "#FFFFFF"
-                                    font.pixelSize: 12
-                                    wrapMode: Text.WordWrap
-                                    elide: Text.ElideNone
-                                    maximumLineCount: 6
-                                    lineHeight: 1.4
-                                }
-                            }
-                            LText {
-                                visible: root.scripture.referencePosition !== "above"
-                                text: root.scripture.previewReference
-                                color: "#F2C38B"
-                                font.pixelSize: 12
-                                font.weight: Font.DemiBold
-                            }
+                        // The first slide, drawn as the output draws it (theme,
+                        // fitted size, side by side columns), shrunk to fit.
+                        SlideFrame {
+                            objectName: "scriptureSlidePreview"
+                            anchors.centerIn: parent
+                            height: Math.min(parent.height, parent.width * 9 / 16)
+                            width: height * 16 / 9
+                            text: root.scripture.previewSlide.text || ""
+                            slideStyle: root.scripture.previewSlide.style || ({})
+                            footer: root.scripture.previewSlide.footer || ""
+                            elements: root.scripture.previewSlide.elements || []
+                            frameWidth: 0
                         }
                     }
                     LText {

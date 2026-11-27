@@ -165,23 +165,39 @@ QString ScriptureController::shortCredit(const Translation &t)
     return QStringLiteral("%1 © %2, %3").arg(t.abbreviation, m.captured(1).trimmed(), t.licence);
 }
 
+QString ScriptureController::creditFor(const Translation &t, bool firstSlide) const
+{
+    // Shown: the full line on every slide. Hidden: public domain needs no
+    // credit; anything else (CC BY-SA) a short one, on the first slide.
+    if (t.copyright.isEmpty())
+        return {};
+    if (m_showCopyright)
+        return t.copyright;
+    const bool required = !t.licence.startsWith(QLatin1String("Public domain"), Qt::CaseInsensitive);
+    return required && firstSlide ? shortCredit(t) : QString();
+}
+
 QString ScriptureController::credit(bool firstSlide) const
 {
-    if (!m_showCopyright && !firstSlide)
-        return {};
     QStringList lines;
     for (const auto *passage : {m_passage ? &*m_passage : nullptr, m_secondPassage ? &*m_secondPassage : nullptr}) {
-        if (!passage)
-            continue;
-        const Translation &t = passage->translation;
-        // Public domain needs no credit; anything else (CC BY-SA) does.
-        const bool required = !t.licence.startsWith(QLatin1String("Public domain"), Qt::CaseInsensitive);
-        if (m_showCopyright && !t.copyright.isEmpty())
-            lines << t.copyright;
-        else if (required && !t.copyright.isEmpty())
-            lines << shortCredit(t);
+        if (passage) {
+            if (const QString line = creditFor(passage->translation, firstSlide); !line.isEmpty())
+                lines << line;
+        }
     }
     return lines.join(QStringLiteral(" · "));
+}
+
+QVariantMap ScriptureController::previewSlide() const
+{
+    if (m_item.slides.empty())
+        return {};
+    const SlideView &slide = m_item.slides.front();
+    return {{"text", slide.text},
+            {"style", m_item.style ? styleWithSize(*m_item.style, slide.fontSize).toVariantMap() : QVariantMap()},
+            {"footer", slide.footer},
+            {"elements", slide.elements.toVariantList()}};
 }
 
 QString ScriptureController::previewSecondText() const
@@ -358,7 +374,9 @@ void ScriptureController::rebuild()
                                                : QStringLiteral("%1 (%2)").arg(slideReference(*m_secondPassage, matching), second->abbreviation);
             const QString footer = credit(firstSlide);
             SlideView slide{{}, reference, scriptureColour, slideText(chunk), footer, 0, {}, {}, {}, false, {}, {}};
-            slide.elements = sideBySideElements(style, slideText(chunk), leftReference, secondText(chunk), rightReference, footer);
+            // Each translation's reference and credit under its own passage.
+            slide.elements = sideBySideElements(style, slideText(chunk), leftReference, creditFor(t, firstSlide),
+                                                secondText(chunk), rightReference, creditFor(*second, firstSlide));
             view.slides.push_back(std::move(slide));
             continue;
         }

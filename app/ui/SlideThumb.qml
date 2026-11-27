@@ -1,4 +1,5 @@
 import QtQuick
+import Lumen.Slides
 
 // One slide card in the slide grid: group label, LIVE/NEXT tag, 16:9 preview.
 Rectangle {
@@ -9,6 +10,7 @@ Rectangle {
     property color groupColor: Theme.textMuted
     property string slideText
     required property url thumbnail // media slides: a picture of the video or image
+    property var elements: []        // a slide laid out by position: drawn as it is
     signal clicked()
     property string status // "live", "next" or ""
 
@@ -86,13 +88,26 @@ Rectangle {
             fillMode: Image.PreserveAspectFit
             asynchronous: true
         }
-        LText {
+        ComposedSlide {
+            objectName: "thumbComposed"
             anchors.fill: parent
-            anchors.margins: 10
+            visible: root.elements && root.elements.length > 0
+            elements: visible ? root.elements : []
+            playVideo: false
+        }
+        // Words: as large as fits the card (long lyrics and scripture shrink
+        // rather than run off it).
+        LText {
+            objectName: "thumbText"
+            anchors.fill: parent
+            anchors.margins: 8
+            visible: !(root.elements && root.elements.length > 0)
             text: root.slideText
             color: "#FFFFFF"
             font.pixelSize: 12
-            lineHeight: 1.3
+            fontSizeMode: Text.Fit
+            minimumPixelSize: 6
+            lineHeight: 1.2
             wrapMode: Text.WordWrap
             elide: Text.ElideNone
             horizontalAlignment: Text.AlignHCenter
