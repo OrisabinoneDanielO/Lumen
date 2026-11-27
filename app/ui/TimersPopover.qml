@@ -45,7 +45,7 @@ Rectangle {
                 }
                 Small {
                     objectName: "timerHide"
-                    text: qsTr("Hide from screen")
+                    text: qsTr("Off the stage")
                     onClicked: root.timers.hide()
                 }
                 Small {
@@ -115,7 +115,10 @@ Rectangle {
                         }
                         Small {
                             objectName: "timerShow-" + row.index
-                            text: qsTr("Show")
+                            // On the stage display, for the speaker; the
+                            // audience never sees timers (countdown slides
+                            // excepted).
+                            text: qsTr("On stage")
                             variant: row.shown ? "primary" : "default"
                             onClicked: row.shown ? root.timers.hide() : root.timers.show(row.index)
                         }

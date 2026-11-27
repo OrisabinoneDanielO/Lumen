@@ -117,6 +117,13 @@ private slots:
         QVERIFY(test::textPixelsBetween(frame, 0.0, 0.12) > 20); // the banner
         QVERIFY(test::textPixelsBetween(frame, 0.4, 0.8) > 50);  // the large time
 
+        // LUMEN_SCREENSHOT_DIR: how timers look on the output.
+        if (const QString dir = qEnvironmentVariable("LUMEN_SCREENSHOT_DIR"); !dir.isEmpty()) {
+            output.place(QGuiApplication::primaryScreen(), false, QSize(960, 540));
+            QTest::qWait(200);
+            QVERIFY(output.grab().save(dir + QStringLiteral("/timers-output.png")));
+            output.place(QGuiApplication::primaryScreen(), false, QSize(480, 270));
+        }
         output.advanceClock(61 * 1000);
         frame = output.grab();
         QVERIFY(texts(output.window()->contentItem(), "timerText").contains("3:59"));
@@ -134,10 +141,15 @@ private slots:
         const int elapsed = rowOf(ui.timers->timers(), "Elapsed");
         QVERIFY(sermon >= 0 && elapsed >= 0 && rowOf(ui.timers->timers(), "Service start") >= 0);
 
+        // Shown: on the stage display only; the audience never sees it.
         QVERIFY(ui.timers->show(sermon));
-        const auto banner = [&] { return ui.show.scene().layer(Layer::Messages).content; };
-        QCOMPARE(banner().kind, Content::Kind::Timer);
-        QCOMPARE(banner().text, QStringLiteral("Sermon"));
+        QVERIFY(ui.show.scene().layer(Layer::Messages).content.isEmpty());
+        struct Shown
+        {
+            QJsonObject timer;
+        };
+        const auto banner = [&] { return Shown{ui.timers->stageTimer()->value("spec").toObject()}; };
+        QCOMPARE(ui.timers->stageTimer()->value("label").toString(), QStringLiteral("Sermon"));
         QCOMPARE(core::show::timerText(banner().timer, now), QStringLiteral("30:00")); // not started
 
         QVERIFY(ui.timers->start(sermon));
@@ -161,6 +173,8 @@ private slots:
         QTRY_VERIFY(ui.timers->summary().startsWith(QStringLiteral("Elapsed 1:15")));
         ui.timers->hide();
         QVERIFY(ui.show.scene().layer(Layer::Messages).content.isEmpty());
+        // Off the stage: it shows the running timer instead.
+        QCOMPARE(ui.timers->stageTimer()->value("label").toString(), QStringLiteral("Elapsed"));
 
         // Adding and removing.
         QVERIFY(!ui.timers->add(QStringLiteral("Bad"), QStringLiteral("countdown"), QStringLiteral("soon")));
@@ -258,10 +272,13 @@ private slots:
         QTRY_VERIFY(ui.timers->summary().startsWith(QStringLiteral("Sermon 30:00"))
                     || ui.timers->summary().startsWith(QStringLiteral("Sermon 29:5")));
         QTRY_COMPARE(ui.item("timersButton")->property("text").toString(), ui.timers->summary());
+        // On stage: for the stage display; nothing on the audience screen.
         QVERIFY(ui.click(QStringLiteral("timerShow-%1").arg(sermon)));
-        QCOMPARE(ui.show.scene().layer(Layer::Messages).content.kind, Content::Kind::Timer);
+        QVERIFY(ui.show.scene().layer(Layer::Messages).content.isEmpty());
+        QCOMPARE(ui.timers->stageTimer()->value("label").toString(), QStringLiteral("Sermon"));
+        QVERIFY(qobject_cast<RowModel *>(ui.timers->timers())->get(sermon).value("shown").toBool());
         QVERIFY(ui.click(QStringLiteral("timerStart-%1").arg(sermon))); // now Pause
-        QVERIFY(ui.show.scene().layer(Layer::Messages).content.timer.contains("pausedMs"));
+        QVERIFY(ui.timers->stageTimer()->value("spec").toObject().contains("pausedMs"));
 
         // Keyboard only: a count up needs just a name, so Enter adds it; a
         // countdown's name goes on to the minutes.

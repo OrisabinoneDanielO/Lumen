@@ -87,7 +87,7 @@ The **Plan** menu above the service plan makes, opens, renames and duplicates pl
 
 ## Timers and messages
 
-**Timers** in the toolbar starts, pauses and resets countdowns (for a set time or to a time of day) and count-up clocks, and shows one in the banner at the top of the output. Countdown slides, such as a pre-service loop, show the time live. The output counts on its own clock, so a timer keeps time even if the operator window stops. **Message** puts a line of text in the banner over the slides and keeps recent ones a click away; pick a template ("Parent of {number}, please come to the nursery"), fill in its fields and show it, as a banner or a scrolling ticker. Clear Msg (F4) takes it down.
+**Timers** in the toolbar starts, pauses and resets countdowns (for a set time or to a time of day) and count-up clocks. **On stage** shows one on the stage display for the speaker and band; timers never appear on the audience screen. Countdown slides, such as a pre-service loop, show the time to the audience. The output counts on its own clock, so a timer keeps time even if the operator window stops. **Message** puts a line of text in the banner over the slides and keeps recent ones a click away; pick a template ("Parent of {number}, please come to the nursery"), fill in its fields and show it, as a banner or a scrolling ticker. Clear Msg (F4) takes it down.
 
 ## Props
 

@@ -27,9 +27,10 @@ class OperatorController;
 // and sent to the output as wall-clock times, so the render process counts
 // on its own and a timer keeps time even if this UI stops.
 //
-// A timer can be shown in the Messages banner, and slides with a timer
-// element (countdown slides) show one. Starting, pausing or resetting a timer
-// that is on screen updates it there at once.
+// A timer can be shown on the stage display (never the audience screen:
+// sermon and service timers are for the speaker and band), and slides with
+// a timer element (countdown slides) show one to the audience. Starting,
+// pausing or resetting a timer that is shown updates it there at once.
 class TimerController : public QObject
 {
     Q_OBJECT
@@ -49,8 +50,8 @@ public:
     Q_INVOKABLE bool start(int row);
     Q_INVOKABLE bool pause(int row);
     Q_INVOKABLE bool reset(int row);
-    Q_INVOKABLE bool show(int row);  // in the Messages banner
-    Q_INVOKABLE void hide();         // takes a shown timer off the banner
+    Q_INVOKABLE bool show(int row);  // on the stage display
+    Q_INVOKABLE void hide();         // takes it off the stage display
     // minutes for a countdown, "HH:mm" for a countdown to a time, ignored for
     // a count-up clock. Returns false (and adds nothing) if they make no sense.
     Q_INVOKABLE bool add(const QString &name, const QString &mode, const QString &value);
@@ -92,6 +93,7 @@ private:
     std::vector<core::data::Timer> m_timers;
     QHash<QString, State> m_states;
     RowModel m_model{{"name", "mode", "setting", "display", "running", "shown"}};
+    QString m_shownId; // the timer shown on the stage display, if any
     QString m_summary;
     QTimer m_tick;
     std::function<qint64()> m_now;
