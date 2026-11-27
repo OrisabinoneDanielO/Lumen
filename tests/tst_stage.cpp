@@ -96,6 +96,18 @@ private slots:
         QVERIFY(texts.contains("stageClock") && texts.contains("stageTimer") && texts.contains("stageNow"));
         QVERIFY(!texts.contains("stageNext"));
 
+        // Chords (for the band): the lines with their chords; the other
+        // layouts keep the plain words.
+        QJsonObject chorded = sampleState(wall, "chords");
+        chorded.insert("nowChords", "<font color=\"#F2C38B\">G</font>\u2009'Twas grace");
+        stage.setStage(chorded);
+        texts = stage.visibleTexts("stage");
+        QCOMPARE(texts.value("stageNow").toString(), chorded.value("nowChords").toString());
+        QVERIFY(texts.contains("stageNext"));
+        chorded.insert("layout", "default");
+        stage.setStage(chorded);
+        QVERIFY(stage.visibleTexts("stage").value("stageNow").toString().startsWith(QStringLiteral("'Twas grace")));
+
         // No message: no bar.
         QJsonObject quiet = sampleState(wall, "default");
         quiet.remove("message");

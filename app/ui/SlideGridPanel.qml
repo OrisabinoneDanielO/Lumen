@@ -47,6 +47,49 @@ Item {
                     }
                 }
 
+                // A song: its key for the band, moved up or down a semitone
+                // (the stage display's Chords layout follows; the audience
+                // never sees chords).
+                Row {
+                    objectName: "transposeRow"
+                    Layout.alignment: Qt.AlignBottom
+                    visible: root.controller.shownIsSong
+                    spacing: 4
+                    LText {
+                        objectName: "shownKey"
+                        height: 28
+                        verticalAlignment: Text.AlignVCenter
+                        rightPadding: 4
+                        text: root.controller.shownKey !== ""
+                              ? qsTr("Key %1").arg(root.controller.shownKey)
+                                + (root.controller.shownTranspose !== 0
+                                   ? " (" + (root.controller.shownTranspose > 0 ? "+" : "") + root.controller.shownTranspose + ")" : "")
+                              : root.controller.shownTranspose !== 0
+                                ? qsTr("Transpose %1").arg((root.controller.shownTranspose > 0 ? "+" : "") + root.controller.shownTranspose)
+                                : qsTr("Transpose")
+                        font.pixelSize: 11
+                        color: Theme.textMuted
+                    }
+                    LButton {
+                        objectName: "transposeDown"
+                        text: "-"
+                        implicitHeight: 28
+                        radius: 6
+                        fontSize: 12
+                        Accessible.name: qsTr("Down a semitone")
+                        onClicked: root.controller.transposeShown(-1)
+                    }
+                    LButton {
+                        objectName: "transposeUp"
+                        text: "+"
+                        implicitHeight: 28
+                        radius: 6
+                        fontSize: 12
+                        Accessible.name: qsTr("Up a semitone")
+                        onClicked: root.controller.transposeShown(1)
+                    }
+                }
+
                 // A video: play it once and stop on its last frame, or loop
                 // until it is cleared (kept with the video).
                 Row {

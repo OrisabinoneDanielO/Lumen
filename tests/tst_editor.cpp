@@ -4,6 +4,7 @@
 
 #include "lumen/core/data/repository.h"
 
+#include <QJsonObject>
 #include <QUrl>
 
 using namespace lumen;
@@ -325,6 +326,60 @@ private slots:
         QVERIFY(!editor.arrangementCustom());
         QVERIFY(editor.save());
         QCOMPARE(storedOrder(), (QStringList{"Verse 1", "Bridge"}));
+    }
+
+    // Chords typed in the lyrics stay off the audience's text, come back in
+    // the editor, and reach the stage display's Chords layout, transposed.
+    void chordsInLyricsAndTransposition()
+    {
+        test::OperatorHarness ui;
+        QString error;
+        QVERIFY2(ui.load(true, &error), qPrintable(error));
+        ui.controller->selectItem(2); // Amazing Grace, key of G
+        EditorController &editor = *ui.editor;
+        QVERIFY(editor.openSelected());
+        const QString id = ui.controller->selectedPresentationId();
+        editor.setLyrics(QStringLiteral("[Verse 1]\n[G]Amazing [C]grace\nThat [D]saved a wretch\n\n[Chorus]\nNo chords here"));
+        QVERIFY(editor.save());
+        Database &db = ui.database();
+        const auto groups = Repository<Group>(db).listChildren(id).value();
+        const auto slides = Repository<Slide>(db).listChildren(groups.front().id).value();
+        QCOMPARE(slides.front().chords, QStringLiteral("[G]Amazing [C]grace\nThat [D]saved a wretch"));
+        QCOMPARE(storedElements(db, id).front().content, QStringLiteral("Amazing grace\nThat saved a wretch"));
+        QVERIFY(editor.openSelected());
+        QVERIFY(editor.lyrics().startsWith(QStringLiteral("[Verse 1]\n[G]Amazing [C]grace")));
+        QVERIFY(editor.lyrics().contains(QStringLiteral("[Chorus]\nNo chords here")));
+
+        // Show mode: up a tone, from the buttons above the slides.
+        QVERIFY(ui.click("showMode"));
+        ui.controller->selectItem(2);
+        ui.settle();
+        QVERIFY(ui.item("transposeRow")->isVisible());
+        QCOMPARE(ui.controller->shownKey(), QStringLiteral("G"));
+        QVERIFY(ui.click("transposeUp"));
+        QVERIFY(ui.click("transposeUp"));
+        QCOMPARE(ui.controller->shownTranspose(), 2);
+        QCOMPARE(ui.controller->shownKey(), QStringLiteral("A"));
+        QTRY_COMPARE(ui.item("shownKey")->property("text").toString(), QStringLiteral("Key A (+2)"));
+        const auto kept = Repository<Presentation>(db).get(id);
+        QCOMPARE(kept.value().metadata.value("transpose").toInt(), 2);
+
+        QVERIFY(ui.controller->goLive(0));
+        QCOMPARE(ui.show.scene().layer(Layer::Slide).content.text, QStringLiteral("Amazing grace\nThat saved a wretch"));
+        const QJsonObject stage = ui.controller->stageState();
+        QVERIFY2(stage.value("nowChords").toString().contains(QStringLiteral(">A</font>")), qPrintable(stage.value("nowChords").toString()));
+        QVERIFY(stage.value("nowChords").toString().contains(QStringLiteral(">D</font>")));
+        QVERIFY(stage.value("nowChords").toString().contains(QStringLiteral(">E</font>")));
+        QVERIFY(stage.value("detail").toString().contains(QStringLiteral("Key of A (written in G)")));
+        QCOMPARE(stage.value("now").toString(), QStringLiteral("Amazing grace\nThat saved a wretch"));
+        // A song with no chords on that slide: nothing for the band's view.
+        QVERIFY(ui.controller->goLive(1));
+        QVERIFY(!ui.controller->stageState().contains("nowChords"));
+        // Not a song: no transposition.
+        ui.controller->selectItem(1);
+        QVERIFY(!ui.controller->shownIsSong());
+        ui.controller->transposeShown(1);
+        QCOMPARE(ui.controller->shownTranspose(), 0);
     }
 
     // Unsaved changes are never dropped without asking: choosing another item

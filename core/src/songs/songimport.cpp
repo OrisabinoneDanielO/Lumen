@@ -1,4 +1,5 @@
 #include "lumen/core/songs/songimport.h"
+#include "lumen/core/songs/chords.h"
 
 #include "lumen/core/textfold.h"
 
@@ -320,7 +321,20 @@ Result<ParsedSong> parseTextSong(const QString &text, const QString &fallbackTit
         }
         if (!current)
             current = Stanza{};
-        current->blocks.back().push_back({line, {}});
+        // Chords: inline ("[G]Amazing [C]grace"), or on their own line
+        // above the words; never shown to the audience.
+        if (isChordLine(line)) {
+            const QString next = i + 1 < end ? lines[i + 1] : QString();
+            if (!next.trimmed().isEmpty() && !isChordLine(next) && sectionLabelFromHeader(next.trimmed()).isEmpty()
+                && next.trimmed() != QLatin1String("---")) {
+                const ChordedLine merged = splitChords(mergeChordLine(lines[i], next));
+                current->blocks.back().push_back({merged.text, merged.chordPro});
+                ++i;
+            }
+            continue; // chords with no words under them: left out
+        }
+        const ChordedLine split = splitChords(line);
+        current->blocks.back().push_back({split.text, split.chordPro});
     }
     close();
 
@@ -452,12 +466,14 @@ std::vector<LyricLine> readLines(QXmlStreamReader &xml)
 {
     std::vector<LyricLine> out;
     LyricLine line;
+    bool chorded = false; // line.chords holds the line in ChordPro form
     auto finish = [&] {
         line.text = line.text.simplified();
-        line.chords = line.chords.simplified();
+        line.chords = chorded ? line.chords.simplified() : QString();
         if (!line.text.isEmpty())
             out.push_back(line);
         line = {};
+        chorded = false;
     };
     int depth = 1;
     while (depth > 0 && !xml.atEnd()) {
@@ -477,7 +493,10 @@ std::vector<LyricLine> readLines(QXmlStreamReader &xml)
                     if (const auto bass = attrs.value(QStringLiteral("bass")); !bass.isEmpty())
                         chord += u'/' + bass.toString();
                 }
-                line.chords += u' ' + chord;
+                if (!chord.isEmpty()) {
+                    line.chords += u'[' + chord + u']';
+                    chorded = true;
+                }
                 ++depth; // chords may wrap text in OpenLyrics 0.9
             } else {
                 ++depth; // formatting tags: keep their text
@@ -489,6 +508,7 @@ std::vector<LyricLine> readLines(QXmlStreamReader &xml)
             break;
         case QXmlStreamReader::Characters:
             line.text += xml.text();
+            line.chords += xml.text();
             break;
         default:
             break;
@@ -610,6 +630,17 @@ std::vector<std::vector<LyricLine>> splitIntoSlides(const std::vector<LyricLine>
 QString normaliseForSearch(const QString &text)
 {
     return foldForSearch(text);
+}
+
+QString slideChords(const std::vector<LyricLine> &lines)
+{
+    QStringList out;
+    bool any = false;
+    for (const LyricLine &line : lines) {
+        any = any || !line.chords.isEmpty();
+        out << (line.chords.isEmpty() ? line.text : line.chords);
+    }
+    return any ? out.join(u'\n') : QString();
 }
 
 } // namespace lumen::core::songs

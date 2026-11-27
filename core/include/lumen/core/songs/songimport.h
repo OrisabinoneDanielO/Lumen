@@ -16,7 +16,7 @@ namespace lumen::core::songs {
 struct LyricLine
 {
     QString text;
-    QString chords; // chord names on this line, e.g. "G C D" (kept for later)
+    QString chords; // the line with inline chords, "[G]Amazing [C]grace"; empty if none
 
     bool operator==(const LyricLine &) const = default;
 };
@@ -80,6 +80,11 @@ Result<ParsedSong> parseOpenLyrics(const QByteArray &xml);
 // Splits lines into slides of at most maxLines, as evenly as possible:
 // 5 lines at 2 per slide -> 2 + 2 + 1; 6 at 4 -> 3 + 3.
 std::vector<std::vector<LyricLine>> splitIntoSlides(const std::vector<LyricLine> &lines, int maxLines);
+
+// A slide's chords as stored (Slide::chords): its lines in ChordPro form,
+// one per line (lines without chords as plain text, so they stay in step),
+// or empty if no line has chords.
+QString slideChords(const std::vector<LyricLine> &lines);
 
 // Text as stored in the search index: case-folded, accents and tone marks
 // removed (Yoruba ẹ -> e), Hausa hooked letters plain (ɗ -> d), punctuation

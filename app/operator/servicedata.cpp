@@ -99,6 +99,7 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
     const QString subtitle = meta.value(QStringLiteral("subtitle")).toString();
     view.subtitle = subtitle.isEmpty() ? author : subtitle;
     view.key = meta.value(QStringLiteral("key")).toString();
+    view.transpose = meta.value(QStringLiteral("transpose")).toInt();
 
     QStringList detail;
     if (!author.isEmpty())
@@ -163,6 +164,9 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
                            media.mediaKind, media.mediaPath, media.thumbnail, slideTimer, timerName, {}};
             // The operator's choice for this video (Play once by default).
             made.mediaLoop = p.metadata.value(QStringLiteral("videoLoop")).toBool();
+            // Chords as written inline (older imports kept only the names).
+            if (slide.chords.contains(u'['))
+                made.chords = slide.chords;
             made.trimInMs = p.metadata.value(QStringLiteral("trimInMs")).toInteger();
             made.trimOutMs = p.metadata.value(QStringLiteral("trimOutMs")).toInteger();
             // Slides made in the editor; scripture with a second translation
