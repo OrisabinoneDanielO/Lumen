@@ -1,4 +1,5 @@
 #include "operatorcontroller.h"
+#include "planprint.h"
 
 #include <QRegularExpression>
 
@@ -123,6 +124,22 @@ void OperatorController::refreshTexts()
     m_planMessage.clear(); // it was in the old language
     refreshSavedPlans();
     emit stateChanged();
+}
+
+bool OperatorController::printPlan(const QUrl &file, const QString &what)
+{
+    if (!m_plan)
+        return false;
+    const PrintKind kind = what == QLatin1String("lyrics")   ? PrintKind::Lyrics
+                           : what == QLatin1String("chords") ? PrintKind::ChordCharts
+                                                             : PrintKind::ServiceOrder;
+    const auto written = writePlanPdf(*m_plan, kind, file.toLocalFile());
+    m_planMessage = written.ok() ? tr("Saved %1; it opens to print").arg(QFileInfo(file.toLocalFile()).fileName())
+                                 : tr("Not saved: %1").arg(written.error().message);
+    emit stateChanged();
+    if (written.ok())
+        emit openFileRequested(file);
+    return written.ok();
 }
 
 bool OperatorController::exportSongUsage(const QUrl &file, int months)

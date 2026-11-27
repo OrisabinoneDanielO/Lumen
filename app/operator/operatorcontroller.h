@@ -351,6 +351,9 @@ public:
     // CCLI reporting: the songs shown live in the last `months` months (0:
     // all), as a CSV file. Says how many in the plan's message line.
     Q_INVOKABLE bool exportSongUsage(const QUrl &file, int months);
+    // The open plan on paper, as a PDF: "order" (order of service),
+    // "lyrics" or "chords" (chord charts). Then opens it to print.
+    Q_INVOKABLE bool printPlan(const QUrl &file, const QString &what);
     int selectedSong() const { return m_selectedSong; }
     QString importSummary() const { return m_importSummary; }
     QString importDetails() const { return m_importDetails; }
@@ -405,6 +408,7 @@ signals:
     void previewVideoChanged(const QString &path);
     void videoPositionChanged();
     void logoMediaChanged(const QString &path); // to remember it
+    void openFileRequested(const QUrl &file);   // in the system's viewer
     // For the outputs: pause, play or seek the video on the Media layer.
     void videoControlRequested(const QString &action, qint64 positionMs);
     void decksImported(const QString &summary);
