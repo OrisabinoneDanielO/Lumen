@@ -223,8 +223,17 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
     if (const auto theme = themeFor(db, p)) {
         // Scripture keeps the reference where it was put.
         const QString position = meta.value(QStringLiteral("referencePosition")).toString();
-        applyTheme(view, p.kind == PresentationKind::Scripture ? scriptureStyle(theme->style, position) : theme->style,
-                   theme->background);
+        const core::show::TextStyle style =
+            p.kind == PresentationKind::Scripture ? scriptureStyle(theme->style, position) : theme->style;
+        applyTheme(view, style, theme->background);
+        // Side by side scripture, in the current layout (also when stored
+        // in an older one) and this theme.
+        if (p.kind == PresentationKind::Scripture) {
+            for (SlideView &slide : view.slides) {
+                if (!slide.elements.isEmpty())
+                    relayoutSideBySide(slide, style, meta);
+            }
+        }
     }
     return view;
 }
@@ -255,47 +264,52 @@ core::show::TextStyle scriptureStyle(core::show::TextStyle style, const QString 
 }
 
 QJsonArray sideBySideElements(const core::show::TextStyle &style, const QString &left, const QString &leftReference,
-                              const QString &right, const QString &rightReference, const QString &credit)
+                              const QString &leftCredit, const QString &right, const QString &rightReference,
+                              const QString &rightCredit)
 {
     using core::show::TextStyle;
-    // The credit takes the footer band; the passages and their references
-    // sit in the body as one block, placed as the theme places a slide's
+    // No footer band: each column carries its reference and credit under
+    // its passage, and the whole block sits where the theme puts a slide's
     // text (centred, top or bottom), like a normal scripture slide.
-    TextStyle bands = style;
-    bands.footerPosition = QStringLiteral("below");
-    bands.footerSize = qMax(16, style.footerSize * 3 / 4);
-    const auto areas = core::show::textAreas(bands, core::show::referenceSize, !credit.isEmpty());
+    TextStyle plain = style;
+    plain.footerPosition = QStringLiteral("none");
+    const auto areas = core::show::textAreas(plain, core::show::referenceSize, false);
     const auto colour = [](const QColor &c) { return c.name(c.alpha() == 255 ? QColor::HexRgb : QColor::HexArgb); };
     const auto frame = [](const QRectF &r) {
         return QJsonArray{std::round(r.x()), std::round(r.y()), std::round(r.width()), std::round(r.height())};
     };
     const bool above = style.footerPosition == QLatin1String("above");
+    const bool credits = !leftCredit.isEmpty() || !rightCredit.isEmpty();
     const double gap = 64;
     const double column = (areas.body.width() - gap) / 2;
-    const double referenceHeight = std::ceil(style.footerSize * 1.6);
+    const double referenceHeight = std::ceil(style.footerSize * 1.5);
+    const int creditSize = qMax(14, style.footerSize * 2 / 3);
+    const double creditHeight = credits ? std::ceil(creditSize * 1.3 * 2) : 0; // room for two lines
     const double referenceGap = std::ceil(style.footerSize * 0.4);
+    const double captions = referenceHeight + creditHeight; // reference, then credit, per column
 
     // One size for both columns: the largest at which each fits beside the
-    // other (with room for its reference).
-    TextStyle columnStyle = style;
-    columnStyle.footerPosition = QStringLiteral("none");
+    // other (with room for its captions).
+    TextStyle columnStyle = plain;
     columnStyle.safeArea = QRectF(areas.body.left() / core::show::referenceSize.width(),
                                   areas.body.top() / core::show::referenceSize.height(),
                                   column / core::show::referenceSize.width(),
-                                  (areas.body.height() - referenceHeight - referenceGap) / core::show::referenceSize.height());
+                                  (areas.body.height() - captions - referenceGap) / core::show::referenceSize.height());
     const int size = qMin(core::show::fitText(left, columnStyle, false).pixelSize,
                           core::show::fitText(right, columnStyle, false).pixelSize);
     const double wrapWidth = column * 0.97 - 2.0 * style.outline;
-    const double textHeight = std::min(areas.body.height() - referenceHeight - referenceGap,
+    const double textHeight = std::min(areas.body.height() - captions - referenceGap,
                                        std::ceil(std::max(core::show::textHeight(left, style, size, wrapWidth),
                                                           core::show::textHeight(right, style, size, wrapWidth)))
                                            + 4);
-    const double block = textHeight + referenceGap + referenceHeight;
+    const double block = textHeight + referenceGap + captions;
     const double top = style.valign == QLatin1String("top")      ? areas.body.top()
                        : style.valign == QLatin1String("bottom") ? areas.body.bottom() - block
                                                                  : areas.body.top() + (areas.body.height() - block) / 2;
-    const double textTop = above ? top + referenceHeight + referenceGap : top;
+    // Captions under the passages (or, reference above, over them).
+    const double textTop = above ? top + captions + referenceGap : top;
     const double referenceTop = above ? top : top + textHeight + referenceGap;
+    const double creditTop = referenceTop + referenceHeight;
     const auto columnAt = [&](int i) { return areas.body.left() + i * (column + gap); };
 
     const QJsonObject textStyle{{"font", style.font},
@@ -315,6 +329,9 @@ QJsonArray sideBySideElements(const core::show::TextStyle &style, const QString 
     referenceStyle.insert("bold", true);
     referenceStyle.insert("lineHeight", 1.0);
     referenceStyle.insert("fit", true);
+    QJsonObject creditStyle = referenceStyle;
+    creditStyle.insert("size", creditSize);
+    creditStyle.insert("bold", false);
 
     QJsonArray elements;
     for (const auto &[i, text] : {std::pair(0, left), std::pair(1, right)})
@@ -327,15 +344,62 @@ QJsonArray sideBySideElements(const core::show::TextStyle &style, const QString 
                                     {"frame", frame(QRectF(columnAt(i), referenceTop, column, referenceHeight))},
                                     {"style", referenceStyle},
                                     {"text", reference}});
-    if (!areas.footer.isEmpty()) {
-        QJsonObject creditStyle = referenceStyle;
-        creditStyle.insert("size", bands.footerSize);
-        creditStyle.insert("bold", false);
-        creditStyle.insert("align", "center");
-        creditStyle.insert("valign", "middle");
-        elements.append(QJsonObject{{"type", "text"}, {"frame", frame(areas.footer)}, {"style", creditStyle}, {"text", credit}});
+    for (const auto &[i, credit] : {std::pair(0, leftCredit), std::pair(1, rightCredit)}) {
+        if (credit.isEmpty())
+            continue;
+        elements.append(QJsonObject{{"type", "text"},
+                                    {"frame", frame(QRectF(columnAt(i), creditTop, column, creditHeight))},
+                                    {"style", creditStyle},
+                                    {"text", credit},
+                                    {"column", i}});
     }
     return elements;
+}
+
+bool relayoutSideBySide(SlideView &slide, const core::show::TextStyle &style, const QJsonObject &metadata)
+{
+    const QJsonArray &e = slide.elements;
+    if (e.size() < 3 || metadata.value(QStringLiteral("secondTranslation")).toString().isEmpty())
+        return false;
+    for (const QJsonValue &v : e) {
+        if (v.toObject().value("type").toString() != QLatin1String("text"))
+            return false;
+    }
+    const auto text = [&](int i) { return e.at(i).toObject().value("text").toString(); };
+    QString leftReference, rightReference, leftCredit, rightCredit;
+    QStringList credits;
+    if (e.size() == 3) {
+        // The first layout: one footer, "John 3:16 (KJV · Yorùbá) · credit · credit".
+        static const QRegularExpression footer(QStringLiteral(R"(^(.*) \((.+) · (.+?)\)(?: · (.*))?$)"));
+        const auto m = footer.match(text(2));
+        if (!m.hasMatch())
+            return false;
+        leftReference = QStringLiteral("%1 (%2)").arg(m.captured(1), m.captured(2));
+        rightReference = QStringLiteral("%1 (%2)").arg(m.captured(1), m.captured(3));
+        credits = m.captured(4).split(QStringLiteral(" · "), Qt::SkipEmptyParts);
+    } else {
+        leftReference = text(2);
+        rightReference = text(3);
+        for (int i = 4; i < e.size(); ++i) {
+            const QJsonObject element = e.at(i).toObject();
+            if (element.contains("column")) { // this layout: a credit per column
+                (element.value("column").toInt() == 0 ? leftCredit : rightCredit) = element.value("text").toString();
+            } else {
+                credits << element.value("text").toString().split(QStringLiteral(" · "), Qt::SkipEmptyParts);
+            }
+        }
+    }
+    // One shared credit line: each part to the translation it names.
+    const QString second = metadata.value(QStringLiteral("secondAbbreviation")).toString();
+    const QString secondCopyright = metadata.value(QStringLiteral("secondCopyright")).toString();
+    for (const QString &credit : credits) {
+        const bool right = credits.size() == 2 ? &credit == &credits.back()
+                                               : (!second.isEmpty() && credit.contains(second)) || credit == secondCopyright
+                                                     || secondCopyright.startsWith(credit.section(u'.', 0, 0));
+        (right ? rightCredit : leftCredit) = credit;
+    }
+    slide.elements = sideBySideElements(style, text(0), leftReference, leftCredit, text(1), rightReference, rightCredit);
+    return true;
 }
 
 QColor defaultGroupColour(const QString &label)

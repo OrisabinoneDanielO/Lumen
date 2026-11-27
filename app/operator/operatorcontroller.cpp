@@ -1177,7 +1177,10 @@ void OperatorController::showSelected()
     if (const ItemView *view = selected()) {
         for (const SlideView &slide : view->slides) {
             rows << QVariantMap{{"group", slide.group}, {"colour", slide.colour}, {"text", slide.text},
-                                {"thumbnail", slide.thumbnail.isEmpty() ? QUrl() : QUrl::fromLocalFile(slide.thumbnail)}};
+                                {"thumbnail", slide.thumbnail.isEmpty() ? QUrl() : QUrl::fromLocalFile(slide.thumbnail)},
+                                // Slides laid out by position (editor slides, scripture
+                                // side by side): the card draws them as they are.
+                                {"elements", slide.elements.toVariantList()}};
         }
     }
     m_slideModel.setRows(rows);

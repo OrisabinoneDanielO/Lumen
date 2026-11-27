@@ -319,13 +319,15 @@ private slots:
         QVERIFY(ui.click("second-yor"));
         QVERIFY(scripture.secondTranslation() >= 0);
         QVERIFY(scripture.previewSecondText().startsWith(m_expected["yor"].start));
-        QTRY_VERIFY(ui.item("scripturePreviewSecond")->isVisible());
+        // The window's preview draws that slide as the output will.
+        QCOMPARE(scripture.previewSlide().value("elements").toList().size(), 6);
+        QTRY_VERIFY(ui.item("scriptureSlidePreview")->isVisible());
         QVERIFY(scripture.showNow());
         const Content live = ui.show.scene().layer(Layer::Slide).content;
         QCOMPARE(live.kind, Content::Kind::Composed);
         const auto text = [](const Content &c, int i) { return c.elements[i].toObject().value("text").toString(); };
         const auto frameOf = [](const Content &c, int i) { return c.elements[i].toObject().value("frame").toArray(); };
-        QCOMPARE(live.elements.size(), 5);
+        QCOMPARE(live.elements.size(), 6); // two passages, two references, two credits
         QVERIFY(text(live, 0).startsWith(m_expected["engwebp"].start));
         QVERIFY(text(live, 1).startsWith(m_expected["yor"].start));
         QCOMPARE(text(live, 2), QStringLiteral("John 3:16 (WEB)"));
@@ -347,8 +349,15 @@ private slots:
             const double middle = (blockTop + blockBottom) / 2;
             QVERIFY2(middle > 420 && middle < 560, qPrintable(QString::number(middle)));
         }
-        const QString credit = text(live, 4);
-        QVERIFY2(credit.contains(QStringLiteral("World English Bible")) && credit.contains(QStringLiteral("Biblica")), qPrintable(credit));
+        // Each translation's copyright under its own reference.
+        QCOMPARE(text(live, 4), QStringLiteral("World English Bible. Public domain."));
+        QVERIFY(text(live, 5).contains(QStringLiteral("Biblica")));
+        for (int column : {0, 1}) {
+            const QJsonArray reference = frameOf(live, column + 2);
+            const QJsonArray credit = frameOf(live, column + 4);
+            QCOMPARE(credit[0].toDouble(), reference[0].toDouble());
+            QCOMPARE(credit[1].toDouble(), reference[1].toDouble() + reference[3].toDouble());
+        }
 
         // Copyright line hidden: the public-domain WEB's goes; the Yoruba
         // Bible keeps a short credit (CC BY-SA asks for one), on the first
@@ -360,6 +369,7 @@ private slots:
         const Content hidden = ui.show.scene().layer(Layer::Slide).content;
         QCOMPARE(hidden.elements.size(), 5);
         QCOMPARE(text(hidden, 4), QStringLiteral("Yorùbá © Biblica, CC BY-SA 4.0"));
+        QCOMPARE(frameOf(hidden, 4)[0].toDouble(), frameOf(hidden, 3)[0].toDouble()); // under the Yoruba
         QVERIFY(ui.controller->goLive(1));
         QCOMPARE(ui.show.scene().layer(Layer::Slide).content.elements.size(), 4); // no credit
 
@@ -374,7 +384,9 @@ private slots:
         QCOMPARE(fromPlan.elements.size(), 4); // the credit is on slide 1
         QCOMPARE(text(fromPlan, 3), QStringLiteral("Johanu 3:17 (Yorùbá)"));
         QVERIFY(ui.controller->goLive(0));
-        QCOMPARE(text(ui.show.scene().layer(Layer::Slide).content, 4), QStringLiteral("Yorùbá © Biblica, CC BY-SA 4.0"));
+        const Content firstFromPlan = ui.show.scene().layer(Layer::Slide).content;
+        QCOMPARE(text(firstFromPlan, 4), QStringLiteral("Yorùbá © Biblica, CC BY-SA 4.0"));
+        QCOMPARE(frameOf(firstFromPlan, 4)[0].toDouble(), frameOf(firstFromPlan, 3)[0].toDouble()); // still under the Yoruba
 
         // One public-domain translation with the line hidden: just the
         // reference. Shown again: the copyright is back.

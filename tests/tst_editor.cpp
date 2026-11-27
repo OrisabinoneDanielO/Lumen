@@ -189,18 +189,49 @@ private slots:
             theme.style,
             QStringLiteral("For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life."),
             QStringLiteral("John 3:16 (KJV)"),
+            QStringLiteral("King James Version. Public domain."),
             QStringLiteral("“Nítorí Ọlọ́run fẹ́ aráyé tó bẹ́ẹ̀ gẹ́ẹ́, tí ó fi ọmọ rẹ̀ kan ṣoṣo fún ni, kí ẹnikẹ́ni tí ó bá gbà á gbọ́, má bà á ṣègbé, ṣùgbọ́n kí ó lè ní ìyè àìnípẹ̀kun."),
             QStringLiteral("Johanu 3:16 (Yorùbá)"),
             QStringLiteral("Yoruba Bible. Copyright © 2009, 2017 Biblica, Inc. CC BY-SA 4.0.")));
         output.setScene(scene);
-        QTRY_COMPARE(output.visibleTexts("elementText-").size(), 5);
+        // Each passage with its reference and its copyright under it.
+        QTRY_COMPARE(output.visibleTexts("elementText-").size(), 6);
         const QVariantMap texts = output.visibleTexts("elementText-");
         QCOMPARE(texts.value("elementText-2").toString(), QStringLiteral("John 3:16 (KJV)"));
         QCOMPARE(texts.value("elementText-3").toString(), QStringLiteral("Johanu 3:16 (Yorùbá)"));
+        QCOMPARE(texts.value("elementText-4").toString(), QStringLiteral("King James Version. Public domain."));
+        QVERIFY(texts.value("elementText-5").toString().startsWith(QStringLiteral("Yoruba Bible.")));
         if (const QString dir = qEnvironmentVariable("LUMEN_SCREENSHOT_DIR"); !dir.isEmpty()) {
             QTest::qWait(200);
             QVERIFY(output.grab().save(dir + QStringLiteral("/scripture-side-by-side.png")));
         }
+    }
+
+    // A side by side slide stored in an earlier layout (one footer naming
+    // both) comes back in the current one: each reference and credit under
+    // its own passage.
+    void olderSideBySideSlidesAreLaidOutAgain()
+    {
+        const auto theme = builtInTheme(ThemeTarget::Scripture);
+        app::SlideView slide;
+        slide.elements = QJsonArray{
+            QJsonObject{{"type", "text"}, {"text", "Therefore said some of the Pharisees"}},
+            QJsonObject{{"type", "text"}, {"text", "Nítorí náà àwọn kan nínú àwọn Farisi"}},
+            QJsonObject{{"type", "text"},
+                        {"text", "John 9:16 (KJV · Yorùbá) · King James Version. Public domain. · Yoruba Bible. Copyright © 2009, 2017 Biblica, Inc. CC BY-SA 4.0."}}};
+        const QJsonObject meta{{"secondTranslation", "yor"}, {"secondAbbreviation", "Yorùbá"},
+                               {"secondCopyright", "Yoruba Bible. Copyright © 2009, 2017 Biblica, Inc. CC BY-SA 4.0."}};
+        QVERIFY(app::relayoutSideBySide(slide, theme.style, meta));
+        const auto text = [&](int i) { return slide.elements.at(i).toObject().value("text").toString(); };
+        QCOMPARE(slide.elements.size(), 6);
+        QCOMPARE(text(2), QStringLiteral("John 9:16 (KJV)"));
+        QCOMPARE(text(3), QStringLiteral("John 9:16 (Yorùbá)"));
+        QCOMPARE(text(4), QStringLiteral("King James Version. Public domain."));
+        QVERIFY(text(5).startsWith(QStringLiteral("Yoruba Bible.")));
+        // Not side by side scripture: left alone.
+        app::SlideView other;
+        other.elements = QJsonArray{QJsonObject{{"type", "shape"}}};
+        QVERIFY(!app::relayoutSideBySide(other, theme.style, meta));
     }
 
     void slidesBackgroundTransitionAndCancel()

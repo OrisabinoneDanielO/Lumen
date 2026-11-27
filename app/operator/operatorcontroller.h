@@ -518,7 +518,7 @@ private:
     RowModel m_planModel{{"kind", "title", "subtitle", "notes", "header"}};
     RowModel m_mediaModel{{"title", "kind", "duration", "thumbnail", "presentationId", "path", "loop"}};
     RowModel m_deckModel{{"title", "slides", "thumbnail", "presentationId", "method"}};
-    RowModel m_slideModel{{"group", "colour", "text", "thumbnail"}};
+    RowModel m_slideModel{{"group", "colour", "text", "thumbnail", "elements"}};
     RowModel m_songModel{{"title", "author", "copyright", "key", "presentationId"}};
 };
 

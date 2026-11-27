@@ -272,6 +272,7 @@ Item {
                         required property string group
                         required property color colour
                         required property string text
+                        required property var model // for its "elements" role (the card's own property)
 
                         objectName: "slide-" + index
                         width: (grid.width - (grid.columns - 1) * grid.spacing) / grid.columns
@@ -279,6 +280,7 @@ Item {
                         groupLabel: group
                         groupColor: colour
                         slideText: text
+                        elements: model.elements
                         status: index === root.controller.liveSlide ? "live"
                               : index === root.controller.previewSlide ? "next" : ""
                         onClicked: {
