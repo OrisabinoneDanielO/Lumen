@@ -1,5 +1,7 @@
 #include "operatorcontroller.h"
 
+#include <QRegularExpression>
+
 #include "lumenfile.h"
 #include "planstore.h"
 
@@ -228,6 +230,111 @@ bool OperatorController::shownIsVideo() const
 {
     const ItemView *view = selected();
     return view && !view->slides.empty() && view->slides.front().mediaKind == QLatin1String("video");
+}
+
+bool OperatorController::liveVideo() const
+{
+    const Content &media = m_show.scene().layer(Layer::Media).content;
+    return media.kind == Content::Kind::Video && media.videoPath == m_livePath;
+}
+
+void OperatorController::toggleVideoPlaying()
+{
+    if (!liveVideo())
+        return;
+    m_livePlaying = !m_livePlaying; // at once; the next status confirms it
+    emit videoControlRequested(m_livePlaying ? QStringLiteral("play") : QStringLiteral("pause"), 0);
+    emit videoPositionChanged();
+}
+
+void OperatorController::seekVideo(double positionMs)
+{
+    if (!liveVideo())
+        return;
+    m_livePositionMs = qBound<qint64>(0, qint64(positionMs), m_liveDurationMs);
+    emit videoControlRequested(QStringLiteral("seek"), m_livePositionMs);
+    emit videoPositionChanged();
+}
+
+QString OperatorController::formatTime(qint64 ms)
+{
+    const qint64 seconds = qMax<qint64>(0, ms) / 1000;
+    return QStringLiteral("%1:%2").arg(seconds / 60).arg(seconds % 60, 2, 10, QLatin1Char('0'));
+}
+
+qint64 OperatorController::parseTime(const QString &text)
+{
+    const QString t = text.trimmed();
+    if (t.isEmpty())
+        return 0;
+    static const QRegularExpression form(QStringLiteral(R"(^(?:(\d+):)?(\d+(?:\.\d+)?)$)"));
+    const auto m = form.match(t);
+    if (!m.hasMatch())
+        return -1;
+    const double seconds = m.captured(1).toDouble() * 60 + m.captured(2).toDouble();
+    if (!m.captured(1).isEmpty() && m.captured(2).toDouble() >= 60)
+        return -1;
+    return qint64(seconds * 1000 + 0.5);
+}
+
+QString OperatorController::shownVideoStart() const
+{
+    return shownIsVideo() ? formatTime(selected()->slides.front().trimInMs) : QString();
+}
+
+QString OperatorController::shownVideoEnd() const
+{
+    if (!shownIsVideo() || selected()->slides.front().trimOutMs <= 0)
+        return {};
+    return formatTime(selected()->slides.front().trimOutMs);
+}
+
+bool OperatorController::setShownVideoTrim(const QString &start, const QString &end)
+{
+    if (!shownIsVideo() || !m_db)
+        return false;
+    const qint64 in = parseTime(start);
+    const qint64 out = parseTime(end);
+    if (in < 0 || out < 0 || (out > 0 && out <= in)) {
+        m_planMessage = tr("Start and end are times like 1:05, and the end comes after the start");
+        emit stateChanged();
+        return false;
+    }
+    const QString presentationId = selected()->presentationId;
+    const QString path = selected()->slides.front().mediaPath;
+    using core::data::Presentation;
+    using core::data::Repository;
+    if (auto p = Repository<Presentation>(*m_db).get(presentationId); p.ok()) {
+        p.value().metadata.insert(QStringLiteral("trimInMs"), in);
+        p.value().metadata.insert(QStringLiteral("trimOutMs"), out);
+        if (auto updated = Repository<Presentation>(*m_db).update(p.value()); !updated.ok())
+            qWarning("Start and end not saved: %s", qPrintable(updated.error().message));
+    }
+    const auto apply = [&](ItemView &view) {
+        if (view.presentationId != presentationId)
+            return;
+        for (SlideView &slide : view.slides) {
+            slide.trimInMs = in;
+            slide.trimOutMs = out;
+        }
+    };
+    if (m_plan) {
+        for (ItemView &item : m_plan->items)
+            apply(item);
+    }
+    if (m_librarySong)
+        apply(*m_librarySong);
+    // Playing now: it takes the points at once.
+    const Content &onAir = m_show.scene().layer(Layer::Media).content;
+    if (onAir.kind == Content::Kind::Video && onAir.videoPath == path) {
+        Content changed = onAir;
+        changed.trimInMs = in;
+        changed.trimOutMs = out;
+        m_show.setContent(Layer::Media, changed);
+    }
+    m_planMessage.clear();
+    emit stateChanged();
+    return true;
 }
 
 bool OperatorController::shownVideoLoops() const
@@ -485,6 +592,22 @@ QUrl OperatorController::previewPoster() const
 
 void OperatorController::setOutputStatus(const QJsonObject &status)
 {
+    const QJsonObject video = status.value(QStringLiteral("videoPosition")).toObject();
+    const QString path = video.value(QStringLiteral("path")).toString();
+    const qint64 position = video.value(QStringLiteral("positionMs")).toInteger();
+    const qint64 duration = video.value(QStringLiteral("durationMs")).toInteger();
+    const bool playing = video.value(QStringLiteral("playing")).toBool();
+    if (path != m_livePath || position != m_livePositionMs || duration != m_liveDurationMs || playing != m_livePlaying) {
+        const bool otherVideo = path != m_livePath; // liveVideo may change
+        m_livePath = path;
+        m_livePositionMs = position;
+        m_liveDurationMs = duration;
+        m_livePlaying = playing;
+        emit videoPositionChanged();
+        if (otherVideo)
+            emit stateChanged();
+    }
+
     QHash<QString, QString> errors;
     for (const QJsonValue &v : status.value(QStringLiteral("videoErrors")).toArray())
         errors.insert(v.toObject().value(QStringLiteral("path")).toString(), v.toObject().value(QStringLiteral("message")).toString());
@@ -889,9 +1012,8 @@ bool OperatorController::goLive(int index)
     std::vector<std::pair<Layer, Content>> changes;
     if (!slide.mediaKind.isEmpty()) {
         // A video or picture fills the Media layer; the slide text goes.
-        const Content media = slide.mediaKind == QLatin1String("video")
-                                  ? Content::video(slide.mediaPath, slide.mediaLoop, 1.0, slide.thumbnail)
-                                  : Content::image(slide.mediaPath);
+        // (slideContent: a video with its start and end points.)
+        const Content media = slideContent(*view, index);
         changes = {{Layer::Media, media}, {Layer::Slide, Content::empty()}};
     } else {
         changes = {{Layer::Slide, slideContent(*view, index)}};
@@ -914,8 +1036,12 @@ bool OperatorController::goLive(int index)
 Content OperatorController::slideContent(const ItemView &view, int index) const
 {
     const SlideView &slide = view.slides[std::size_t(index)];
-    if (slide.mediaKind == QLatin1String("video"))
-        return Content::video(slide.mediaPath, slide.mediaLoop, 1.0, slide.thumbnail);
+    if (slide.mediaKind == QLatin1String("video")) {
+        Content video = Content::video(slide.mediaPath, slide.mediaLoop, 1.0, slide.thumbnail);
+        video.trimInMs = slide.trimInMs;
+        video.trimOutMs = slide.trimOutMs;
+        return video;
+    }
     if (slide.mediaKind == QLatin1String("image"))
         return Content::image(slide.mediaPath);
     // A countdown slide shows its timer, counted by the renderer.

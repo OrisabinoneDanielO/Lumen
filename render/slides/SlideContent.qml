@@ -35,6 +35,17 @@ Item {
     property url video
     property bool loop: false
     property real volume: 1.0
+    // Play from trimInMs; at trimOutMs (0: the end) stop, or loop back.
+    property real trimInMs: 0
+    property real trimOutMs: 0
+    // This view's video takes the operator's pause, play and seek and says
+    // where it is (the incoming content on the Media layer).
+    property bool transport: false
+    signal videoPosition(string path, real positionMs, real durationMs, bool playing)
+    function videoCommand(action, positionMs) {
+        if (videoHost.current)
+            videoHost.current.command(action, positionMs)
+    }
     property bool playVideo: true
     property string timerText
     property var prop: ({})
@@ -109,10 +120,59 @@ Item {
                     player.source = player.source // keeps the source when the slide's goes
                     destroy(300)
                 }
+                function command(action, positionMs) {
+                    if (action === "pause")
+                        player.pause()
+                    else if (action === "play")
+                        player.play()
+                    else if (action === "seek")
+                        player.position = Math.max(view.trimInMs, Math.min(positionMs, end() - 100))
+                }
+                // Where it stops or loops back.
+                function end() {
+                    return view.trimOutMs > 0 && (player.duration <= 0 || view.trimOutMs < player.duration)
+                        ? view.trimOutMs : player.duration
+                }
+                // At the out point: stop (Play once) or go back to the in point.
+                function checkEnd() {
+                    if (view.trimOutMs > 0 && player.position >= view.trimOutMs - 20
+                        && player.playbackState === MediaPlayer.PlayingState) {
+                        if (view.loop)
+                            player.position = view.trimInMs
+                        else
+                            player.pause() // stays on the last frame, like Play once
+                    }
+                }
+                // Position updates can be far apart; the out point is
+                // checked about every frame while a trimmed video plays.
+                Timer {
+                    interval: 40
+                    repeat: true
+                    running: view.trimOutMs > 0 && player.playbackState === MediaPlayer.PlayingState
+                    onTriggered: videoItem.checkEnd()
+                }
+                Timer {
+                    interval: 250
+                    repeat: true
+                    running: view.transport
+                    onTriggered: view.videoPosition(view.video.toString(), player.position, videoItem.end(),
+                                                    player.playbackState === MediaPlayer.PlayingState)
+                }
                 MediaPlayer {
                     id: player
                     source: view.video
-                    loops: view.loop ? MediaPlayer.Infinite : 1
+                    // Trimmed loops go back by hand, to the start point.
+                    loops: view.loop && view.trimInMs <= 0 && view.trimOutMs <= 0 ? MediaPlayer.Infinite : 1
+                    onMediaStatusChanged: {
+                        if ((mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia)
+                            && view.trimInMs > 0 && position < view.trimInMs - 50)
+                            position = view.trimInMs
+                        if (mediaStatus === MediaPlayer.EndOfMedia && view.loop && loops === 1) {
+                            position = view.trimInMs
+                            play()
+                        }
+                    }
+                    onPositionChanged: videoItem.checkEnd()
                     videoOutput: output
                     audioOutput: AudioOutput {
                         id: sound

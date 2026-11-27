@@ -48,6 +48,8 @@ Item {
                 footer: content.footer
                 video: content.video
                 loop: content.loop
+                trimInMs: content.trimInMs
+                trimOutMs: content.trimOutMs
                 volume: content.volume
                 playVideo: layer.visible // a layer the output leaves out decodes nothing
                 timerText: content.kind === "timer" ? stack.scene.timerText(content.timer, stack.scene.wallMs) : ""
@@ -69,6 +71,8 @@ Item {
                 clip: layer.kind === "wipe" && layer.p < 1.0
             SlideContent {
                 readonly property QtObject content: layer.modelData.current
+                id: currentContent
+                transport: layer.modelData.name === "media"
                 objectName: "layerCurrent-" + layer.modelData.name
                 width: layer.width
                 height: layer.height
@@ -83,6 +87,8 @@ Item {
                 footer: content.footer
                 video: content.video
                 loop: content.loop
+                trimInMs: content.trimInMs
+                trimOutMs: content.trimOutMs
                 volume: content.volume
                 playVideo: layer.visible // a layer the output leaves out decodes nothing
                 timerText: content.kind === "timer" ? stack.scene.timerText(content.timer, stack.scene.wallMs) : ""
@@ -91,6 +97,11 @@ Item {
                 wallMs: stack.scene.wallMs
                 layerName: layer.modelData.name
                 onVideoFailed: (path, message) => stack.scene.reportVideoError(path, message)
+                onVideoPosition: (path, positionMs, durationMs, playing) => stack.scene.reportVideoPosition(path, positionMs, durationMs, playing)
+                Connections {
+                    target: currentContent.transport ? stack.scene : null
+                    function onVideoCommand(action, positionMs) { currentContent.videoCommand(action, positionMs) }
+                }
                 opacity: layer.kind === "push" || layer.kind === "pushUp" || layer.kind === "wipe" ? 1.0 : layer.p
             }
             }

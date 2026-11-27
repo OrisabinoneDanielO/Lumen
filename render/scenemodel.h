@@ -36,6 +36,8 @@ class ContentModel : public QObject
     Q_PROPERTY(QUrl video READ video NOTIFY changed)
     Q_PROPERTY(bool loop READ loop NOTIFY changed)
     Q_PROPERTY(double volume READ volume NOTIFY changed)
+    Q_PROPERTY(qint64 trimInMs READ trimInMs NOTIFY changed)
+    Q_PROPERTY(qint64 trimOutMs READ trimOutMs NOTIFY changed)
     Q_PROPERTY(QVariantMap timer READ timer NOTIFY changed)
     Q_PROPERTY(QVariantMap prop READ prop NOTIFY changed)
     Q_PROPERTY(QVariantList elements READ elements NOTIFY changed)
@@ -56,6 +58,8 @@ public:
     QUrl video() const;
     bool loop() const { return m_content.loop; }
     double volume() const { return m_content.volume; }
+    qint64 trimInMs() const { return m_content.trimInMs; }
+    qint64 trimOutMs() const { return m_content.trimOutMs; }
     QVariantMap timer() const { return m_content.timer.toVariantMap(); }
     QVariantMap prop() const { return m_content.prop.toVariantMap(); }
     QVariantList elements() const { return m_content.elements.toVariantList(); }
@@ -164,6 +168,13 @@ public:
     // path) for "status" until that video is no longer used.
     Q_INVOKABLE void reportVideoError(const QString &path, const QString &message);
     QJsonArray videoErrors() const;
+    // The Media layer's video: pause, play or seek it (protocol "video").
+    void videoControl(const QString &action, qint64 positionMs) { emit videoCommand(action, positionMs); }
+    // Where it is, from its player (path: a file:// URL or local path).
+    Q_INVOKABLE void reportVideoPosition(const QString &path, qint64 positionMs, qint64 durationMs, bool playing);
+    // {"path", "positionMs", "durationMs", "playing"}, or empty when no
+    // video is on the Media layer.
+    QJsonObject videoPosition() const;
     void preload(const QString &path);
 
     qint64 wallMs() const { return m_wallShownMs; }
@@ -198,6 +209,7 @@ public:
     }
 
 signals:
+    void videoCommand(const QString &action, qint64 positionMs);
     void identifyChanged();
     void levelsChanged();
     void preloadsChanged();
@@ -215,6 +227,7 @@ private:
     qint64 m_wallShownMs = 0;
     QJsonObject m_identify;
     QHash<QString, QString> m_videoErrors; // local path -> message
+    QJsonObject m_videoPosition;
     void forgetUnusedVideoErrors();
     QJsonObject m_stage;
     std::array<std::unique_ptr<CueRunner>, core::show::layerCount> m_cueRunners;

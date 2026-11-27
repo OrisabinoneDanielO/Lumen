@@ -163,6 +163,8 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
                            media.mediaKind, media.mediaPath, media.thumbnail, slideTimer, timerName, {}};
             // The operator's choice for this video (Play once by default).
             made.mediaLoop = p.metadata.value(QStringLiteral("videoLoop")).toBool();
+            made.trimInMs = p.metadata.value(QStringLiteral("trimInMs")).toInteger();
+            made.trimOutMs = p.metadata.value(QStringLiteral("trimOutMs")).toInteger();
             // Slides made in the editor; scripture with a second translation
             // side by side.
             if ((p.kind == PresentationKind::Slides || p.kind == PresentationKind::Scripture)

@@ -44,6 +44,10 @@ struct SlideView
     // "videoLoop"; once by default). Last, so positional initialisers stay
     // as they were.
     bool mediaLoop = false;
+    // A video's start and end points (the presentation's "trimInMs" and
+    // "trimOutMs"; 0: the start, the end).
+    qint64 trimInMs = 0;
+    qint64 trimOutMs = 0;
 };
 
 // The JSON for composed content from a slide's stored elements, bottom

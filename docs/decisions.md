@@ -319,3 +319,7 @@ From the Scripture mockup: a second translation side by side, Verses per slide "
 ## A song's play order is its own
 
 The song editor shows each group once in the lyrics, so saving the lyrics used to rebuild the default arrangement from them and lose any repeats (Verse 1, Chorus, Verse 2, Chorus became Verse 1, Chorus, Verse 2). The editor now keeps the stored order apart from the lyrics: it follows the lyrics as written until the order is edited by hand (**Edit arrangement**), and an order set by hand survives lyrics changes (groups removed from the lyrics drop out of it). **As written** goes back to following the lyrics.
+
+## Video transport and trim (protocol v11)
+
+The design doc's media module asks for trim in and out points, playback controls and scrubbing; no batch built them. Pause, play and seek are protocol commands ("video"), not scene state: a pause is not a change of content, so it must not start a transition or restart the video, and the operator never needs it restored after a renderer restart. The output reports the Media layer video's position in its status, which the operator window already asks for every second; the Live column's bar moves on its own in between. Start and end points are content (`trimInMs`, `trimOutMs`), stored with the video's presentation like Play once / Loop, so every plan using the video gets them. The out point is checked about every frame while a trimmed video plays, because the player's position updates can be too far apart to stop on time.

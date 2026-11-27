@@ -131,6 +131,11 @@ struct Content
         return c;
     }
 
+    // Video: play from trimInMs and stop (or loop back) at trimOutMs (0: the
+    // end). Last, so positional initialisers stay as they were.
+    qint64 trimInMs = 0;
+    qint64 trimOutMs = 0;
+
     bool isEmpty() const { return kind == Kind::Empty; }
     bool operator==(const Content &) const = default;
 };

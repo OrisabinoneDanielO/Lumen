@@ -5,6 +5,7 @@
 
 #include <QFile>
 #include <QImage>
+#include <QJsonObject>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -232,6 +233,90 @@ private slots:
         h.settle();
         QVERIFY(!h.controller->shownIsVideo());
         QVERIFY(!h.item(QStringLiteral("videoOnce"))->isVisible());
+    }
+
+    void timesReadAndWritten()
+    {
+        using app::OperatorController;
+        QCOMPARE(OperatorController::parseTime(QStringLiteral("1:05")), qint64(65000));
+        QCOMPARE(OperatorController::parseTime(QStringLiteral("65")), qint64(65000));
+        QCOMPARE(OperatorController::parseTime(QStringLiteral(" 0:02.5 ")), qint64(2500));
+        QCOMPARE(OperatorController::parseTime(QString()), qint64(0));
+        QCOMPARE(OperatorController::parseTime(QStringLiteral("1:75")), qint64(-1));
+        QCOMPARE(OperatorController::parseTime(QStringLiteral("soon")), qint64(-1));
+        QCOMPARE(OperatorController::formatTime(65000), QStringLiteral("1:05"));
+        QCOMPARE(OperatorController::formatTime(0), QStringLiteral("0:00"));
+    }
+
+    // Start and end points are kept with the video and go live with it;
+    // the Live column pauses, plays and jumps along the video on screen.
+    void startEndAndTransport()
+    {
+        test::OperatorHarness h;
+        QString error;
+        QVERIFY2(h.load(false, &error), qPrintable(error));
+        h.controller->importMedia({QUrl::fromLocalFile(media("loop-1080p-vp9.webm"))});
+        const int clip = mediaRow(*h.controller, QStringLiteral("loop-1080p-vp9"));
+        QVERIFY(h.controller->showMedia(clip));
+        h.settle();
+        QVERIFY(h.item(QStringLiteral("videoStart"))->isVisible());
+        QCOMPARE(h.controller->shownVideoStart(), QStringLiteral("0:00"));
+        QCOMPARE(h.controller->shownVideoEnd(), QString());
+
+        // Typed in the boxes above the slides.
+        QVERIFY(h.click(QStringLiteral("videoStart")));
+        QTest::keyClick(h.window, Qt::Key_A, Qt::ControlModifier);
+        for (const char c : QByteArrayLiteral("0:02"))
+            QTest::keyClick(h.window, c);
+        QTest::keyClick(h.window, Qt::Key_Return);
+        QTRY_COMPARE(h.controller->shownVideoStart(), QStringLiteral("0:02"));
+        QVERIFY(h.click(QStringLiteral("videoEnd")));
+        for (const char c : QByteArrayLiteral("8"))
+            QTest::keyClick(h.window, c);
+        QTest::keyClick(h.window, Qt::Key_Return);
+        QTRY_COMPARE(h.controller->shownVideoEnd(), QStringLiteral("0:08"));
+        auto *cards = qobject_cast<app::RowModel *>(h.controller->media());
+        const auto kept = Repository<Presentation>(h.database()).get(cards->get(clip).value("presentationId").toString());
+        QVERIFY(kept.ok());
+        QCOMPARE(kept.value().metadata.value("trimInMs").toInteger(), 2000);
+        QCOMPARE(kept.value().metadata.value("trimOutMs").toInteger(), 8000);
+        // An end before the start is refused, with a reason.
+        QVERIFY(!h.controller->setShownVideoTrim(QStringLiteral("0:05"), QStringLiteral("0:03")));
+        QCOMPARE(h.controller->shownVideoEnd(), QStringLiteral("0:08"));
+
+        QVERIFY(h.controller->playMedia(clip));
+        const Content live = h.show.scene().layer(Layer::Media).content;
+        QCOMPARE(live.trimInMs, 2000);
+        QCOMPARE(live.trimOutMs, 8000);
+
+        // The output reports where it is: the Live column shows it.
+        QVERIFY(!h.controller->liveVideo());
+        h.controller->setOutputStatus({{"videoPosition", QJsonObject{{"path", live.videoPath}, {"positionMs", 3000},
+                                                                     {"durationMs", 8000}, {"playing", true}}}});
+        QVERIFY(h.controller->liveVideo());
+        QCOMPARE(h.controller->liveVideoPositionMs(), 3000.0);
+        h.settle();
+        QTRY_VERIFY(h.item(QStringLiteral("videoTransport"))->isVisible());
+        // LUMEN_SCREENSHOT_DIR: the Live column with the video's controls.
+        if (const QString dir = qEnvironmentVariable("LUMEN_SCREENSHOT_DIR"); !dir.isEmpty())
+            QVERIFY(h.window->grabWindow().save(dir + QStringLiteral("/video-transport.png")));
+        QSignalSpy control(h.controller.get(), &app::OperatorController::videoControlRequested);
+        QVERIFY(h.click(QStringLiteral("videoPlayPause")));
+        QCOMPARE(control.count(), 1);
+        QCOMPARE(control.at(0).at(0).toString(), QStringLiteral("pause"));
+        QVERIFY(!h.controller->liveVideoPlaying());
+        // A click on the bar three quarters along jumps there.
+        QQuickItem *bar = h.item(QStringLiteral("videoSeekBar"));
+        QTest::mouseClick(h.window, Qt::LeftButton, {}, bar->mapToScene(QPointF(bar->width() * 0.75, bar->height() / 2)).toPoint());
+        QCOMPARE(control.count(), 2);
+        QCOMPARE(control.at(1).at(0).toString(), QStringLiteral("seek"));
+        QVERIFY(qAbs(control.at(1).at(1).toLongLong() - 6000) < 200);
+
+        // Cleared: no transport.
+        h.controller->clearLayer(QStringLiteral("slide"));
+        QVERIFY(!h.controller->liveVideo());
+        h.settle();
+        QTRY_VERIFY(!h.item(QStringLiteral("videoTransport"))->isVisible());
     }
 
     // Edit mode never changes the screen: Use as background does nothing

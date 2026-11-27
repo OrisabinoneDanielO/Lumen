@@ -127,6 +127,14 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
         return okReply();
     }
 
+    if (command == QLatin1String("video")) {
+        const QString action = request.value(QStringLiteral("action")).toString();
+        if (action != QLatin1String("pause") && action != QLatin1String("play") && action != QLatin1String("seek"))
+            return errorReply(QStringLiteral("\"video\" needs \"action\": pause, play or seek"));
+        m_output.videoControl(action, qMax<qint64>(0, request.value(QStringLiteral("positionMs")).toInteger()));
+        return okReply();
+    }
+
     if (command == QLatin1String("identify")) {
         m_output.setIdentify(request.value(QStringLiteral("identify")).toObject());
         return okReply();
@@ -228,6 +236,7 @@ QJsonObject RenderServer::handle(const QJsonObject &request)
                         {QStringLiteral("screen"), m_output.screenName()},
                         {QStringLiteral("identify"), m_output.identify()},
                         {QStringLiteral("videoErrors"), m_output.videoErrors()},
+                        {QStringLiteral("videoPosition"), m_output.videoPosition()},
                         {QStringLiteral("server"), m_server.serverName()}});
     }
 

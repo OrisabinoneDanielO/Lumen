@@ -81,6 +81,10 @@ QJsonObject contentJson(const Content &content)
         json.insert(QStringLiteral("video"), content.videoPath);
         json.insert(QStringLiteral("loop"), content.loop);
         json.insert(QStringLiteral("volume"), content.volume);
+        if (content.trimInMs > 0)
+            json.insert(QStringLiteral("trimInMs"), content.trimInMs);
+        if (content.trimOutMs > 0)
+            json.insert(QStringLiteral("trimOutMs"), content.trimOutMs);
         if (!content.imagePath.isEmpty())
             json.insert(QStringLiteral("poster"), content.imagePath);
     }
@@ -141,6 +145,10 @@ std::optional<Content> contentFrom(const QJsonValue &value)
         content.loop = json.value(QStringLiteral("loop")).toBool();
         content.volume = qBound(0.0, json.value(QStringLiteral("volume")).toDouble(1.0), 1.0);
         content.imagePath = json.value(QStringLiteral("poster")).toString();
+        content.trimInMs = qMax<qint64>(0, json.value(QStringLiteral("trimInMs")).toInteger());
+        content.trimOutMs = qMax<qint64>(0, json.value(QStringLiteral("trimOutMs")).toInteger());
+        if (content.trimOutMs > 0 && content.trimOutMs <= content.trimInMs)
+            content.trimOutMs = 0; // an end before the start: play to the end
         if (content.videoPath.isEmpty())
             return std::nullopt;
     }

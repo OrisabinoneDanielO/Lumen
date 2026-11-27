@@ -56,7 +56,11 @@ namespace lumen::core::render {
 //     "status" reports "identify". Cued content may follow MIDI timecode
 //     ("source": "mtc", "mtcDevice", "mtcStart"); its status reports
 //     "timecode".
-inline constexpr int protocolVersion = 10;
+// v11: video trim ("trimInMs", "trimOutMs"); "video" pauses, plays or seeks
+//     the video on the Media layer ("action": "pause" | "play" | "seek",
+//     "positionMs"); "status" reports "videoPosition" ({"path",
+//     "positionMs", "durationMs", "playing"}, or empty).
+inline constexpr int protocolVersion = 11;
 
 // Longest line either side accepts, to bound memory use.
 inline constexpr qsizetype maxLineBytes = 1024 * 1024;

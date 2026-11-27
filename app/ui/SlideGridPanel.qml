@@ -72,6 +72,74 @@ Item {
                         onClicked: root.controller.shownVideoLoops = true
                     }
                 }
+                // Where it starts and ends (kept with the video): Enter or
+                // leaving the box sets them.
+                Row {
+                    Layout.alignment: Qt.AlignBottom
+                    visible: root.controller.shownIsVideo
+                    spacing: 4
+                    component TimeBox: Rectangle {
+                        id: box
+                        property alias text: field.text
+                        property string placeholder
+                        signal done()
+                        width: 64
+                        height: 28
+                        radius: 6
+                        color: Theme.window
+                        border.color: field.activeFocus ? Theme.next : Theme.border
+                        TextInput {
+                            id: field
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            verticalAlignment: TextInput.AlignVCenter
+                            color: Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 12
+                            selectByMouse: true
+                            onAccepted: { box.done(); focus = false }
+                            onActiveFocusChanged: if (!activeFocus) box.done()
+                        }
+                        LText {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: field.text === "" && !field.activeFocus
+                            text: box.placeholder
+                            font.pixelSize: 12
+                            color: Theme.textMuted
+                        }
+                    }
+                    LText {
+                        height: 28
+                        verticalAlignment: Text.AlignVCenter
+                        text: qsTr("Start")
+                        font.pixelSize: 11
+                        color: Theme.textMuted
+                    }
+                    TimeBox {
+                        id: startBox
+                        objectName: "videoStart"
+                        text: root.controller.shownVideoStart
+                        placeholder: "0:00"
+                        onDone: if (text !== root.controller.shownVideoStart) root.controller.setShownVideoTrim(startBox.text, endBox.text)
+                    }
+                    LText {
+                        height: 28
+                        verticalAlignment: Text.AlignVCenter
+                        text: qsTr("End")
+                        font.pixelSize: 11
+                        color: Theme.textMuted
+                    }
+                    TimeBox {
+                        id: endBox
+                        objectName: "videoEnd"
+                        text: root.controller.shownVideoEnd
+                        placeholder: qsTr("end")
+                        onDone: if (text !== root.controller.shownVideoEnd) root.controller.setShownVideoTrim(startBox.text, endBox.text)
+                    }
+                }
 
                 LButton {
                     objectName: "cuesButton"

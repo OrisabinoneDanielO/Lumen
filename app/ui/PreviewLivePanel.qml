@@ -220,6 +220,78 @@ Rectangle {
                         }
                     }
                 }
+                // The video on the screen: pause or play it, and drag along
+                // the bar to jump. Its output reports where it is about
+                // once a second; in between the bar moves on its own.
+                RowLayout {
+                    id: transport
+                    objectName: "videoTransport"
+                    visible: root.controller.liveVideo
+                    width: parent.width
+                    spacing: 8
+                    property real position: root.controller.liveVideoPositionMs
+                    readonly property real duration: root.controller.liveVideoDurationMs
+                    Connections {
+                        target: root.controller
+                        function onVideoPositionChanged() { transport.position = root.controller.liveVideoPositionMs }
+                    }
+                    Timer {
+                        interval: 100
+                        repeat: true
+                        running: transport.visible && root.controller.liveVideoPlaying && !seekMouse.pressed
+                        onTriggered: transport.position = Math.min(transport.duration, transport.position + interval)
+                    }
+                    function clock(ms) {
+                        const s = Math.max(0, Math.floor(ms / 1000))
+                        return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0")
+                    }
+
+                    LButton {
+                        objectName: "videoPlayPause"
+                        implicitHeight: 32
+                        radius: 6
+                        fontSize: 12
+                        text: root.controller.liveVideoPlaying ? qsTr("Pause") : qsTr("Play")
+                        onClicked: root.controller.toggleVideoPlaying()
+                    }
+                    Item {
+                        objectName: "videoSeekBar"
+                        Layout.fillWidth: true
+                        implicitHeight: 32
+                        Accessible.role: Accessible.Slider
+                        Accessible.name: qsTr("Video position")
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width
+                            height: 6
+                            radius: 3
+                            color: Theme.raised
+                            Rectangle {
+                                width: transport.duration > 0 ? parent.width * Math.min(1, transport.position / transport.duration) : 0
+                                height: parent.height
+                                radius: 3
+                                color: Theme.live
+                            }
+                        }
+                        MouseArea {
+                            id: seekMouse
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            preventStealing: true
+                            function at(x) { return Math.max(0, Math.min(1, x / width)) * transport.duration }
+                            onPressed: mouse => transport.position = at(mouse.x)
+                            onPositionChanged: mouse => { if (pressed) transport.position = at(mouse.x) }
+                            onReleased: mouse => root.controller.seekVideo(at(mouse.x))
+                        }
+                    }
+                    LText {
+                        objectName: "videoTime"
+                        text: transport.clock(transport.position) + " / " + transport.clock(transport.duration)
+                        font.pixelSize: 11
+                        font.features: { "tnum": 1 }
+                        color: Theme.textMuted
+                    }
+                }
                 Row {
                     width: parent.width
                     spacing: 8
