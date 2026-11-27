@@ -68,6 +68,7 @@ private slots:
             "props", // batch 14
             "slide_groups", "slides",
             "song_index", // batch 6
+            "song_usage", // CCLI reporting
             "stage_layouts",      "themes",       "timers"};
         QCOMPARE(tables, expected);
     }

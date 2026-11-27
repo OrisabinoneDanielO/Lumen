@@ -75,6 +75,10 @@ The **Media** tab in the library imports videos (`.mp4`, `.mov`, `.webm`, `.mkv`
 
 The **Presentations** tab imports PowerPoint (`.pptx`, `.ppt`, `.odp`) and PDF files as picture slides, one per slide, in show order (hidden slides are left out). PowerPoint files are converted by PowerPoint (Windows) or LibreOffice when one is installed, so they look exactly as designed; without either, Lumen draws `.pptx` slides itself (backgrounds, pictures, shapes and text, but not charts, tables or effects) and the import report says so. For Keynote, export to PDF first. Optional: install LibreOffice (`sudo dnf install libreoffice-impress`) for exact PowerPoint slides.
 
+## Song usage for your CCLI report
+
+Every song shown live is counted, once a day, on this computer only (songs shown from the library count too). **Plan ▾ → Song usage (CCLI)…** saves the last 3, 6 or 12 months, or everything, as a spreadsheet (`.csv`): title, author, CCLI song number, copyright, times used, and the first and last date. Lumen sends nothing anywhere; you submit the report to CCLI yourself.
+
 ## Plans and backups
 
 The **Plan** menu above the service plan makes, opens, renames and duplicates plans, adds headers, and exports or imports a plan as a `.lumen` file (the plan, its slides and its media in one file, for the booth PC or another church). Drag a song, video, picture or presentation from the library onto the plan to put it there (a line shows where it will go), and drag plan items up or down to reorder them; **+ Add** opens the library tab for songs, media or presentations, the scripture window, or a new header. Right-click an item to move it, add notes or remove it. Everything is saved as you go; the open plan and item are remembered every 30 seconds, so Lumen reopens where you were after a crash. A backup of the library is made daily (the newest 14 are kept, in `backups` beside the library), and **Restore a backup** puts one back (Lumen restarts; the current library is kept beside it).

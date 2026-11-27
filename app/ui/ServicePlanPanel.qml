@@ -545,6 +545,12 @@ Rectangle {
                         }
                     }
                     MenuEntry {
+                        objectName: "planUsage"
+                        text: qsTr("Song usage (CCLI)…")
+                        detail: ".csv"
+                        onTriggered: root.menuPage = "usage"
+                    }
+                    MenuEntry {
                         objectName: "planShare"
                         text: qsTr("Share with other computers…")
                         onTriggered: {
@@ -641,6 +647,39 @@ Rectangle {
                 }
 
                 // Backups, newest first. Restoring restarts Lumen.
+                // Song usage: which period, then where to save it.
+                Column {
+                    width: parent.width
+                    visible: root.menuPage === "usage"
+                    LText {
+                        width: parent.width
+                        leftPadding: 10
+                        rightPadding: 10
+                        topPadding: 4
+                        bottomPadding: 6
+                        text: qsTr("Songs shown live, each counted once a day, for your CCLI report. Kept on this computer only.")
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 11
+                        color: Theme.textMuted
+                    }
+                    Repeater {
+                        model: [{ months: 3, label: qsTr("Last 3 months") },
+                                { months: 6, label: qsTr("Last 6 months") },
+                                { months: 12, label: qsTr("Last 12 months") },
+                                { months: 0, label: qsTr("Everything") }]
+                        delegate: MenuEntry {
+                            required property var modelData
+                            objectName: "usage-" + modelData.months
+                            text: modelData.label
+                            onTriggered: {
+                                root.menuPage = ""
+                                usageDialog.months = modelData.months
+                                usageDialog.active = true
+                            }
+                        }
+                    }
+                }
+
                 Column {
                     width: parent.width
                     visible: root.menuPage === "restore"
@@ -868,6 +907,23 @@ Rectangle {
                 exportDialog.active = false
             }
             onRejected: exportDialog.active = false
+        }
+    }
+    Loader {
+        id: usageDialog
+        property int months: 3
+        active: false
+        sourceComponent: FileDialog {
+            title: qsTr("Save song usage")
+            fileMode: FileDialog.SaveFile
+            defaultSuffix: "csv"
+            nameFilters: [qsTr("Spreadsheet (*.csv)")]
+            Component.onCompleted: open()
+            onAccepted: {
+                root.controller.exportSongUsage(selectedFile, usageDialog.months)
+                usageDialog.active = false
+            }
+            onRejected: usageDialog.active = false
         }
     }
     Loader {

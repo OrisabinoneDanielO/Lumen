@@ -6,6 +6,9 @@
 #include "backups.h"
 #include "rowmodel.h"
 #include "servicedata.h"
+#include "usagelog.h"
+
+#include <memory>
 
 #include "lumen/core/show/showcontroller.h"
 #include "lumen/core/songs/songlibrary.h"
@@ -303,6 +306,9 @@ public:
     void setMode(const QString &mode);
     bool editAvailable() const { return m_editAvailable; }
     bool libraryAvailable() const { return m_songs != nullptr; }
+    // CCLI reporting: the songs shown live in the last `months` months (0:
+    // all), as a CSV file. Says how many in the plan's message line.
+    Q_INVOKABLE bool exportSongUsage(const QUrl &file, int months);
     int selectedSong() const { return m_selectedSong; }
     QString importSummary() const { return m_importSummary; }
     QString importDetails() const { return m_importDetails; }
@@ -384,6 +390,7 @@ private:
 
     core::data::Database *m_db = nullptr;
     core::songs::SongLibrary *m_songs = nullptr;
+    std::unique_ptr<UsageLog> m_usage; // songs shown live (CCLI reporting)
     QString m_search;
     int m_selectedSong = -1;
     QString m_importSummary;
