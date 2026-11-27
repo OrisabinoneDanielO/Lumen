@@ -720,7 +720,7 @@ Window {
                         LText {
                             Layout.fillWidth: true
                             visible: !root.scripture.showCopyright
-                            text: qsTr("CC BY-SA Bibles still show their credit (their licence asks for it).")
+                            text: qsTr("CC BY-SA Bibles keep a short credit on the first slide (their licence asks for it).")
                             wrapMode: Text.WordWrap
                             font.pixelSize: 11
                             color: Theme.textMuted

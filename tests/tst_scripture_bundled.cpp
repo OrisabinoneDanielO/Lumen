@@ -279,14 +279,17 @@ private slots:
         QVERIFY2(credit.contains(QStringLiteral("World English Bible")) && credit.contains(QStringLiteral("Biblica")), qPrintable(credit));
 
         // Copyright line hidden: the public-domain WEB's goes; the Yoruba
-        // Bible's stays (CC BY-SA asks for credit).
+        // Bible keeps a short credit (CC BY-SA asks for one), on the first
+        // slide of the passage only.
         QVERIFY(ui.click("copyrightOff"));
         QVERIFY(!scripture.showCopyright());
+        scripture.lookup(QStringLiteral("jn 3 16-17"));
         QVERIFY(scripture.showNow());
         const Content hidden = ui.show.scene().layer(Layer::Slide).content;
         QCOMPARE(hidden.elements.size(), 5);
-        QVERIFY(!text(hidden, 4).contains(QStringLiteral("World English Bible")));
-        QVERIFY(text(hidden, 4).contains(QStringLiteral("Biblica")));
+        QCOMPARE(text(hidden, 4), QStringLiteral("Yorùbá © Biblica, CC BY-SA 4.0"));
+        QVERIFY(ui.controller->goLive(1));
+        QCOMPARE(ui.show.scene().layer(Layer::Slide).content.elements.size(), 4); // no credit
 
         // Added to the plan, it comes back the same.
         QVERIFY(scripture.addToPlan());
@@ -296,8 +299,10 @@ private slots:
         QVERIFY(ui.controller->goLive(1));
         const Content fromPlan = ui.show.scene().layer(Layer::Slide).content;
         QCOMPARE(fromPlan.kind, Content::Kind::Composed);
-        QCOMPARE(fromPlan.elements.size(), 5);
+        QCOMPARE(fromPlan.elements.size(), 4); // the credit is on slide 1
         QCOMPARE(text(fromPlan, 3), QStringLiteral("Johanu 3:17 (Yorùbá)"));
+        QVERIFY(ui.controller->goLive(0));
+        QCOMPARE(text(ui.show.scene().layer(Layer::Slide).content, 4), QStringLiteral("Yorùbá © Biblica, CC BY-SA 4.0"));
 
         // One public-domain translation with the line hidden: just the
         // reference. Shown again: the copyright is back.
@@ -305,6 +310,21 @@ private slots:
         QCOMPARE(scripture.secondTranslation(), -1);
         QVERIFY(scripture.showNow());
         QCOMPARE(ui.show.scene().layer(Layer::Slide).content.footer, QStringLiteral("John 3:16 (WEB)"));
+        // Yoruba alone, hidden: the short credit on the first slide only,
+        // also after a trip through the plan.
+        QVERIFY(ui.click("translation-yor"));
+        QVERIFY(scripture.showNow());
+        QCOMPARE(ui.show.scene().layer(Layer::Slide).content.footer,
+                 QStringLiteral("Johanu 3:16 (Yorùbá) · Yorùbá © Biblica, CC BY-SA 4.0"));
+        QVERIFY(ui.controller->goLive(1));
+        QCOMPARE(ui.show.scene().layer(Layer::Slide).content.footer, QStringLiteral("Johanu 3:17 (Yorùbá)"));
+        QVERIFY(scripture.addToPlan());
+        ui.controller->selectItem(ui.controller->plan()->property("count").toInt() - 1);
+        QVERIFY(ui.controller->goLive(0));
+        QVERIFY(ui.show.scene().layer(Layer::Slide).content.footer.endsWith(QStringLiteral("Yorùbá © Biblica, CC BY-SA 4.0")));
+        QVERIFY(ui.controller->goLive(1));
+        QCOMPARE(ui.show.scene().layer(Layer::Slide).content.footer, QStringLiteral("Johanu 3:17 (Yorùbá)"));
+        QVERIFY(ui.click("translation-engwebp"));
         QVERIFY(ui.click("copyrightOn"));
         QVERIFY(scripture.showNow());
         QCOMPARE(ui.show.scene().layer(Layer::Slide).content.footer,

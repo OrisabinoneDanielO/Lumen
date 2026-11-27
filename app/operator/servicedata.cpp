@@ -202,11 +202,14 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
         static const QRegularExpression part(QStringLiteral(R"(\s*\(\d+/\d+\)$)"));
         const QString abbreviation = meta.value(QStringLiteral("abbreviation")).toString();
         const QString copyright = meta.value(QStringLiteral("copyright")).toString();
+        // Copyright line hidden when it was added: the required credit on
+        // the first slide only.
+        const bool firstOnly = meta.value(QStringLiteral("creditFirstSlideOnly")).toBool();
         for (SlideView &slide : view.slides) {
             QString reference = slide.group;
             reference.remove(part);
             slide.footer = abbreviation.isEmpty() ? reference : QStringLiteral("%1 (%2)").arg(reference, abbreviation);
-            if (!copyright.isEmpty())
+            if (!copyright.isEmpty() && (!firstOnly || &slide == &view.slides.front()))
                 slide.footer += QStringLiteral(" · ") + copyright;
         }
     }

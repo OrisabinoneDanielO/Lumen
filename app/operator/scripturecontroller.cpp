@@ -127,8 +127,19 @@ void ScriptureController::setShowCopyright(bool show)
     emit changed();
 }
 
-QString ScriptureController::credit() const
+QString ScriptureController::shortCredit(const Translation &t)
 {
+    static const QRegularExpression holder(QStringLiteral(R"(©\s*(?:\d{4}[,\s]*)*([^.,]+?)(?:,?\s*Inc)?\.)"));
+    const auto m = holder.match(t.copyright);
+    if (!m.hasMatch() || t.licence.isEmpty())
+        return t.copyright;
+    return QStringLiteral("%1 © %2, %3").arg(t.abbreviation, m.captured(1).trimmed(), t.licence);
+}
+
+QString ScriptureController::credit(bool firstSlide) const
+{
+    if (!m_showCopyright && !firstSlide)
+        return {};
     QStringList lines;
     for (const auto *passage : {m_passage ? &*m_passage : nullptr, m_secondPassage ? &*m_secondPassage : nullptr}) {
         if (!passage)
@@ -136,8 +147,10 @@ QString ScriptureController::credit() const
         const Translation &t = passage->translation;
         // Public domain needs no credit; anything else (CC BY-SA) does.
         const bool required = !t.licence.startsWith(QLatin1String("Public domain"), Qt::CaseInsensitive);
-        if ((m_showCopyright || required) && !t.copyright.isEmpty())
+        if (m_showCopyright && !t.copyright.isEmpty())
             lines << t.copyright;
+        else if (required && !t.copyright.isEmpty())
+            lines << shortCredit(t);
     }
     return lines.join(QStringLiteral(" · "));
 }
@@ -300,6 +313,7 @@ void ScriptureController::rebuild()
 
     m_firstSlideVerses = chunks.empty() ? 0 : int(chunks.front().size());
     for (const auto &chunk : chunks) {
+        const bool firstSlide = view.slides.empty();
         const QString reference = slideReference(*m_passage, chunk);
         if (sideBySide) {
             // Each column names its own passage, in its own language.
@@ -313,13 +327,13 @@ void ScriptureController::rebuild()
             const QString rightReference = matching.empty()
                                                ? second->abbreviation
                                                : QStringLiteral("%1 (%2)").arg(slideReference(*m_secondPassage, matching), second->abbreviation);
-            const QString footer = credit();
+            const QString footer = credit(firstSlide);
             SlideView slide{{}, reference, scriptureColour, slideText(chunk), footer, 0, {}, {}, {}, false, {}, {}};
             slide.elements = sideBySideElements(style, slideText(chunk), leftReference, secondText(chunk), rightReference, footer);
             view.slides.push_back(std::move(slide));
             continue;
         }
-        const QString lineCredit = credit();
+        const QString lineCredit = credit(firstSlide);
         const QString footer = lineCredit.isEmpty() ? QStringLiteral("%1 (%2)").arg(reference, t.abbreviation)
                                                     : QStringLiteral("%1 (%2) · %3").arg(reference, t.abbreviation, lineCredit);
         const QStringList parts = core::show::splitToFit(slideText(chunk), style, true);
@@ -327,7 +341,9 @@ void ScriptureController::rebuild()
             const QString group = parts.size() > 1
                                       ? QStringLiteral("%1 (%2/%3)").arg(reference).arg(p + 1).arg(parts.size())
                                       : reference;
-            view.slides.push_back({{}, group, scriptureColour, parts[p], footer, 0, {}, {}, {}, false, {}, {}});
+            // Hidden: the credit on the passage's very first slide only.
+            const QString partFooter = p == 0 || m_showCopyright ? footer : QStringLiteral("%1 (%2)").arg(reference, t.abbreviation);
+            view.slides.push_back({{}, group, scriptureColour, parts[p], partFooter, 0, {}, {}, {}, false, {}, {}});
         }
     }
     if (sideBySide) {
@@ -369,6 +385,7 @@ bool ScriptureController::addToPlan()
     const Translation &t = m_passage->translation;
 
     QJsonObject metadata{{"subtitle", t.title},           {"copyright", credit()},
+                         {"creditFirstSlideOnly", !m_showCopyright},
                          {"abbreviation", t.abbreviation}, {"translation", t.id},
                          {"reference", m_passage->label},  {"referencePosition", m_referencePosition}};
     if (m_secondPassage) {
