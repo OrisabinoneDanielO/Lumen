@@ -33,6 +33,8 @@ using namespace core::show;
 OperatorController::OperatorController(ShowController &show, bool editAvailable, QObject *parent)
     : QObject(parent), m_show(show), m_editAvailable(editAvailable)
 {
+    m_advanceTimer.setSingleShot(true);
+    connect(&m_advanceTimer, &QTimer::timeout, this, &OperatorController::advanceLive);
     connect(&m_show, &ShowController::sceneChanged, this, [this] {
         // Something else (e.g. Clear Slide) took the slide off air.
         const auto &scene = m_show.scene();
@@ -1166,16 +1168,49 @@ void OperatorController::activateSlide(int index)
 
 bool OperatorController::goLive(int index)
 {
-    // Edit mode can never change what is on screen.
     const ItemView *view = selected();
-    if (m_editMode || !view || index < 0 || index >= int(view->slides.size()))
+    return view && goLiveFrom(*view, m_current, index);
+}
+
+const ItemView *OperatorController::liveView() const
+{
+    if (!m_onAir)
+        return nullptr;
+    const ItemView *view = m_positionItem == libraryItem ? (m_librarySong ? &*m_librarySong : nullptr) : item(m_positionItem);
+    return view && keyOf(*view) == m_positionKey ? view : nullptr;
+}
+
+void OperatorController::restartAdvance(const ItemView &view)
+{
+    if (view.autoAdvance > 0 && view.slides.size() > 1)
+        m_advanceTimer.start(view.autoAdvance * 1000);
+    else
+        m_advanceTimer.stop();
+}
+
+void OperatorController::advanceLive()
+{
+    // Only while that item is still up (not cleared, not replaced).
+    const ItemView *view = liveView();
+    if (!view || view->autoAdvance <= 0 || m_editMode
+        || (m_show.scene().layer(Layer::Slide).content.isEmpty() && m_show.scene().layer(Layer::Media).content.isEmpty()))
+        return;
+    const int next = (m_positionSlide + 1) % int(view->slides.size()); // round and round
+    goLiveFrom(*view, m_positionItem, next);
+}
+
+bool OperatorController::goLiveFrom(const ItemView &item, int itemIndex, int index)
+{
+    // Edit mode can never change what is on screen.
+    const ItemView *view = &item;
+    if (m_editMode || index < 0 || index >= int(view->slides.size()))
         return false;
     // CCLI reporting: a song counts once a day.
     if (m_usage && view->kind == QLatin1String("SONG")) {
         if (const auto recorded = m_usage->record(view->presentationId); !recorded.ok())
             qWarning("Song usage not recorded: %s", qPrintable(recorded.error().message));
     }
-    m_positionItem = m_current;
+    m_positionItem = itemIndex;
     m_positionKey = keyOf(*view);
     m_positionSlide = index;
     m_positionLabel = tr("%1 · slide %2").arg(view->slides[std::size_t(index)].group).arg(index + 1);
@@ -1202,8 +1237,51 @@ bool OperatorController::goLive(int index)
     m_show.setContents(changes);
     if (m_show.scene().sequence == before)
         emit stateChanged(); // same text, new position (e.g. a repeated chorus)
+    restartAdvance(*view);
     emit slideSentLive(index);
     return true;
+}
+
+bool OperatorController::canAutoAdvance() const
+{
+    const ItemView *view = selected();
+    return view && view->slides.size() > 1 && !shownIsVideo() && view->kind != QLatin1String("BIBLE");
+}
+
+int OperatorController::shownAutoAdvance() const
+{
+    const ItemView *view = selected();
+    return view ? view->autoAdvance : 0;
+}
+
+void OperatorController::setShownAutoAdvance(int seconds)
+{
+    const ItemView *view = selected();
+    seconds = std::clamp(seconds, 0, 600);
+    if (!view || !m_db || view->presentationId.isEmpty() || seconds == view->autoAdvance)
+        return;
+    const QString presentationId = view->presentationId;
+    using core::data::Presentation;
+    using core::data::Repository;
+    if (auto p = Repository<Presentation>(*m_db).get(presentationId); p.ok()) {
+        p.value().metadata.insert(QStringLiteral("autoAdvance"), seconds);
+        if (auto updated = Repository<Presentation>(*m_db).update(p.value()); !updated.ok())
+            qWarning("Auto-advance not saved: %s", qPrintable(updated.error().message));
+    }
+    const auto apply = [&](ItemView &v) {
+        if (v.presentationId == presentationId)
+            v.autoAdvance = seconds;
+    };
+    if (m_plan) {
+        for (ItemView &v : m_plan->items)
+            apply(v);
+    }
+    if (m_librarySong)
+        apply(*m_librarySong);
+    // On air now: it starts (or stops) at once.
+    if (const ItemView *live = liveView(); live && live->presentationId == presentationId)
+        restartAdvance(*live);
+    emit stateChanged();
 }
 
 Content OperatorController::slideContent(const ItemView &view, int index) const

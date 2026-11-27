@@ -84,6 +84,10 @@ class OperatorController : public QObject
     // The shown video's start and end points ("m:ss"; end empty: the end).
     // A song: its key as the band plays it, and how far it is transposed.
     Q_PROPERTY(bool shownIsSong READ shownIsSong NOTIFY stateChanged)
+    // Seconds each slide of the shown item stays up before the next, round
+    // and round (announcement loops); 0: by hand.
+    Q_PROPERTY(int shownAutoAdvance READ shownAutoAdvance NOTIFY stateChanged)
+    Q_PROPERTY(bool canAutoAdvance READ canAutoAdvance NOTIFY stateChanged)
     Q_PROPERTY(QString shownKey READ shownKey NOTIFY stateChanged)
     Q_PROPERTY(int shownTranspose READ shownTranspose NOTIFY stateChanged)
     Q_PROPERTY(QString shownVideoStart READ shownVideoStart NOTIFY stateChanged)
@@ -215,6 +219,9 @@ public:
     bool shownIsVideo() const;
     bool shownVideoLoops() const;
     bool shownIsSong() const;
+    int shownAutoAdvance() const;
+    bool canAutoAdvance() const; // an item with several slides (not a video)
+    Q_INVOKABLE void setShownAutoAdvance(int seconds);
     QString shownKey() const;
     int shownTranspose() const;
     // Moves the shown song's chords (and key) up or down by semitones, for
@@ -437,6 +444,13 @@ private:
     QString m_livePath; // the video the last status was about
     QString m_remoteScreen;
     QString m_logoMedia;
+    QTimer m_advanceTimer; // auto-advance of the live item
+    // goLive's work for any item: the selected one, or (auto-advance) the
+    // one on air while another is selected.
+    bool goLiveFrom(const ItemView &view, int itemIndex, int index);
+    const ItemView *liveView() const; // the item on air, if it is still there
+    void advanceLive();
+    void restartAdvance(const ItemView &view);
     qint64 m_livePositionMs = 0;
     qint64 m_liveDurationMs = 0;
     bool m_livePlaying = false;

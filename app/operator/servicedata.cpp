@@ -100,6 +100,7 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
     view.subtitle = subtitle.isEmpty() ? author : subtitle;
     view.key = meta.value(QStringLiteral("key")).toString();
     view.transpose = meta.value(QStringLiteral("transpose")).toInt();
+    view.autoAdvance = meta.value(QStringLiteral("autoAdvance")).toInt();
 
     QStringList detail;
     if (!author.isEmpty())

@@ -74,6 +74,7 @@ struct ItemView
     QString notes;          // the plan item's notes
     QString key;            // a song's key ("G"), for the stage display
     int transpose = 0;      // semitones the band plays it up (+) or down (-)
+    int autoAdvance = 0;    // seconds per slide when live (looping); 0: by hand
     QString presentationId; // empty for a header
     QString kind;     // "SONG", "BIBLE", "SLIDES", "MEDIA", "TIMER"; empty for a header
     QString title;

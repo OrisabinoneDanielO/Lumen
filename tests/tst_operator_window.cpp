@@ -507,6 +507,44 @@ private slots:
         QVERIFY(m_ui->show.scene().sequence > 0);
     }
 
+    // Auto-advance (announcement loops): each slide for its time, round and
+    // round, on the item that is live even while another is selected;
+    // Clear stops it.
+    void autoAdvanceLoops()
+    {
+        open();
+        QVERIFY(m_ui->click("planItem-7")); // [Sermon title]: three slides
+        QVERIFY(m_ui->controller->canAutoAdvance());
+        m_ui->settle();
+        QVERIFY(m_ui->item("autoAdvanceRow")->isVisible());
+        QVERIFY(m_ui->click("autoAdvance-5"));
+        QCOMPARE(m_ui->controller->shownAutoAdvance(), 5);
+        m_ui->controller->setShownAutoAdvance(1); // a second, to keep the test short
+        QVERIFY(m_ui->controller->goLive(0));
+        QCOMPARE(onAir(), QStringLiteral("[Sermon title]"));
+        QTRY_COMPARE_WITH_TIMEOUT(onAir(), QStringLiteral("[Point 1]"), 2500);
+        // Another item chosen meanwhile: the live one keeps going; the
+        // choice stays.
+        QVERIFY(m_ui->click("planItem-2"));
+        QTRY_COMPARE_WITH_TIMEOUT(onAir(), QStringLiteral("[Point 2]"), 2500);
+        QTRY_COMPARE_WITH_TIMEOUT(onAir(), QStringLiteral("[Sermon title]"), 2500); // round again
+        QCOMPARE(m_ui->controller->currentItem(), 2);
+        // Clear Slide stops it.
+        m_ui->controller->clearLayer(QStringLiteral("slide"));
+        QTest::qWait(1500);
+        QVERIFY(onAir().isEmpty());
+        // Off: by hand again.
+        m_ui->controller->selectItem(7);
+        QVERIFY(m_ui->click("autoAdvance-0"));
+        QVERIFY(m_ui->controller->goLive(0));
+        QTest::qWait(1500);
+        QCOMPARE(onAir(), QStringLiteral("[Sermon title]"));
+        // Songs and scripture have no auto-advance.
+        m_ui->controller->selectItem(2);
+        m_ui->settle();
+        QVERIFY(!m_ui->item("autoAdvanceRow")->isVisible());
+    }
+
     // The Main light asks before turning the output off.
     void outputOffIsConfirmed()
     {
