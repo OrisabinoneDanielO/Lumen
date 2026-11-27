@@ -251,9 +251,11 @@ core::show::TextStyle scriptureStyle(core::show::TextStyle style, const QString 
 QJsonArray sideBySideElements(const core::show::TextStyle &style, const QString &left, const QString &leftReference,
                               const QString &right, const QString &rightReference, const QString &credit)
 {
-    // The credit takes the footer band; each column's reference sits with
-    // its text inside the body.
-    core::show::TextStyle bands = style;
+    using core::show::TextStyle;
+    // The credit takes the footer band; the passages and their references
+    // sit in the body as one block, placed as the theme places a slide's
+    // text (centred, top or bottom), like a normal scripture slide.
+    TextStyle bands = style;
     bands.footerPosition = QStringLiteral("below");
     bands.footerSize = qMax(16, style.footerSize * 3 / 4);
     const auto areas = core::show::textAreas(bands, core::show::referenceSize, !credit.isEmpty());
@@ -262,32 +264,51 @@ QJsonArray sideBySideElements(const core::show::TextStyle &style, const QString 
         return QJsonArray{std::round(r.x()), std::round(r.y()), std::round(r.width()), std::round(r.height())};
     };
     const bool above = style.footerPosition == QLatin1String("above");
-    QJsonObject textStyle{{"font", style.font},
-                          {"size", style.maxSize},
-                          {"bold", style.weight >= 600},
-                          {"colour", colour(style.colour)},
-                          {"align", style.align},
-                          // Text hugs its reference: down onto it, or up under it.
-                          {"valign", above ? "top" : "bottom"},
-                          {"shadow", style.shadow},
-                          {"outline", style.outline},
-                          {"outlineColour", colour(style.outlineColour)},
-                          {"fit", true}};
-    QJsonObject referenceStyle = textStyle;
-    referenceStyle.insert("size", style.footerSize);
-    referenceStyle.insert("colour", colour(style.footerColour));
-    referenceStyle.insert("bold", true);
-    referenceStyle.insert("valign", above ? "bottom" : "top");
-    referenceStyle.insert("fit", true);
-
     const double gap = 64;
     const double column = (areas.body.width() - gap) / 2;
     const double referenceHeight = std::ceil(style.footerSize * 1.6);
     const double referenceGap = std::ceil(style.footerSize * 0.4);
-    const double textHeight = areas.body.height() - referenceHeight - referenceGap;
-    const double textTop = above ? areas.body.top() + referenceHeight + referenceGap : areas.body.top();
-    const double referenceTop = above ? areas.body.top() : areas.body.top() + textHeight + referenceGap;
+
+    // One size for both columns: the largest at which each fits beside the
+    // other (with room for its reference).
+    TextStyle columnStyle = style;
+    columnStyle.footerPosition = QStringLiteral("none");
+    columnStyle.safeArea = QRectF(areas.body.left() / core::show::referenceSize.width(),
+                                  areas.body.top() / core::show::referenceSize.height(),
+                                  column / core::show::referenceSize.width(),
+                                  (areas.body.height() - referenceHeight - referenceGap) / core::show::referenceSize.height());
+    const int size = qMin(core::show::fitText(left, columnStyle, false).pixelSize,
+                          core::show::fitText(right, columnStyle, false).pixelSize);
+    const double wrapWidth = column * 0.97 - 2.0 * style.outline;
+    const double textHeight = std::min(areas.body.height() - referenceHeight - referenceGap,
+                                       std::ceil(std::max(core::show::textHeight(left, style, size, wrapWidth),
+                                                          core::show::textHeight(right, style, size, wrapWidth)))
+                                           + 4);
+    const double block = textHeight + referenceGap + referenceHeight;
+    const double top = style.valign == QLatin1String("top")      ? areas.body.top()
+                       : style.valign == QLatin1String("bottom") ? areas.body.bottom() - block
+                                                                 : areas.body.top() + (areas.body.height() - block) / 2;
+    const double textTop = above ? top + referenceHeight + referenceGap : top;
+    const double referenceTop = above ? top : top + textHeight + referenceGap;
     const auto columnAt = [&](int i) { return areas.body.left() + i * (column + gap); };
+
+    const QJsonObject textStyle{{"font", style.font},
+                                {"size", size},
+                                {"bold", style.weight >= 600},
+                                {"colour", colour(style.colour)},
+                                {"align", style.align},
+                                {"valign", "top"}, // both columns start on the same line
+                                {"shadow", style.shadow},
+                                {"outline", style.outline},
+                                {"outlineColour", colour(style.outlineColour)},
+                                {"lineHeight", style.lineHeight},
+                                {"fit", false}};
+    QJsonObject referenceStyle = textStyle;
+    referenceStyle.insert("size", style.footerSize);
+    referenceStyle.insert("colour", colour(style.footerColour));
+    referenceStyle.insert("bold", true);
+    referenceStyle.insert("lineHeight", 1.0);
+    referenceStyle.insert("fit", true);
 
     QJsonArray elements;
     for (const auto &[i, text] : {std::pair(0, left), std::pair(1, right)})

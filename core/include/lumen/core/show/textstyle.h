@@ -63,6 +63,10 @@ struct Fit
 };
 Fit fitText(const QString &text, const TextStyle &style, bool hasFooter);
 
+// Height (1080p pixels) the text takes at pixelSize, wrapped to width, with
+// the style's font and line spacing; as the output measures it.
+double textHeight(const QString &text, const TextStyle &style, int pixelSize, double width);
+
 // Splits text that does not fit into parts that do, at sentence, then clause,
 // then word boundaries. Returns the text unchanged (one part) if it fits.
 QStringList splitToFit(const QString &text, const TextStyle &style, bool hasFooter, int maxParts = 6);

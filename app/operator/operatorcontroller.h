@@ -90,6 +90,7 @@ class OperatorController : public QObject
     Q_PROPERTY(QString shownVideoEnd READ shownVideoEnd NOTIFY stateChanged)
     // The video on the screen now (the Media layer), as its output reports.
     Q_PROPERTY(bool liveVideo READ liveVideo NOTIFY stateChanged)
+    Q_PROPERTY(QString logoMedia READ logoMedia NOTIFY stateChanged)
     // Live goes to another computer's screen (its name), or "".
     Q_PROPERTY(QString remoteScreen READ remoteScreen NOTIFY stateChanged)
     Q_PROPERTY(double liveVideoPositionMs READ liveVideoPositionMs NOTIFY videoPositionChanged)
@@ -254,6 +255,15 @@ public:
     // A library song double-clicked: its first slide live at once.
     Q_INVOKABLE bool playSong(int row);
     Q_INVOKABLE bool useAsBackground(int row); // a looping, silent motion background
+    // A picture or video (looping, silent) as the Logo (F6), kept for next
+    // time; resetLogo goes back to Lumen's own.
+    Q_INVOKABLE bool useAsLogo(int row);
+    Q_INVOKABLE void resetLogo();
+    void setLogoMedia(const QString &path); // at start-up: the one kept
+    QString logoMedia() const { return m_logoMedia; }
+    // Takes a video or picture out of the library (and its plans); the file
+    // stays on disk.
+    Q_INVOKABLE bool removeMedia(int row);
     Q_INVOKABLE bool addMediaToPlan(int row);
     // Turns on the Presentations tab (batch 10).
     void attachPresentations(PresentationLibrary &decks, DeckImporter::Options options = {});
@@ -387,6 +397,7 @@ signals:
     void scriptureRequested(); // Ctrl+B
     void previewVideoChanged(const QString &path);
     void videoPositionChanged();
+    void logoMediaChanged(const QString &path); // to remember it
     // For the outputs: pause, play or seek the video on the Media layer.
     void videoControlRequested(const QString &action, qint64 positionMs);
     void decksImported(const QString &summary);
@@ -425,6 +436,7 @@ private:
     QHash<QString, QString> m_videoErrors; // local path -> why the output could not play it
     QString m_livePath; // the video the last status was about
     QString m_remoteScreen;
+    QString m_logoMedia;
     qint64 m_livePositionMs = 0;
     qint64 m_liveDurationMs = 0;
     bool m_livePlaying = false;

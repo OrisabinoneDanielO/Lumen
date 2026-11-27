@@ -9,7 +9,7 @@ import "timertext.js" as TimerText
 // Element types: text, shape (a rectangle or ellipse), image, video, clock
 // (the time of day) and timer (a countdown or count-up, see timertext.js).
 // Styles are in 1080p pixels: text {font, size, bold, italic, colour, align,
-// valign, shadow, outline, fit}, shape {fill, shape, radius, border,
+// valign, shadow, outline, fit, lineHeight}, shape {fill, shape, radius, border,
 // borderWidth}, image and video {fit: "contain" | "cover"}, video {loop,
 // muted}, clock {format}.
 Item {
@@ -45,6 +45,10 @@ Item {
         horizontalAlignment: root.hAlign(s.align)
         verticalAlignment: root.vAlign(s.valign)
         wrapMode: Text.WordWrap
+        // Proportional line spacing, as themes give it (scripture side by
+        // side measures its columns with the same spacing).
+        lineHeightMode: Text.ProportionalHeight
+        lineHeight: s.lineHeight || 1.0
         fontSizeMode: s.fit === false ? Text.FixedSize : Text.Fit
         minimumPixelSize: Math.max(1, Math.round(12 * root.sy))
         style: (s.outline || 0) > 0 ? Text.Outline : s.shadow === true ? Text.Raised : Text.Normal

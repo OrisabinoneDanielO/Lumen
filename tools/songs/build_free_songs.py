@@ -94,6 +94,9 @@ def openlp(folder):
         title = props.findtext("ol:titles/ol:title", default="", namespaces=NS).strip()
         if not title:
             continue
+        # Words to show (an instrumental piece such as "Canon in D" has none).
+        if not any((l.text or "").strip() or len(l) for l in root.iter("{%s}lines" % NS["ol"])):
+            continue
         writers = []
         for a in authors:
             plain = re.sub(r"\s*\(.*?\)", "", a).strip()

@@ -583,6 +583,71 @@ bool OperatorController::useAsBackground(int row)
     return true;
 }
 
+void OperatorController::setLogoMedia(const QString &path)
+{
+    using core::show::Content;
+    if (path.isEmpty() || !QFileInfo::exists(path)) {
+        m_logoMedia.clear();
+        m_show.setLogoContent(core::show::Scene{}.logoContent);
+    } else {
+        m_logoMedia = path;
+        m_show.setLogoContent(MediaLibrary::isVideo(path) ? Content::video(path, true, 0.0) : Content::image(path));
+    }
+    emit stateChanged();
+}
+
+bool OperatorController::useAsLogo(int row)
+{
+    const QString path = m_mediaModel.get(row).value(QStringLiteral("path")).toString();
+    if (path.isEmpty())
+        return false;
+    setLogoMedia(path);
+    emit logoMediaChanged(m_logoMedia);
+    return true;
+}
+
+void OperatorController::resetLogo()
+{
+    setLogoMedia({});
+    emit logoMediaChanged({});
+}
+
+bool OperatorController::removeMedia(int row)
+{
+    const QVariantMap media = m_mediaModel.get(row);
+    const QString id = media.value(QStringLiteral("presentationId")).toString();
+    if (!m_mediaLibrary || id.isEmpty())
+        return false;
+    // Off the screen first if it is up there.
+    const QString path = media.value(QStringLiteral("path")).toString();
+    for (const Layer layer : {Layer::Media, Layer::Background}) {
+        const Content &content = m_show.scene().layer(layer).content;
+        if (!path.isEmpty() && (content.videoPath == path || content.imagePath == path))
+            m_show.setContent(layer, Content::empty());
+    }
+    const auto removed = m_mediaLibrary->remove(id);
+    if (!removed.ok()) {
+        m_mediaSummary = tr("Not removed: %1").arg(removed.error().message);
+        emit stateChanged();
+        return false;
+    }
+    m_mediaSummary = removed.value() > 0
+                         ? tr("Removed \"%1\" from the library and %2 plan item(s)").arg(media.value(QStringLiteral("title")).toString()).arg(removed.value())
+                         : tr("Removed \"%1\" from the library (the file is still on disk)").arg(media.value(QStringLiteral("title")).toString());
+    if (m_selectedMedia == row)
+        m_selectedMedia = -1;
+    if (m_librarySong && m_librarySong->presentationId == id) {
+        m_librarySong.reset();
+        if (m_current == libraryItem)
+            m_current = -1;
+    }
+    refreshMedia();
+    if (m_plan && removed.value() > 0)
+        reloadPlan(m_current < int(m_plan->items.size()) ? m_current : -1);
+    emit stateChanged();
+    return true;
+}
+
 bool OperatorController::addMediaToPlan(int row)
 {
     return addPresentationToPlan(m_mediaModel.get(row).value(QStringLiteral("presentationId")).toString());

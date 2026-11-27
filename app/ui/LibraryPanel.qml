@@ -304,6 +304,32 @@ Rectangle {
                 enabled: root.controller.selectedMedia >= 0
                 onClicked: root.controller.useAsBackground(root.controller.selectedMedia)
             }
+            // The Logo (F6): this picture or video instead of Lumen's own.
+            LButton {
+                objectName: "useAsLogo"
+                visible: root.page === 2
+                implicitHeight: 32
+                radius: 6
+                text: qsTr("Use as logo")
+                enabled: root.controller.selectedMedia >= 0
+                onClicked: root.controller.useAsLogo(root.controller.selectedMedia)
+            }
+            LButton {
+                objectName: "resetLogo"
+                visible: root.page === 2 && root.controller.logoMedia !== ""
+                implicitHeight: 32
+                radius: 6
+                text: qsTr("Reset logo")
+                onClicked: root.controller.resetLogo()
+            }
+            // Out of the library (and its plans); the file stays on disk.
+            RemoveButton {
+                objectName: "removeMedia"
+                visible: root.page === 2
+                implicitHeight: 32
+                enabled: root.controller.selectedMedia >= 0
+                onConfirmed: root.controller.removeMedia(root.controller.selectedMedia)
+            }
             LButton {
                 objectName: "importMedia"
                 visible: root.page === 2

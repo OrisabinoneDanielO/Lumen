@@ -4,6 +4,7 @@
 #include "lumen/core/data/repository.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QImage>
 #include <QJsonObject>
 #include <QSignalSpy>
@@ -317,6 +318,75 @@ private slots:
         QVERIFY(!h.controller->liveVideo());
         h.settle();
         QTRY_VERIFY(!h.item(QStringLiteral("videoTransport"))->isVisible());
+    }
+
+    // A picture or a video as the Logo (F6), kept for next time.
+    void pictureOrVideoAsLogo()
+    {
+        test::OperatorHarness h;
+        QString error;
+        QVERIFY2(h.load(false, &error), qPrintable(error));
+        h.controller->importMedia({QUrl::fromLocalFile(media("bars-720p.png")), QUrl::fromLocalFile(media("loop-1080p-vp9.webm"))});
+        QSignalSpy kept(h.controller.get(), &app::OperatorController::logoMediaChanged);
+        QVERIFY(h.controller->useAsLogo(mediaRow(*h.controller, QStringLiteral("bars-720p"))));
+        QCOMPARE(h.show.scene().logoContent.kind, Content::Kind::Image);
+        QCOMPARE(h.show.scene().logoContent.imagePath, media("bars-720p.png"));
+        QCOMPARE(kept.count(), 1);
+        QCOMPARE(kept.at(0).at(0).toString(), media("bars-720p.png"));
+        QVERIFY(h.controller->useAsLogo(mediaRow(*h.controller, QStringLiteral("loop-1080p-vp9"))));
+        const Content logo = h.show.scene().logoContent;
+        QCOMPARE(logo.kind, Content::Kind::Video);
+        QVERIFY(logo.loop);
+        QCOMPARE(logo.volume, 0.0); // silent
+        h.settle();
+        QVERIFY(h.item(QStringLiteral("resetLogo")) != nullptr);
+        h.controller->resetLogo();
+        QCOMPARE(h.show.scene().logoContent, core::show::Scene{}.logoContent);
+        QVERIFY(kept.last().at(0).toString().isEmpty());
+        // A kept logo whose file has gone: Lumen's own.
+        h.controller->setLogoMedia(QStringLiteral("/no/such/logo.png"));
+        QCOMPARE(h.show.scene().logoContent, core::show::Scene{}.logoContent);
+    }
+
+    // Media taken out of the library: off the screen and out of its plan;
+    // the file stays on disk, the thumbnail goes. Remove asks first.
+    void removingMedia()
+    {
+        test::OperatorHarness h;
+        QString error;
+        QVERIFY2(h.load(false, &error), qPrintable(error));
+        h.controller->importMedia({QUrl::fromLocalFile(media("clip-360p-h264.mp4")), QUrl::fromLocalFile(media("bars-720p.png"))});
+        const int clip = mediaRow(*h.controller, QStringLiteral("clip-360p-h264"));
+        const int before = h.controller->media()->property("count").toInt();
+        const int planBefore = h.controller->plan()->property("count").toInt();
+        QVERIFY(h.controller->addMediaToPlan(clip));
+        QCOMPARE(h.controller->plan()->property("count").toInt(), planBefore + 1);
+        QVERIFY(h.controller->playMedia(clip));
+        QCOMPARE(h.show.scene().layer(Layer::Media).content.kind, Content::Kind::Video);
+        auto *cards = qobject_cast<app::RowModel *>(h.controller->media());
+        const QString thumbnail = cards->get(clip).value("thumbnail").toUrl().toLocalFile();
+        QVERIFY(QFileInfo::exists(thumbnail));
+
+        QVERIFY(h.controller->removeMedia(clip));
+        QCOMPARE(h.controller->media()->property("count").toInt(), before - 1);
+        QCOMPARE(h.controller->plan()->property("count").toInt(), planBefore);
+        QVERIFY(h.show.scene().layer(Layer::Media).content.isEmpty());
+        QVERIFY(QFileInfo::exists(media("clip-360p-h264.mp4"))); // the file is untouched
+        QVERIFY(!QFileInfo::exists(thumbnail));
+        QVERIFY(h.controller->mediaSummary().contains(QStringLiteral("plan item")));
+        QCOMPARE(mediaRow(*h.controller, QStringLiteral("clip-360p-h264")), -1);
+
+        // In the window: Remove, then Sure?
+        const int picture = mediaRow(*h.controller, QStringLiteral("bars-720p"));
+        QVERIFY(h.controller->showMedia(picture));
+        h.settle();
+        QQuickItem *library = h.item(QStringLiteral("library"));
+        library->setProperty("page", 2);
+        h.settle();
+        QVERIFY(h.click(QStringLiteral("removeMedia")));
+        QCOMPARE(h.controller->media()->property("count").toInt(), before - 1); // asked, not gone
+        QVERIFY(h.click(QStringLiteral("removeMedia")));
+        QTRY_COMPARE(h.controller->media()->property("count").toInt(), before - 2);
     }
 
     // Edit mode never changes the screen: Use as background does nothing

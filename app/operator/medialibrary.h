@@ -47,6 +47,10 @@ public:
 
     MediaImportReport importFiles(const QStringList &paths);
     core::Result<std::vector<MediaRow>> list() const;
+    // Takes a video or picture out of the library (and out of the plans
+    // that use it): the file itself stays where it is; its thumbnail goes.
+    // Returns how many plan items were removed with it.
+    core::Result<int> remove(const QString &presentationId);
 
     // Size plus the first and last megabyte: quick, and enough to tell files
     // apart (and to find a moved file again).

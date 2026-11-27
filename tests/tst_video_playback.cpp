@@ -106,6 +106,25 @@ private slots:
         QTRY_VERIFY(m_output->videoPosition().isEmpty());
     }
 
+    // A video as the Logo (F6) plays while the logo is up, and only then.
+    void videoLogo()
+    {
+        Scene scene;
+        scene.sequence = ++m_sequence;
+        scene.logoContent = Content::video(QStringLiteral(LUMEN_MEDIA_DIR "/loop-1080p-vp9.webm"), true, 0.0);
+        m_output->setScene(scene);
+        QTest::qWait(300);
+        QCOMPARE(m_output->videosPlaying(), 0); // not up: nothing decodes
+        scene.logo = true;
+        scene.sequence = ++m_sequence;
+        m_output->setScene(scene);
+        QTRY_VERIFY_WITH_TIMEOUT(m_output->videosPlaying() >= 1, 5000);
+        scene.logo = false;
+        scene.sequence = ++m_sequence;
+        m_output->setScene(scene);
+        QTRY_COMPARE_WITH_TIMEOUT(m_output->videosPlaying(), 0, 5000);
+    }
+
     void motionLoopPlaysAndLoops()
     {
         const int seconds = qEnvironmentVariableIntValue("LUMEN_VIDEO_SECONDS") > 0
