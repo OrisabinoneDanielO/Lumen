@@ -131,8 +131,15 @@ private:
     int m_second = -1;
     int m_firstSlideVerses = 0;
     bool m_showCopyright = true;
-    // The copyright lines the slides carry (see showCopyright), joined.
-    QString credit() const;
+    // The copyright lines the slides carry, joined. Shown: every Bible's,
+    // in full, on every slide. Hidden: only Bibles whose licence asks for
+    // credit (CC BY-SA), shortened, on the passage's first slide.
+    QString credit(bool firstSlide = true) const;
+public:
+    // "Yorùbá © Biblica, CC BY-SA 4.0" from "Yoruba Bible. Copyright © 2009,
+    // 2017 Biblica, Inc. CC BY-SA 4.0." (the full line if it does not read so).
+    static QString shortCredit(const core::scripture::Translation &t);
+private:
     std::optional<core::scripture::Passage> m_passage;
     std::optional<core::scripture::Passage> m_secondPassage; // the same verses
     ItemView m_item;
