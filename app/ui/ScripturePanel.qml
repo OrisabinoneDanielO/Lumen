@@ -41,6 +41,9 @@ Window {
     readonly property string hint: qsTr("%1: Space for the chapter").arg(root.scripture.bookFor(bookInput.text))
 
     function refresh() { root.scripture.lookup(root.composed()) }
+    function escaped(text) {
+        return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    }
 
     // Many Bibles: up to eight show as buttons (the chosen one, those used
     // lately, then the bundled order), the rest in the list (All
@@ -627,14 +630,82 @@ Window {
                         width: parent.width - 40
                         spacing: 8
 
+                        // Finding a verse by its words ("love one another";
+                        // a phrase in quotes), in the chosen translation.
+                        SearchField {
+                            id: findField
+                            objectName: "scriptureFind"
+                            inputName: "scriptureFindText"
+                            width: parent.width
+                            placeholder: qsTr("Find words, e.g. love one another")
+                            onTextChanged: findTimer.restart()
+                            onAccepted: { findTimer.stop(); root.scripture.findWords(text) }
+                            Timer {
+                                id: findTimer
+                                interval: 250
+                                onTriggered: root.scripture.findWords(findField.text)
+                            }
+                        }
+                        LText {
+                            objectName: "scriptureFindSummary"
+                            width: parent.width
+                            visible: root.scripture.wordQuery.trim() !== ""
+                            text: root.scripture.wordSummary
+                            font.pixelSize: 11
+                            color: Theme.textMuted
+                        }
+                        Repeater {
+                            model: root.scripture.wordQuery.trim() !== "" ? root.scripture.wordResults : []
+                            delegate: Rectangle {
+                                id: hitRow
+                                required property var modelData
+                                required property int index
+                                objectName: "wordResult-" + index
+                                readonly property bool chosen: root.scripture.label === modelData.label
+                                width: verseColumn.width
+                                height: hitText.implicitHeight + 20
+                                radius: 8
+                                color: chosen ? Theme.rowSelected : hitMouse.containsMouse ? Theme.raised : "transparent"
+                                border.color: chosen ? Theme.next : "transparent"
+                                LText {
+                                    id: hitText
+                                    x: 12
+                                    y: 10
+                                    width: parent.width - 24
+                                    text: "<b>" + root.escaped(hitRow.modelData.label) + "</b>  " + root.escaped(hitRow.modelData.text)
+                                    textFormat: Text.StyledText
+                                    wrapMode: Text.WordWrap
+                                    elide: Text.ElideNone
+                                    maximumLineCount: 3
+                                    lineHeight: 1.3
+                                }
+                                MouseArea {
+                                    id: hitMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    // Into the reference: the passage shows,
+                                    // ready for Preview or Show now.
+                                    onClicked: {
+                                        bookInput.text = hitRow.modelData.book
+                                        chapterInput.text = String(hitRow.modelData.chapter)
+                                        verseInput.text = String(hitRow.modelData.verse)
+                                        root.refresh()
+                                    }
+                                    onDoubleClicked: root.scripture.showNow()
+                                }
+                            }
+                        }
+
                         SectionLabel {
+                            visible: root.scripture.wordQuery.trim() === ""
                             text: root.scripture.versesPerSlide === 1 ? qsTr("VERSES · ONE PER SLIDE")
                                   : root.scripture.versesPerSlide === 2 ? qsTr("VERSES · TWO PER SLIDE")
                                                                         : qsTr("VERSES · AS MANY AS FIT")
                         }
                         LText {
                             width: parent.width
-                            visible: root.scripture.verses.length === 0
+                            visible: root.scripture.verses.length === 0 && root.scripture.wordQuery.trim() === ""
                             text: root.referenceText === "" ? qsTr("Type a book above (j for John), then the chapter and verse.")
                                   : root.suggesting ? root.hint
                                   : root.scripture.error
@@ -642,7 +713,7 @@ Window {
                             color: Theme.textMuted
                         }
                         Repeater {
-                            model: root.scripture.verses
+                            model: root.scripture.wordQuery.trim() === "" ? root.scripture.verses : []
                             delegate: Rectangle {
                                 id: verseRow
                                 required property var modelData

@@ -10,6 +10,8 @@ add_library(lumen_operator STATIC
     operatorcontroller.h
     operatorcontroller.cpp
     usagelog.h
+    planprint.h
+    planprint.cpp
     freesongs.h
     freesongs.cpp
     usagelog.cpp

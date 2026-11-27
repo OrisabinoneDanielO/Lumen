@@ -1,4 +1,5 @@
 #include "lumen/core/scripture/biblestore.h"
+#include "lumen/core/textfold.h"
 
 #include <optional>
 
@@ -192,6 +193,62 @@ Status BibleStore::addBookNames(BookNames &names) const
             names.add(q.value(column).toString(), code);
     }
     return success();
+}
+
+Result<std::vector<VerseHit>> BibleStore::search(const QString &translationId, const QString &query, int limit,
+                                                 int *total) const
+{
+    // A quoted query is one phrase; otherwise every word, anywhere.
+    const QString trimmed = query.trimmed();
+    const bool phrase = trimmed.size() > 2 && trimmed.startsWith(u'"') && trimmed.endsWith(u'"');
+    const QString folded = foldForSearch(phrase ? trimmed.mid(1, trimmed.size() - 2) : trimmed);
+    const QStringList words = phrase ? QStringList{folded.simplified()} : folded.split(u' ', Qt::SkipEmptyParts);
+    if (total)
+        *total = 0;
+    if (words.isEmpty() || words.join(QString()).size() < 2)
+        return std::vector<VerseHit>{};
+
+    QSqlDatabase db = QSqlDatabase::database(m_connection);
+    QHash<QString, QString> names;
+    {
+        QSqlQuery books(db);
+        books.prepare(QStringLiteral("SELECT code, name FROM books WHERE translation = ?"));
+        books.addBindValue(translationId);
+        if (!books.exec())
+            return sqlFailure(books, QStringLiteral("Reading book names"));
+        while (books.next())
+            names.insert(books.value(0).toString(), books.value(1).toString());
+    }
+    QSqlQuery q(db);
+    q.prepare(QStringLiteral("SELECT book, chapter, verse, text FROM verses WHERE translation = ?"));
+    q.addBindValue(translationId);
+    if (!q.exec())
+        return sqlFailure(q, QStringLiteral("Searching the Bible"));
+    std::vector<VerseHit> hits;
+    while (q.next()) {
+        const QString text = q.value(3).toString();
+        const QString haystack = u' ' + foldForSearch(text) + u' ';
+        bool all = true;
+        for (const QString &word : words) {
+            if (!haystack.contains(word)) {
+                all = false;
+                break;
+            }
+        }
+        if (all) {
+            const QString book = q.value(0).toString();
+            hits.push_back({book, names.value(book, book), q.value(1).toInt(), q.value(2).toInt(), text});
+        }
+    }
+    std::sort(hits.begin(), hits.end(), [](const VerseHit &a, const VerseHit &b) {
+        const int oa = bookOrdinal(a.book), ob = bookOrdinal(b.book);
+        return oa != ob ? oa < ob : a.chapter != b.chapter ? a.chapter < b.chapter : a.verse < b.verse;
+    });
+    if (total)
+        *total = int(hits.size());
+    if (int(hits.size()) > limit)
+        hits.resize(std::size_t(limit));
+    return hits;
 }
 
 Result<Passage> BibleStore::passage(const QString &translationId, const Reference &reference) const

@@ -16,7 +16,7 @@ struct MediaRow
     QString presentationId;
     QString assetId;
     QString title;
-    QString kind;      // "video" or "image"
+    QString kind;      // "video", "image" or "audio"
     QString path;
     QString thumbnail; // a small JPEG made on import
     qint64 durationMs = 0;
@@ -44,6 +44,9 @@ public:
 
     static bool isVideo(const QString &path);
     static bool isImage(const QString &path);
+    // Music and other sound (played beside the slides, not on them).
+    static bool isAudio(const QString &path);
+    static qint64 probeAudio(const QString &path, int timeoutMs = 5000);
 
     MediaImportReport importFiles(const QStringList &paths);
     core::Result<std::vector<MediaRow>> list() const;

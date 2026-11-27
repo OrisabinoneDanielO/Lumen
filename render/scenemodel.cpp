@@ -160,6 +160,7 @@ void SceneModel::apply(const Scene &scene, qint64 nowMs)
         m_layers[std::size_t(i)]->show(state.content, state.transition, nowMs);
     }
     m_logo.set(scene.logoContent);
+    m_audio.set(scene.audio);
     const int overrideMs = scene.overrideTransition.effectiveMs();
     const bool logoMoved = m_logoFader.setTarget(scene.logo ? 1.0 : 0.0, overrideMs, nowMs);
     const bool blackMoved = m_blackFader.setTarget(scene.black ? 1.0 : 0.0, overrideMs, nowMs);
@@ -210,6 +211,7 @@ void SceneModel::forgetUnusedVideoErrors()
     QSet<QString> used;
     for (const auto &layer : m_scene.layers)
         used.insert(layer.content.videoPath);
+    used.insert(m_scene.audio.videoPath);
     for (const QUrl &url : m_preloads)
         used.insert(url.toLocalFile());
     for (auto it = m_videoErrors.begin(); it != m_videoErrors.end();)

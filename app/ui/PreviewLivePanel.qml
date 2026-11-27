@@ -424,13 +424,27 @@ Rectangle {
                             text: layerRow.modelData.name
                         }
                         LText {
-                            anchors.right: parent.right
+                            anchors.right: audioStop.visible ? audioStop.left : parent.right
                             anchors.rightMargin: 10
                             anchors.verticalCenter: parent.verticalCenter
                             width: Math.min(implicitWidth, parent.width * 0.6)
                             horizontalAlignment: Text.AlignRight
                             text: layerRow.modelData.value
                             color: layerRow.modelData.active ? Theme.text : Theme.textMuted
+                        }
+                        // Music beside the slides: stopped here (or Clear All).
+                        LButton {
+                            id: audioStop
+                            objectName: layerRow.modelData.key === "audio" ? "audioStop" : ""
+                            visible: layerRow.modelData.key === "audio" && layerRow.modelData.active
+                            anchors.right: parent.right
+                            anchors.rightMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            implicitHeight: 26
+                            radius: 6
+                            fontSize: 11
+                            text: qsTr("Stop")
+                            onClicked: root.controller.clearAudio()
                         }
                     }
                 }

@@ -24,6 +24,7 @@ namespace {
 
 const QStringList videoSuffixes{"mp4", "m4v", "mov", "webm", "mkv", "avi", "mpg", "mpeg", "wmv"};
 const QStringList imageSuffixes{"png", "jpg", "jpeg", "bmp", "gif", "webp"};
+const QStringList audioSuffixes{"mp3", "wav", "m4a", "aac", "ogg", "oga", "flac", "opus", "wma"};
 
 QString lengthText(qint64 ms)
 {
@@ -52,6 +53,34 @@ MediaLibrary::MediaLibrary(Database &db, QString thumbnailFolder)
 bool MediaLibrary::isVideo(const QString &path)
 {
     return videoSuffixes.contains(QFileInfo(path).suffix().toLower());
+}
+
+bool MediaLibrary::isAudio(const QString &path)
+{
+    return audioSuffixes.contains(QFileInfo(path).suffix().toLower());
+}
+
+qint64 MediaLibrary::probeAudio(const QString &path, int timeoutMs)
+{
+    QMediaPlayer player; // no audio output: silent
+    QEventLoop loop;
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+    QObject::connect(&player, &QMediaPlayer::durationChanged, &loop, [&](qint64 duration) {
+        if (duration > 0)
+            loop.quit();
+    });
+    QObject::connect(&player, &QMediaPlayer::mediaStatusChanged, &loop, [&](QMediaPlayer::MediaStatus status) {
+        if (status == QMediaPlayer::InvalidMedia)
+            loop.quit();
+    });
+    QObject::connect(&player, &QMediaPlayer::errorOccurred, &loop, &QEventLoop::quit);
+    player.setSource(QUrl::fromLocalFile(path));
+    timeout.start(timeoutMs);
+    if (player.duration() <= 0)
+        loop.exec();
+    return player.duration();
 }
 
 bool MediaLibrary::isImage(const QString &path)
@@ -126,10 +155,11 @@ MediaImportReport MediaLibrary::importFiles(const QStringList &paths)
     for (const QString &path : paths) {
         const QFileInfo info(path);
         const QString name = info.fileName();
-        const bool video = isVideo(path);
+        const bool audio = isAudio(path);
+        const bool video = isVideo(path) || audio; // audio is played the same way, without a picture
         if (!info.isFile() || (!video && !isImage(path))) {
             ++report.failed;
-            report.messages << QStringLiteral("%1: not a video or picture Lumen can show").arg(name);
+            report.messages << QStringLiteral("%1: not a video, picture or audio file Lumen can play").arg(name);
             continue;
         }
         const QString hash = fingerprint(path);
@@ -143,7 +173,14 @@ MediaImportReport MediaLibrary::importFiles(const QStringList &paths)
 
         QImage frame;
         qint64 duration = 0;
-        if (video) {
+        if (audio) {
+            duration = probeAudio(path);
+            if (duration <= 0) {
+                ++report.failed;
+                report.messages << QStringLiteral("%1: the audio could not be read").arg(name);
+                continue;
+            }
+        } else if (video) {
             const Probe probe = probeVideo(path);
             frame = probe.frame;
             duration = probe.durationMs;
@@ -170,10 +207,12 @@ MediaImportReport MediaLibrary::importFiles(const QStringList &paths)
                                                               .hash = hash,
                                                               .durationMs = duration,
                                                               .thumbnailPath = QFileInfo::exists(thumbnail) ? thumbnail : QString(),
-                                                              .loop = video && duration > 0 && duration <= 60000});
+                                                              .loop = video && !audio && duration > 0 && duration <= 60000});
             if (!asset.ok())
                 return asset.error();
-            const QString subtitle = video ? QStringLiteral("Video · %1").arg(lengthText(duration)) : QStringLiteral("Picture");
+            const QString subtitle = audio   ? QStringLiteral("Audio · %1").arg(lengthText(duration))
+                                     : video ? QStringLiteral("Video · %1").arg(lengthText(duration))
+                                             : QStringLiteral("Picture");
             auto presentation = Repository<Presentation>(m_db).create({.libraryId = libraryId,
                                                                       .kind = PresentationKind::Media,
                                                                       .title = info.completeBaseName(),
@@ -181,7 +220,7 @@ MediaImportReport MediaLibrary::importFiles(const QStringList &paths)
             if (!presentation.ok())
                 return presentation.error();
             auto group = Repository<Group>(m_db).create({.presentationId = presentation.value().id,
-                                                         .label = video ? QStringLiteral("Video") : QStringLiteral("Picture")});
+                                                         .label = audio ? QStringLiteral("Audio") : video ? QStringLiteral("Video") : QStringLiteral("Picture")});
             if (!group.ok())
                 return group.error();
             auto slide = Repository<Slide>(m_db).create({.groupId = group.value().id});
@@ -230,7 +269,7 @@ Result<std::vector<MediaRow>> MediaLibrary::list() const
             if (!asset.ok())
                 continue;
             rows.push_back({p.id, asset.value().id, p.title,
-                            element.type == ElementType::Video ? QStringLiteral("video") : QStringLiteral("image"),
+                            element.type != ElementType::Video ? QStringLiteral("image") : isAudio(asset.value().filePath) ? QStringLiteral("audio") : QStringLiteral("video"),
                             asset.value().filePath, asset.value().thumbnailPath, asset.value().durationMs,
                             asset.value().loop});
             break;

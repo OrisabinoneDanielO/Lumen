@@ -47,6 +47,36 @@ Item {
                     }
                 }
 
+                // Announcements and the like: each slide stays up this long,
+                // then the next, round and round, once it is live.
+                Row {
+                    objectName: "autoAdvanceRow"
+                    Layout.alignment: Qt.AlignBottom
+                    visible: root.controller.canAutoAdvance && !root.controller.shownIsSong
+                    spacing: 4
+                    LText {
+                        height: 28
+                        verticalAlignment: Text.AlignVCenter
+                        rightPadding: 2
+                        text: qsTr("Auto")
+                        font.pixelSize: 11
+                        color: Theme.textMuted
+                    }
+                    Repeater {
+                        model: [0, 5, 8, 10, 15, 30]
+                        delegate: LButton {
+                            required property int modelData
+                            objectName: "autoAdvance-" + modelData
+                            text: modelData === 0 ? qsTr("Off") : qsTr("%1 s").arg(modelData)
+                            variant: root.controller.shownAutoAdvance === modelData ? "primary" : "default"
+                            implicitHeight: 28
+                            radius: 6
+                            fontSize: 11
+                            onClicked: root.controller.setShownAutoAdvance(modelData)
+                        }
+                    }
+                }
+
                 // A song: its key for the band, moved up or down a semitone
                 // (the stage display's Chords layout follows; the audience
                 // never sees chords).
@@ -119,7 +149,7 @@ Item {
                 // leaving the box sets them.
                 Row {
                     Layout.alignment: Qt.AlignBottom
-                    visible: root.controller.shownIsVideo
+                    visible: root.controller.shownIsVideo && !root.controller.shownIsAudio
                     spacing: 4
                     component TimeBox: Rectangle {
                         id: box

@@ -559,6 +559,13 @@ Rectangle {
                         }
                     }
                     MenuEntry {
+                        objectName: "planPrint"
+                        enabled: root.controller.planId !== ""
+                        text: qsTr("Print…")
+                        detail: "PDF"
+                        onTriggered: root.menuPage = "print"
+                    }
+                    MenuEntry {
                         objectName: "planUsage"
                         text: qsTr("Song usage (CCLI)…")
                         detail: ".csv"
@@ -687,6 +694,28 @@ Rectangle {
                             onTriggered: {
                                 root.menuPage = ""
                                 root.language.choose(modelData.code)
+                            }
+                        }
+                    }
+                }
+
+                // Print: what, then where to save the PDF (it then opens to
+                // print).
+                Column {
+                    width: parent.width
+                    visible: root.menuPage === "print"
+                    Repeater {
+                        model: [{ what: "order", label: qsTr("Order of service") },
+                                { what: "lyrics", label: qsTr("Lyrics (songs and scripture)") },
+                                { what: "chords", label: qsTr("Chord charts") }]
+                        delegate: MenuEntry {
+                            required property var modelData
+                            objectName: "print-" + modelData.what
+                            text: modelData.label
+                            onTriggered: {
+                                root.menuPage = ""
+                                printDialog.what = modelData.what
+                                printDialog.active = true
                             }
                         }
                     }
@@ -952,6 +981,23 @@ Rectangle {
                 exportDialog.active = false
             }
             onRejected: exportDialog.active = false
+        }
+    }
+    Loader {
+        id: printDialog
+        property string what: "order"
+        active: false
+        sourceComponent: FileDialog {
+            title: qsTr("Save the printout")
+            fileMode: FileDialog.SaveFile
+            defaultSuffix: "pdf"
+            nameFilters: [qsTr("PDF (*.pdf)")]
+            Component.onCompleted: open()
+            onAccepted: {
+                root.controller.printPlan(selectedFile, printDialog.what)
+                printDialog.active = false
+            }
+            onRejected: printDialog.active = false
         }
     }
     Loader {

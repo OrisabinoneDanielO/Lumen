@@ -42,6 +42,16 @@ struct Passage
     std::vector<PassageVerse> verses;
 };
 
+// A verse found by its words.
+struct VerseHit
+{
+    QString book;     // USFM code
+    QString bookName; // as the translation prints it
+    int chapter = 0;
+    int verse = 0;
+    QString text;
+};
+
 // One SQLite file of Bible text. The bundled bibles.db is opened read-only;
 // Bibles a user adds go into a separate writable store.
 class BibleStore
@@ -67,6 +77,13 @@ public:
     // The verses of a reference, clamped to the chapter's real length. Errors
     // say what does not exist ("John has 21 chapters").
     Result<Passage> passage(const QString &translationId, const Reference &reference) const;
+
+    // Verses of a translation holding every word of the query, ignoring
+    // case, accents and tone marks ("olorun" finds "Ọlọrun"); a query in
+    // quotes must appear as written. In Bible order, at most `limit`;
+    // `total` (if given) is how many there are in all.
+    Result<std::vector<VerseHit>> search(const QString &translationId, const QString &query, int limit = 100,
+                                         int *total = nullptr) const;
 
 private:
     BibleStore(QString connection, bool readOnly);

@@ -33,6 +33,7 @@
 
 #include <QCommandLineParser>
 #include <QDeadlineTimer>
+#include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
 #include <QGuiApplication>
@@ -815,6 +816,10 @@ int main(int argc, char *argv[])
             turnOutputOn();
             return output ? output->link.get() : nullptr;
         });
+
+    // A printout (Plan > Print) opens in the system's viewer, to print.
+    QObject::connect(&controller, &app::OperatorController::openFileRequested, &app,
+                     [](const QUrl &file) { QDesktopServices::openUrl(file); });
 
     // The Logo (F6): a picture or video the operator chose, kept.
     controller.setLogoMedia(settings.value(QStringLiteral("show/logoMedia")).toString());

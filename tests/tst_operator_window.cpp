@@ -1,4 +1,5 @@
 #include "operatorharness.h"
+#include "planprint.h"
 #include <QUrl>
 #include <QFile>
 #include "usagelog.h"
@@ -505,6 +506,97 @@ private slots:
         // Nothing open: clicks act as usual again.
         QVERIFY(m_ui->click("slide-1"));
         QVERIFY(m_ui->show.scene().sequence > 0);
+    }
+
+    // Auto-advance (announcement loops): each slide for its time, round and
+    // round, on the item that is live even while another is selected;
+    // Clear stops it.
+    void autoAdvanceLoops()
+    {
+        open();
+        QVERIFY(m_ui->click("planItem-7")); // [Sermon title]: three slides
+        QVERIFY(m_ui->controller->canAutoAdvance());
+        m_ui->settle();
+        QVERIFY(m_ui->item("autoAdvanceRow")->isVisible());
+        QVERIFY(m_ui->click("autoAdvance-5"));
+        QCOMPARE(m_ui->controller->shownAutoAdvance(), 5);
+        m_ui->controller->setShownAutoAdvance(1); // a second, to keep the test short
+        QVERIFY(m_ui->controller->goLive(0));
+        QCOMPARE(onAir(), QStringLiteral("[Sermon title]"));
+        QTRY_COMPARE_WITH_TIMEOUT(onAir(), QStringLiteral("[Point 1]"), 2500);
+        // Another item chosen meanwhile: the live one keeps going; the
+        // choice stays.
+        QVERIFY(m_ui->click("planItem-2"));
+        QTRY_COMPARE_WITH_TIMEOUT(onAir(), QStringLiteral("[Point 2]"), 2500);
+        QTRY_COMPARE_WITH_TIMEOUT(onAir(), QStringLiteral("[Sermon title]"), 2500); // round again
+        QCOMPARE(m_ui->controller->currentItem(), 2);
+        // Clear Slide stops it.
+        m_ui->controller->clearLayer(QStringLiteral("slide"));
+        QTest::qWait(1500);
+        QVERIFY(onAir().isEmpty());
+        // Off: by hand again.
+        m_ui->controller->selectItem(7);
+        QVERIFY(m_ui->click("autoAdvance-0"));
+        QVERIFY(m_ui->controller->goLive(0));
+        QTest::qWait(1500);
+        QCOMPARE(onAir(), QStringLiteral("[Sermon title]"));
+        // Songs and scripture have no auto-advance.
+        m_ui->controller->selectItem(2);
+        m_ui->settle();
+        QVERIFY(!m_ui->item("autoAdvanceRow")->isVisible());
+    }
+
+    // Printing (Plan > Print): order of service, lyrics, chord charts, as
+    // PDFs that then open to print.
+    void printingThePlan()
+    {
+        open();
+        QTemporaryDir temporary;
+        // LUMEN_SCREENSHOT_DIR: the PDFs are kept there to look at.
+        const QString kept = qEnvironmentVariable("LUMEN_SCREENSHOT_DIR");
+        struct Dir { QString path; QString filePath(const QString &name) const { return path + u'/' + name; } };
+        const Dir dir{kept.isEmpty() ? temporary.path() : kept};
+        QSignalSpy opened(m_ui->controller.get(), &app::OperatorController::openFileRequested);
+        for (const char *what : {"order", "lyrics", "chords"}) {
+            const QString file = dir.filePath(QStringLiteral("%1.pdf").arg(QLatin1String(what)));
+            QVERIFY2(m_ui->controller->printPlan(QUrl::fromLocalFile(file), QString::fromLatin1(what)), what);
+            QFile pdf(file);
+            QVERIFY(pdf.open(QIODevice::ReadOnly));
+            QVERIFY(pdf.read(5) == "%PDF-");
+            QVERIFY(pdf.size() > 1000);
+        }
+        QCOMPARE(opened.count(), 3);
+        QVERIFY(m_ui->controller->planMessage().contains(QStringLiteral("chords.pdf")));
+
+        // What they say.
+        app::PlanView plan;
+        plan.name = QStringLiteral("Sunday Service");
+        plan.date = QDate(2026, 11, 29);
+        app::ItemView header;
+        header.title = QStringLiteral("Worship");
+        app::ItemView song;
+        song.presentationId = QStringLiteral("s");
+        song.kind = QStringLiteral("SONG");
+        song.title = QStringLiteral("Amazing Grace");
+        song.key = QStringLiteral("G");
+        song.notes = QStringLiteral("Start soft");
+        song.slides = {{{}, QStringLiteral("Verse 1"), {}, QStringLiteral("Amazing grace\nthat saved"), {}, 0, {}, {}, {}, false, {}, {}},
+                       {{}, QStringLiteral("Chorus"), {}, QStringLiteral("My chains are gone"), {}, 0, {}, {}, {}, false, {}, {}},
+                       {{}, QStringLiteral("Verse 2"), {}, QStringLiteral("Twas grace"), {}, 0, {}, {}, {}, false, {}, {}},
+                       {{}, QStringLiteral("Chorus"), {}, QStringLiteral("My chains are gone"), {}, 0, {}, {}, {}, false, {}, {}}};
+        song.slides[0].chords = QStringLiteral("[G]Amazing [C]grace\nthat saved");
+        song.chips = {{QStringLiteral("V1"), {}, {}}, {QStringLiteral("C"), {}, {}}, {QStringLiteral("V2"), {}, {}}, {QStringLiteral("C"), {}, {}}};
+        plan.items = {header, song};
+        const QString order = app::planHtml(plan, app::PrintKind::ServiceOrder);
+        QVERIFY(order.contains(QStringLiteral("WORSHIP")));
+        QVERIFY(order.contains(QStringLiteral("Amazing Grace")));
+        QVERIFY(order.contains(QStringLiteral("Key G")));
+        QVERIFY(order.contains(QStringLiteral("Start soft")));
+        const QString lyrics = app::planHtml(plan, app::PrintKind::Lyrics);
+        QCOMPARE(lyrics.count(QStringLiteral("My chains are gone")), 1); // the chorus once
+        QVERIFY(lyrics.contains(QStringLiteral("V1 C V2 C"))); // and the order
+        const QString chords = app::planHtml(plan, app::PrintKind::ChordCharts);
+        QVERIFY2(chords.contains(QStringLiteral("G       C </span>\nAmazing grace")), qPrintable(chords));
     }
 
     // The Main light asks before turning the output off.

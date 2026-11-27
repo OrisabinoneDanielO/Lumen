@@ -1,4 +1,5 @@
 #include "operatorcontroller.h"
+#include "planprint.h"
 
 #include <QRegularExpression>
 
@@ -33,6 +34,8 @@ using namespace core::show;
 OperatorController::OperatorController(ShowController &show, bool editAvailable, QObject *parent)
     : QObject(parent), m_show(show), m_editAvailable(editAvailable)
 {
+    m_advanceTimer.setSingleShot(true);
+    connect(&m_advanceTimer, &QTimer::timeout, this, &OperatorController::advanceLive);
     connect(&m_show, &ShowController::sceneChanged, this, [this] {
         // Something else (e.g. Clear Slide) took the slide off air.
         const auto &scene = m_show.scene();
@@ -123,6 +126,22 @@ void OperatorController::refreshTexts()
     emit stateChanged();
 }
 
+bool OperatorController::printPlan(const QUrl &file, const QString &what)
+{
+    if (!m_plan)
+        return false;
+    const PrintKind kind = what == QLatin1String("lyrics")   ? PrintKind::Lyrics
+                           : what == QLatin1String("chords") ? PrintKind::ChordCharts
+                                                             : PrintKind::ServiceOrder;
+    const auto written = writePlanPdf(*m_plan, kind, file.toLocalFile());
+    m_planMessage = written.ok() ? tr("Saved %1; it opens to print").arg(QFileInfo(file.toLocalFile()).fileName())
+                                 : tr("Not saved: %1").arg(written.error().message);
+    emit stateChanged();
+    if (written.ok())
+        emit openFileRequested(file);
+    return written.ok();
+}
+
 bool OperatorController::exportSongUsage(const QUrl &file, int months)
 {
     if (!m_usage)
@@ -204,7 +223,7 @@ void OperatorController::refreshMedia()
             const qint64 seconds = (row.durationMs + 500) / 1000;
             list << QVariantMap{{"title", row.title},
                                 {"kind", row.kind},
-                                {"duration", row.kind == QLatin1String("video")
+                                {"duration", row.kind == QLatin1String("video") || row.kind == QLatin1String("audio")
                                                  ? QStringLiteral("%1:%2").arg(seconds / 60).arg(seconds % 60, 2, 10, QLatin1Char('0'))
                                                  : QString()},
                                 {"thumbnail", row.thumbnail.isEmpty() ? QUrl() : QUrl::fromLocalFile(row.thumbnail)},
@@ -262,7 +281,9 @@ void OperatorController::preloadMedia(int row)
 bool OperatorController::shownIsVideo() const
 {
     const ItemView *view = selected();
-    return view && !view->slides.empty() && view->slides.front().mediaKind == QLatin1String("video");
+    // Audio too: Play once or Loop is chosen the same way.
+    return view && !view->slides.empty()
+           && (view->slides.front().mediaKind == QLatin1String("video") || view->slides.front().mediaKind == QLatin1String("audio"));
 }
 
 bool OperatorController::liveVideo() const
@@ -486,6 +507,11 @@ void OperatorController::setShownVideoLoops(bool loops)
         Content changed = onAir;
         changed.loop = loops;
         m_show.setContent(Layer::Media, changed);
+    }
+    if (m_show.scene().audio.videoPath == path && !path.isEmpty()) {
+        Content changed = m_show.scene().audio;
+        changed.loop = loops;
+        m_show.setAudio(changed);
     }
     emit stateChanged();
 }
@@ -1108,8 +1134,15 @@ QVariantList OperatorController::layers() const
                 {"active", !content.isEmpty()}};
     };
     // Top to bottom, as in the mockup.
-    return {describe(Layer::Messages), describe(Layer::Props), describe(Layer::Slide),
+    QVariantList list{describe(Layer::Messages), describe(Layer::Props), describe(Layer::Slide),
             describe(Layer::Media), describe(Layer::Background)};
+    // Sound beside the slides (not a layer; Stop or Clear All ends it).
+    const Content &audio = m_show.scene().audio;
+    list << QVariantMap{{"name", tr("Audio")},
+                        {"value", audio.isEmpty() ? tr("Off") : (audio.loop ? tr("Looping: %1") : tr("Playing: %1")).arg(QFileInfo(audio.videoPath).completeBaseName())},
+                        {"active", !audio.isEmpty()},
+                        {"key", "audio"}};
+    return list;
 }
 
 void OperatorController::setMode(const QString &mode)
@@ -1166,16 +1199,56 @@ void OperatorController::activateSlide(int index)
 
 bool OperatorController::goLive(int index)
 {
-    // Edit mode can never change what is on screen.
     const ItemView *view = selected();
-    if (m_editMode || !view || index < 0 || index >= int(view->slides.size()))
+    return view && goLiveFrom(*view, m_current, index);
+}
+
+const ItemView *OperatorController::liveView() const
+{
+    if (!m_onAir)
+        return nullptr;
+    const ItemView *view = m_positionItem == libraryItem ? (m_librarySong ? &*m_librarySong : nullptr) : item(m_positionItem);
+    return view && keyOf(*view) == m_positionKey ? view : nullptr;
+}
+
+void OperatorController::restartAdvance(const ItemView &view)
+{
+    if (view.autoAdvance > 0 && view.slides.size() > 1)
+        m_advanceTimer.start(view.autoAdvance * 1000);
+    else
+        m_advanceTimer.stop();
+}
+
+void OperatorController::advanceLive()
+{
+    // Only while that item is still up (not cleared, not replaced).
+    const ItemView *view = liveView();
+    if (!view || view->autoAdvance <= 0 || m_editMode
+        || (m_show.scene().layer(Layer::Slide).content.isEmpty() && m_show.scene().layer(Layer::Media).content.isEmpty()))
+        return;
+    const int next = (m_positionSlide + 1) % int(view->slides.size()); // round and round
+    goLiveFrom(*view, m_positionItem, next);
+}
+
+bool OperatorController::goLiveFrom(const ItemView &item, int itemIndex, int index)
+{
+    // Edit mode can never change what is on screen.
+    const ItemView *view = &item;
+    if (m_editMode || index < 0 || index >= int(view->slides.size()))
         return false;
+    // Audio plays beside the slides: they, and where Next goes, stay put.
+    if (view->slides[std::size_t(index)].mediaKind == QLatin1String("audio")) {
+        const SlideView &track = view->slides[std::size_t(index)];
+        m_show.setAudio(Content::video(track.mediaPath, track.mediaLoop, 1.0));
+        emit stateChanged();
+        return true;
+    }
     // CCLI reporting: a song counts once a day.
     if (m_usage && view->kind == QLatin1String("SONG")) {
         if (const auto recorded = m_usage->record(view->presentationId); !recorded.ok())
             qWarning("Song usage not recorded: %s", qPrintable(recorded.error().message));
     }
-    m_positionItem = m_current;
+    m_positionItem = itemIndex;
     m_positionKey = keyOf(*view);
     m_positionSlide = index;
     m_positionLabel = tr("%1 · slide %2").arg(view->slides[std::size_t(index)].group).arg(index + 1);
@@ -1202,8 +1275,68 @@ bool OperatorController::goLive(int index)
     m_show.setContents(changes);
     if (m_show.scene().sequence == before)
         emit stateChanged(); // same text, new position (e.g. a repeated chorus)
+    restartAdvance(*view);
     emit slideSentLive(index);
     return true;
+}
+
+bool OperatorController::shownIsAudio() const
+{
+    const ItemView *view = selected();
+    return view && !view->slides.empty() && view->slides.front().mediaKind == QLatin1String("audio");
+}
+
+QString OperatorController::liveAudio() const
+{
+    const Content &audio = m_show.scene().audio;
+    return audio.isEmpty() ? QString() : QFileInfo(audio.videoPath).completeBaseName();
+}
+
+void OperatorController::clearAudio()
+{
+    m_show.setAudio(Content::empty());
+}
+
+bool OperatorController::canAutoAdvance() const
+{
+    const ItemView *view = selected();
+    return view && view->slides.size() > 1 && !shownIsVideo() && view->kind != QLatin1String("BIBLE");
+}
+
+int OperatorController::shownAutoAdvance() const
+{
+    const ItemView *view = selected();
+    return view ? view->autoAdvance : 0;
+}
+
+void OperatorController::setShownAutoAdvance(int seconds)
+{
+    const ItemView *view = selected();
+    seconds = std::clamp(seconds, 0, 600);
+    if (!view || !m_db || view->presentationId.isEmpty() || seconds == view->autoAdvance)
+        return;
+    const QString presentationId = view->presentationId;
+    using core::data::Presentation;
+    using core::data::Repository;
+    if (auto p = Repository<Presentation>(*m_db).get(presentationId); p.ok()) {
+        p.value().metadata.insert(QStringLiteral("autoAdvance"), seconds);
+        if (auto updated = Repository<Presentation>(*m_db).update(p.value()); !updated.ok())
+            qWarning("Auto-advance not saved: %s", qPrintable(updated.error().message));
+    }
+    const auto apply = [&](ItemView &v) {
+        if (v.presentationId == presentationId)
+            v.autoAdvance = seconds;
+    };
+    if (m_plan) {
+        for (ItemView &v : m_plan->items)
+            apply(v);
+    }
+    if (m_librarySong)
+        apply(*m_librarySong);
+    // On air now: it starts (or stops) at once.
+    if (const ItemView *live = liveView(); live && live->presentationId == presentationId)
+        restartAdvance(*live);
+    emit stateChanged();
 }
 
 Content OperatorController::slideContent(const ItemView &view, int index) const

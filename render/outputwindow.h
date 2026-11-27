@@ -94,6 +94,8 @@ public:
     // What the videos shown so far have done (batch 9).
     VideoStats videoStats() const;
     int videosPlaying() const;
+    // The scene's audio is playing (tests).
+    bool audioPlaying() const;
 
     // How smoothly this process itself ran: the longest gap between ticks of
     // the main loop and between swapped frames, and how many exceeded 100 ms.

@@ -204,7 +204,7 @@ private slots:
         QCOMPARE(m_controller->previewSlide(), 3);
         QVERIFY(m_controller->liveText().startsWith(QLatin1String("'Twas grace")));
         QCOMPARE(m_controller->liveLabel(), QStringLiteral("Verse 2 · slide 3"));
-        QCOMPARE(m_controller->layers().size(), 5);
+        QCOMPARE(m_controller->layers().size(), 6); // and the Audio row
         QCOMPARE(count(m_controller->songs()), 4);
         // The cards in the window show the same states.
         QTRY_VERIFY(region("slide-2"));

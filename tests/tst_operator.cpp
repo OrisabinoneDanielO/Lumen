@@ -369,8 +369,10 @@ private slots:
         m_show->setContent(Layer::Background, Content::fill(QColor(0x14, 0x21, 0x3D)));
         m_op->goLive(4);
         const QVariantList layers = m_op->layers();
-        QCOMPARE(layers.size(), 5);
+        QCOMPARE(layers.size(), 6); // five layers, then the audio beside them
         auto row = [&layers](int i) { return layers[i].toMap(); };
+        QCOMPARE(row(5).value("name").toString(), QStringLiteral("Audio"));
+        QCOMPARE(row(5).value("value").toString(), QStringLiteral("Off"));
         QCOMPARE(row(0).value("name").toString(), QStringLiteral("Messages"));
         QCOMPARE(row(0).value("value").toString(), QStringLiteral("Off"));
         QCOMPARE(row(2).value("value").toString(), QStringLiteral("Verse 2 · slide 5"));
@@ -448,7 +450,7 @@ private slots:
         QCOMPARE(m_op->liveLabel(), QStringLiteral("Ending · slide 12")); // still what is on air
         QCOMPARE(m_op->liveSlide(), -1);  // not a slide of this song
         QCOMPARE(m_op->previewSlide(), 0);
-        QCOMPARE(m_op->layers().size(), 5); // reading the panel used to crash
+        QCOMPARE(m_op->layers().size(), 6); // reading the panel used to crash
         QVERIFY(!m_op->previous());
 
         QVERIFY(m_op->showSong(rowOf("Test Song")));

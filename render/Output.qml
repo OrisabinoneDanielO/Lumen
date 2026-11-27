@@ -47,6 +47,26 @@ Window {
         }
     }
 
+    // Sound beside the slides: background music or a track the operator
+    // sent (the scene's audio). Only the audience output plays it.
+    MediaPlayer {
+        id: audioPlayer
+        objectName: "audioPlayer"
+        readonly property url track: output.scene.audio.video
+        loops: output.scene.audio.loop ? MediaPlayer.Infinite : 1
+        audioOutput: AudioOutput {
+            volume: output.scene.audio.volume
+        }
+        // The source is set here, not bound: play() must see the new one.
+        onTrackChanged: {
+            stop()
+            source = track
+            if (track.toString() !== "")
+                play()
+        }
+        onErrorOccurred: (error, errorString) => output.scene.reportVideoError(String(source), errorString)
+    }
+
     // Videos opened ahead of use (the item in Preview): decoded to their
     // first frame and paused, out of sight, so going live starts at once.
     Repeater {
