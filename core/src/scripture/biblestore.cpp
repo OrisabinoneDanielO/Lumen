@@ -1,5 +1,7 @@
 #include "lumen/core/scripture/biblestore.h"
 
+#include <optional>
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -273,15 +275,56 @@ Result<Passage> BibleStore::passage(const QString &translationId, const Referenc
     return passage;
 }
 
+namespace {
+
+// A single-file Bible by its contents (OpenSong files often end in .xmm or
+// nothing at all): USFX, Zefania or OpenSong XML.
+std::optional<Result<std::vector<ParsedBook>>> readXmlBible(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return std::nullopt;
+    const QByteArray bytes = file.readAll();
+    const QByteArray head = bytes.left(4096);
+    if (head.contains("<usfx"))
+        return parseUsfx(bytes);
+    if (head.contains("<XMLBIBLE") || head.contains("<xmlbible"))
+        return parseZefania(bytes);
+    if (head.contains("<bible"))
+        return parseOpenSong(bytes);
+    return std::nullopt;
+}
+
+// OpenLP CSV: books.csv and verses.csv in one folder.
+std::optional<Result<std::vector<ParsedBook>>> readCsvBible(const QDir &folder)
+{
+    QFile books(folder.filePath(QStringLiteral("books.csv")));
+    QFile verses(folder.filePath(QStringLiteral("verses.csv")));
+    if (!books.exists() || !verses.exists())
+        return std::nullopt;
+    if (!books.open(QIODevice::ReadOnly) || !verses.open(QIODevice::ReadOnly))
+        return Result<std::vector<ParsedBook>>(Error{Error::Code::Invalid, QStringLiteral("books.csv or verses.csv cannot be read")});
+    return parseOpenLpCsv(books.readAll(), verses.readAll());
+}
+
+} // namespace
+
 Result<std::vector<ParsedBook>> readBibleFiles(const QString &folderOrFile)
 {
     const QFileInfo info(folderOrFile);
-    if (info.isFile() && (folderOrFile.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive)
-                          || folderOrFile.endsWith(QLatin1String(".usfx"), Qt::CaseInsensitive))) {
-        QFile file(folderOrFile);
-        if (!file.open(QIODevice::ReadOnly))
-            return Error{Error::Code::Invalid, file.errorString()};
-        return parseUsfx(file.readAll());
+    if (info.isFile() && info.suffix().compare(QLatin1String("csv"), Qt::CaseInsensitive) == 0) {
+        if (auto csv = readCsvBible(info.dir()))
+            return *csv;
+        return Error{Error::Code::Invalid, QStringLiteral("An OpenLP CSV Bible needs books.csv and verses.csv side by side")};
+    }
+    if (info.isFile() && !folderOrFile.endsWith(QLatin1String(".usfm"), Qt::CaseInsensitive)
+        && !folderOrFile.endsWith(QLatin1String(".sfm"), Qt::CaseInsensitive)) {
+        if (auto xml = readXmlBible(folderOrFile))
+            return *xml;
+    }
+    if (info.isDir()) {
+        if (auto csv = readCsvBible(QDir(folderOrFile)))
+            return *csv;
     }
 
     QStringList files;
@@ -293,16 +336,15 @@ Result<std::vector<ParsedBook>> readBibleFiles(const QString &folderOrFile)
         files << folderOrFile;
     }
     if (files.isEmpty() && info.isDir()) {
-        // A folder holding a USFX file instead.
-        const auto usfx = QDir(folderOrFile).entryInfoList({QStringLiteral("*.xml"), QStringLiteral("*.usfx")}, QDir::Files);
-        for (const QFileInfo &candidate : usfx) {
-            auto books = readBibleFiles(candidate.filePath());
-            if (books.ok())
-                return books;
+        // A folder holding one XML Bible file instead (USFX, Zefania,
+        // OpenSong).
+        for (const QFileInfo &candidate : QDir(folderOrFile).entryInfoList(QDir::Files, QDir::Name)) {
+            if (auto books = readXmlBible(candidate.filePath()); books && books->ok())
+                return *books;
         }
     }
     if (files.isEmpty())
-        return Error{Error::Code::Invalid, QStringLiteral("No USFM (.usfm, .sfm) or USFX (.xml) files found")};
+        return Error{Error::Code::Invalid, QStringLiteral("No Bible found. Lumen reads USFM, USFX, Zefania and OpenSong XML, and OpenLP CSV (books.csv and verses.csv)")};
 
     std::vector<ParsedBook> books;
     for (const QString &path : files) {
