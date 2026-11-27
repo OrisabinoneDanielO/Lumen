@@ -48,23 +48,36 @@ Window {
     }
 
     // Sound beside the slides: background music or a track the operator
-    // sent (the scene's audio). Only the audience output plays it.
-    MediaPlayer {
-        id: audioPlayer
-        objectName: "audioPlayer"
+    // sent (the scene's audio). Only the audience output plays it, and the
+    // player exists only while there is something to play (no sound device
+    // is opened otherwise).
+    Loader {
+        id: audioHost
         readonly property url track: output.scene.audio.video
-        loops: output.scene.audio.loop ? MediaPlayer.Infinite : 1
-        audioOutput: AudioOutput {
-            volume: output.scene.audio.volume
+        active: track.toString() !== ""
+        sourceComponent: Item {
+            MediaPlayer {
+                id: audioPlayer
+                objectName: "audioPlayer"
+                loops: output.scene.audio.loop ? MediaPlayer.Infinite : 1
+                audioOutput: AudioOutput {
+                    volume: output.scene.audio.volume
+                }
+                // Set here, not bound: play() must see the new source.
+                function start() {
+                    stop()
+                    source = audioHost.track
+                    if (audioHost.track.toString() !== "")
+                        play()
+                }
+                Component.onCompleted: start()
+                onErrorOccurred: (error, errorString) => output.scene.reportVideoError(String(source), errorString)
+            }
+            Connections {
+                target: audioHost
+                function onTrackChanged() { audioPlayer.start() }
+            }
         }
-        // The source is set here, not bound: play() must see the new one.
-        onTrackChanged: {
-            stop()
-            source = track
-            if (track.toString() !== "")
-                play()
-        }
-        onErrorOccurred: (error, errorString) => output.scene.reportVideoError(String(source), errorString)
     }
 
     // Videos opened ahead of use (the item in Preview): decoded to their
