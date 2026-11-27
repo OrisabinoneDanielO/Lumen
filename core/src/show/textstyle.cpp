@@ -172,6 +172,13 @@ bool fitsAt(const QString &text, const TextStyle &style, const QRectF &body, int
 
 } // namespace
 
+double textHeight(const QString &text, const TextStyle &style, int pixelSize, double width)
+{
+    if (!canUseFonts())
+        return pixelSize * style.lineHeight * qMax<qsizetype>(1, text.count(u'\n') + 1);
+    return wrappedHeight(text, styleFont(style, pixelSize), width, style.lineHeight);
+}
+
 Fit fitText(const QString &text, const TextStyle &style, bool hasFooter)
 {
     if (!canUseFonts())

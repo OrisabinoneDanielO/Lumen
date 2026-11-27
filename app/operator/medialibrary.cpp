@@ -1,4 +1,6 @@
 #include "medialibrary.h"
+#include <QSqlError>
+#include <QSqlQuery>
 
 #include "lumen/core/data/repository.h"
 
@@ -235,6 +237,59 @@ Result<std::vector<MediaRow>> MediaLibrary::list() const
         }
     }
     return rows;
+}
+
+Result<int> MediaLibrary::remove(const QString &presentationId)
+{
+    auto presentation = Repository<Presentation>(m_db).get(presentationId);
+    if (!presentation.ok())
+        return presentation.error();
+    if (presentation.value().kind != PresentationKind::Media)
+        return Error{Error::Code::Invalid, QStringLiteral("Not a video or picture")};
+    int planItems = 0;
+    QStringList thumbnails;
+    const Status removed = m_db.inTransaction([&]() -> Status {
+        // Its files (the asset), to forget unless something else uses them.
+        QStringList assets;
+        QSqlQuery used(m_db.connection());
+        used.prepare(QStringLiteral("SELECT DISTINCT e.media_asset_id FROM elements e JOIN slides s ON s.id = e.slide_id "
+                                    "JOIN slide_groups g ON g.id = s.group_id WHERE g.presentation_id = ? "
+                                    "AND e.media_asset_id IS NOT NULL"));
+        used.addBindValue(presentationId);
+        if (!used.exec())
+            return Error{Error::Code::Database, used.lastError().text()};
+        while (used.next())
+            assets << used.value(0).toString();
+        QSqlQuery items(m_db.connection());
+        items.prepare(QStringLiteral("DELETE FROM plan_items WHERE presentation_id = ?"));
+        items.addBindValue(presentationId);
+        if (!items.exec())
+            return Error{Error::Code::Database, items.lastError().text()};
+        planItems = items.numRowsAffected();
+        if (auto gone = Repository<Presentation>(m_db).remove(presentationId); !gone.ok())
+            return gone;
+        for (const QString &asset : assets) {
+            QSqlQuery still(m_db.connection());
+            still.prepare(QStringLiteral("SELECT COUNT(*) FROM elements WHERE media_asset_id = ?"));
+            still.addBindValue(asset);
+            if (!still.exec() || !still.next())
+                return Error{Error::Code::Database, still.lastError().text()};
+            if (still.value(0).toInt() > 0)
+                continue; // a slide made in the editor uses it too
+            if (auto row = Repository<MediaAsset>(m_db).get(asset); row.ok() && !row.value().thumbnailPath.isEmpty())
+                thumbnails << row.value().thumbnailPath;
+            if (auto gone = Repository<MediaAsset>(m_db).remove(asset); !gone.ok())
+                return gone;
+        }
+        return success();
+    });
+    if (!removed.ok())
+        return removed.error();
+    for (const QString &thumbnail : thumbnails) {
+        if (thumbnail.startsWith(m_thumbnails))
+            QFile::remove(thumbnail);
+    }
+    return planItems;
 }
 
 } // namespace lumen::app

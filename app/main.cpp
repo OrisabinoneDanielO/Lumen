@@ -816,6 +816,11 @@ int main(int argc, char *argv[])
             return output ? output->link.get() : nullptr;
         });
 
+    // The Logo (F6): a picture or video the operator chose, kept.
+    controller.setLogoMedia(settings.value(QStringLiteral("show/logoMedia")).toString());
+    QObject::connect(&controller, &app::OperatorController::logoMediaChanged, &app,
+                     [](const QString &path) { QSettings().setValue(QStringLiteral("show/logoMedia"), path); });
+
     // The free songs (songs/README.md): added to the library once for each
     // version of the collection, a moment after the window is up (about
     // three seconds; songs already there are left alone). Not in short test

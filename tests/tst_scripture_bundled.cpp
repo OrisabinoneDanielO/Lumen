@@ -335,7 +335,16 @@ private slots:
             const double gap = reference[1].toDouble() - (words[1].toDouble() + words[3].toDouble());
             QVERIFY2(gap >= 0 && gap < 20, qPrintable(QString::number(gap))); // directly under
         }
-        QCOMPARE(live.elements[0].toObject().value("style").toObject().value("valign").toString(), QStringLiteral("bottom"));
+        // Placed as a normal slide's text: the passages and references as
+        // one block, centred (not pushed to the bottom).
+        {
+            const QJsonArray words = frameOf(live, 0);
+            const QJsonArray reference = frameOf(live, 2);
+            const double blockTop = words[1].toDouble();
+            const double blockBottom = reference[1].toDouble() + reference[3].toDouble();
+            const double middle = (blockTop + blockBottom) / 2;
+            QVERIFY2(middle > 420 && middle < 560, qPrintable(QString::number(middle)));
+        }
         const QString credit = text(live, 4);
         QVERIFY2(credit.contains(QStringLiteral("World English Bible")) && credit.contains(QStringLiteral("Biblica")), qPrintable(credit));
 

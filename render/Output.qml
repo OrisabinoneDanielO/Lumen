@@ -38,6 +38,11 @@ Window {
             image: content.image
             style: content.style
             footer: content.footer
+            // A video logo loops, silent, and decodes only while it shows.
+            video: content.video
+            loop: true
+            volume: 0
+            playVideo: output.scene.logoLevel > 0
             layerName: "logo"
         }
     }
