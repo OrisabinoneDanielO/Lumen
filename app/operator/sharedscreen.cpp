@@ -47,6 +47,8 @@ QStringList changedLayers(const Scene &now, const Scene &before)
         changed << QStringLiteral("logo");
     if (now.black != before.black)
         changed << QStringLiteral("black");
+    if (!(now.audio == before.audio))
+        changed << QStringLiteral("audio");
     return changed;
 }
 
@@ -152,8 +154,26 @@ QJsonObject ScreenHost::handle(const QString &cmd, const QJsonObject &request, c
         contents.push_back({*layer, state.content});
         transitions.push_back({*layer, state.transition});
     }
+    // The music beside the slides, its file named the same way.
+    Content audio = sent->audio;
+    const bool audioChanged = changed.contains(QStringLiteral("audio"));
+    if (audioChanged) {
+        rewriteFiles(audio, [&](const QString &path) {
+            if (!path.startsWith(refPrefix))
+                return path;
+            const QString key = path.mid(refPrefix.size());
+            if (!safeKey(key))
+                return QString();
+            const QString local = QDir(m_folder).filePath(key);
+            if (!QFileInfo::exists(local) && !missing.contains(path))
+                missing << path;
+            return local;
+        });
+    }
     if (!missing.isEmpty())
         return {{"ok", true}, {"missing", QJsonArray::fromStringList(missing)}, {"scene", toJson(m_show.scene())}};
+    if (audioChanged)
+        m_show.setAudio(audio);
     for (const auto &[layer, transition] : transitions)
         m_show.setTransition(layer, transition);
     if (!contents.empty())
@@ -328,6 +348,7 @@ Scene ScreenLink::toLocal(Scene scene) const
     };
     for (LayerState &state : scene.layers)
         rewriteFiles(state.content, map);
+    rewriteFiles(scene.audio, map);
     return scene;
 }
 
@@ -357,6 +378,7 @@ void ScreenLink::send()
     Scene outgoing = now;
     for (LayerState &state : outgoing.layers)
         state.content = toRefs(state.content);
+    outgoing.audio = toRefs(outgoing.audio);
     m_busy = true;
     request({{"cmd", "screen"}, {"scene", toJson(outgoing)}, {"changed", QJsonArray::fromStringList(layers)}}, {},
             [this](const QJsonObject &reply, const QString &error) {

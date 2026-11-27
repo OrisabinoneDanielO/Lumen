@@ -160,6 +160,11 @@ struct Scene
     Content logoContent = Content::textContent(QStringLiteral("Lumen Presenter"));
     Transition overrideTransition = Transition::fade(500);
 
+    // Sound playing beside the slides (background music, a track): a Video
+    // content of an audio file, or empty. Only the audience output plays it;
+    // the layers stay as they are.
+    Content audio;
+
     LayerState &layer(Layer l) { return layers[std::size_t(l)]; }
     const LayerState &layer(Layer l) const { return layers[std::size_t(l)]; }
 

@@ -33,6 +33,13 @@ void ShowController::setContents(const std::vector<std::pair<Layer, Content>> &c
     commit(next);
 }
 
+void ShowController::setAudio(const Content &audio)
+{
+    Scene next = m_scene;
+    next.audio = audio;
+    commit(next);
+}
+
 void ShowController::clear(Layer layer)
 {
     setContent(layer, Content::empty());
@@ -43,6 +50,7 @@ void ShowController::clearAll()
     Scene next = m_scene;
     for (LayerState &state : next.layers)
         state.content = Content::empty();
+    next.audio = Content::empty(); // Clear All: the music stops too
     commit(next);
 }
 

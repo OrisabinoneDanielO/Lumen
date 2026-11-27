@@ -223,7 +223,7 @@ void OperatorController::refreshMedia()
             const qint64 seconds = (row.durationMs + 500) / 1000;
             list << QVariantMap{{"title", row.title},
                                 {"kind", row.kind},
-                                {"duration", row.kind == QLatin1String("video")
+                                {"duration", row.kind == QLatin1String("video") || row.kind == QLatin1String("audio")
                                                  ? QStringLiteral("%1:%2").arg(seconds / 60).arg(seconds % 60, 2, 10, QLatin1Char('0'))
                                                  : QString()},
                                 {"thumbnail", row.thumbnail.isEmpty() ? QUrl() : QUrl::fromLocalFile(row.thumbnail)},
@@ -281,7 +281,9 @@ void OperatorController::preloadMedia(int row)
 bool OperatorController::shownIsVideo() const
 {
     const ItemView *view = selected();
-    return view && !view->slides.empty() && view->slides.front().mediaKind == QLatin1String("video");
+    // Audio too: Play once or Loop is chosen the same way.
+    return view && !view->slides.empty()
+           && (view->slides.front().mediaKind == QLatin1String("video") || view->slides.front().mediaKind == QLatin1String("audio"));
 }
 
 bool OperatorController::liveVideo() const
@@ -505,6 +507,11 @@ void OperatorController::setShownVideoLoops(bool loops)
         Content changed = onAir;
         changed.loop = loops;
         m_show.setContent(Layer::Media, changed);
+    }
+    if (m_show.scene().audio.videoPath == path && !path.isEmpty()) {
+        Content changed = m_show.scene().audio;
+        changed.loop = loops;
+        m_show.setAudio(changed);
     }
     emit stateChanged();
 }
@@ -1127,8 +1134,15 @@ QVariantList OperatorController::layers() const
                 {"active", !content.isEmpty()}};
     };
     // Top to bottom, as in the mockup.
-    return {describe(Layer::Messages), describe(Layer::Props), describe(Layer::Slide),
+    QVariantList list{describe(Layer::Messages), describe(Layer::Props), describe(Layer::Slide),
             describe(Layer::Media), describe(Layer::Background)};
+    // Sound beside the slides (not a layer; Stop or Clear All ends it).
+    const Content &audio = m_show.scene().audio;
+    list << QVariantMap{{"name", tr("Audio")},
+                        {"value", audio.isEmpty() ? tr("Off") : (audio.loop ? tr("Looping: %1") : tr("Playing: %1")).arg(QFileInfo(audio.videoPath).completeBaseName())},
+                        {"active", !audio.isEmpty()},
+                        {"key", "audio"}};
+    return list;
 }
 
 void OperatorController::setMode(const QString &mode)
@@ -1222,6 +1236,13 @@ bool OperatorController::goLiveFrom(const ItemView &item, int itemIndex, int ind
     const ItemView *view = &item;
     if (m_editMode || index < 0 || index >= int(view->slides.size()))
         return false;
+    // Audio plays beside the slides: they, and where Next goes, stay put.
+    if (view->slides[std::size_t(index)].mediaKind == QLatin1String("audio")) {
+        const SlideView &track = view->slides[std::size_t(index)];
+        m_show.setAudio(Content::video(track.mediaPath, track.mediaLoop, 1.0));
+        emit stateChanged();
+        return true;
+    }
     // CCLI reporting: a song counts once a day.
     if (m_usage && view->kind == QLatin1String("SONG")) {
         if (const auto recorded = m_usage->record(view->presentationId); !recorded.ok())
@@ -1257,6 +1278,23 @@ bool OperatorController::goLiveFrom(const ItemView &item, int itemIndex, int ind
     restartAdvance(*view);
     emit slideSentLive(index);
     return true;
+}
+
+bool OperatorController::shownIsAudio() const
+{
+    const ItemView *view = selected();
+    return view && !view->slides.empty() && view->slides.front().mediaKind == QLatin1String("audio");
+}
+
+QString OperatorController::liveAudio() const
+{
+    const Content &audio = m_show.scene().audio;
+    return audio.isEmpty() ? QString() : QFileInfo(audio.videoPath).completeBaseName();
+}
+
+void OperatorController::clearAudio()
+{
+    m_show.setAudio(Content::empty());
 }
 
 bool OperatorController::canAutoAdvance() const

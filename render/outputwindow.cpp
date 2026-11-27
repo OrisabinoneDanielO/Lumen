@@ -248,6 +248,13 @@ OutputWindow::Timing OutputWindow::timing() const
     return t;
 }
 
+bool OutputWindow::audioPlaying() const
+{
+    QObject *player = m_window ? m_window->findChild<QObject *>(QStringLiteral("audioPlayer")) : nullptr;
+    // QMediaPlayer::PlayingState is 1.
+    return player && player->property("playbackState").toInt() == 1;
+}
+
 int OutputWindow::videosPlaying() const
 {
     return int(std::count_if(m_videos.begin(), m_videos.end(), [](const Watched &w) { return w.output; }));

@@ -27,8 +27,11 @@ public:
     // its background, so no frame shows one without the other.
     void setContents(const std::vector<std::pair<Layer, Content>> &changes);
     void clear(Layer layer);
-    // Empties all six layers. Logo and Black are separate controls and stay
-    // as they are.
+    // Sound beside the slides (an audio file as a video content); empty
+    // content stops it.
+    void setAudio(const Content &audio);
+    // Empties all six layers and stops the audio. Logo and Black are
+    // separate controls and stay as they are.
     void clearAll();
     void setTransition(Layer layer, const Transition &transition);
 

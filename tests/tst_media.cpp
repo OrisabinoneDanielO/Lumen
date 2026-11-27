@@ -389,6 +389,53 @@ private slots:
         QTRY_COMPARE(h.controller->media()->property("count").toInt(), before - 2);
     }
 
+    // Audio items (EasyWorship's audio): music beside the slides. Live, it
+    // plays without touching what is on screen; Play once or Loop; Stop in
+    // the Layers list, or Clear All.
+    void audioItems()
+    {
+        test::OperatorHarness h;
+        QString error;
+        QVERIFY2(h.load(false, &error), qPrintable(error));
+        h.controller->importMedia({QUrl::fromLocalFile(media("tone-2s.wav"))});
+        const int tone = mediaRow(*h.controller, QStringLiteral("tone-2s"));
+        QVERIFY2(tone >= 0, qPrintable(h.controller->mediaSummary()));
+        auto *cards = qobject_cast<app::RowModel *>(h.controller->media());
+        QCOMPARE(cards->get(tone).value("kind").toString(), QStringLiteral("audio"));
+        QCOMPARE(cards->get(tone).value("duration").toString(), QStringLiteral("0:02"));
+
+        // A song is up; the music starts beside it.
+        h.controller->selectItem(2);
+        QVERIFY(h.controller->goLive(0));
+        const Content slide = h.show.scene().layer(Layer::Slide).content;
+        QVERIFY(h.controller->showMedia(tone));
+        QVERIFY(h.controller->shownIsAudio());
+        QVERIFY(h.controller->shownIsVideo()); // Play once / Loop
+        QVERIFY(h.controller->playMedia(tone));
+        QCOMPARE(h.show.scene().audio.videoPath, media("tone-2s.wav"));
+        QCOMPARE(h.show.scene().layer(Layer::Slide).content, slide); // untouched
+        QVERIFY(h.show.scene().layer(Layer::Media).content.isEmpty());
+        QCOMPARE(h.controller->liveAudio(), QStringLiteral("tone-2s"));
+        // Loop chosen while it plays: at once.
+        h.controller->setShownVideoLoops(true);
+        QVERIFY(h.show.scene().audio.loop);
+        // Next still steps through the song.
+        h.controller->selectItem(2);
+        QVERIFY(h.controller->next());
+        QCOMPARE(h.show.scene().audio.videoPath, media("tone-2s.wav"));
+        // Stop, in the Layers list.
+        h.settle();
+        QTRY_VERIFY(h.item(QStringLiteral("audioStop")) && h.item(QStringLiteral("audioStop"))->isVisible());
+        // (Below the fold of the Live column at this window size: pressed
+        // directly rather than clicked at a point out of view.)
+        QVERIFY(QMetaObject::invokeMethod(h.item(QStringLiteral("audioStop")), "clicked"));
+        QVERIFY(h.show.scene().audio.isEmpty());
+        // Clear All stops it too.
+        QVERIFY(h.controller->playMedia(tone));
+        h.controller->clearAll();
+        QVERIFY(h.show.scene().audio.isEmpty());
+    }
+
     // Edit mode never changes the screen: Use as background does nothing
     // there; in Show mode it puts the video under everything.
     void useAsBackgroundNotInEditMode()

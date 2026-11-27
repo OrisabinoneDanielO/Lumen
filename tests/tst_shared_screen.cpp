@@ -135,6 +135,21 @@ private slots:
         QVERIFY(QFileInfo::exists(there)); // asked for again, since it was gone
     }
 
+    // Music from the laptop plays on the screen's computer (copied once).
+    void audioTravels()
+    {
+        m_sharing->setTakesScreen(true);
+        QVERIFY(m_link->start(QHostAddress::LocalHost, m_sharing->port(), m_sharing->code(), QStringLiteral("Church PC")));
+        QTRY_VERIFY(m_link->status().contains(QStringLiteral("Live goes to")));
+        const QString tone = QStringLiteral(LUMEN_MEDIA_DIR "/tone-2s.wav");
+        m_laptopShow.setAudio(Content::video(tone, true, 1.0));
+        QTRY_VERIFY(!m_hostShow.scene().audio.isEmpty());
+        QVERIFY(m_hostShow.scene().audio.videoPath.startsWith(m_dir.filePath("screen-files")));
+        QVERIFY(m_hostShow.scene().audio.loop);
+        m_laptopShow.setAudio(Content::empty());
+        QTRY_VERIFY(m_hostShow.scene().audio.isEmpty());
+    }
+
     // Pause and seek from the laptop reach the screen's output.
     void videoControlReachesTheScreen()
     {

@@ -84,6 +84,9 @@ class OperatorController : public QObject
     // The shown video's start and end points ("m:ss"; end empty: the end).
     // A song: its key as the band plays it, and how far it is transposed.
     Q_PROPERTY(bool shownIsSong READ shownIsSong NOTIFY stateChanged)
+    // Audio (music beside the slides): the shown item is one; what plays.
+    Q_PROPERTY(bool shownIsAudio READ shownIsAudio NOTIFY stateChanged)
+    Q_PROPERTY(QString liveAudio READ liveAudio NOTIFY stateChanged)
     // Seconds each slide of the shown item stays up before the next, round
     // and round (announcement loops); 0: by hand.
     Q_PROPERTY(int shownAutoAdvance READ shownAutoAdvance NOTIFY stateChanged)
@@ -219,6 +222,9 @@ public:
     bool shownIsVideo() const;
     bool shownVideoLoops() const;
     bool shownIsSong() const;
+    bool shownIsAudio() const;
+    QString liveAudio() const; // its name, or ""
+    Q_INVOKABLE void clearAudio();
     int shownAutoAdvance() const;
     bool canAutoAdvance() const; // an item with several slides (not a video)
     Q_INVOKABLE void setShownAutoAdvance(int seconds);

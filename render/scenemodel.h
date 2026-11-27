@@ -137,6 +137,8 @@ class SceneModel : public QObject
     Q_OBJECT
     Q_PROPERTY(QList<QObject *> layers READ layers CONSTANT)
     Q_PROPERTY(QObject *logo READ logo CONSTANT)
+    // Sound beside the slides (the scene's audio).
+    Q_PROPERTY(QObject *audio READ audio CONSTANT)
     Q_PROPERTY(double logoLevel READ logoLevel NOTIFY levelsChanged)
     Q_PROPERTY(double blackLevel READ blackLevel NOTIFY levelsChanged)
     // Videos opened ahead of use (the item in Preview), newest last.
@@ -155,6 +157,7 @@ public:
 
     QList<QObject *> layers() const;
     QObject *logo() { return &m_logo; }
+    QObject *audio() { return &m_audio; }
     double logoLevel() const { return m_logoFader.level(); }
     double blackLevel() const { return m_blackFader.level(); }
 
@@ -220,6 +223,7 @@ private:
     Scene m_scene;
     std::vector<std::unique_ptr<LayerModel>> m_layers;
     ContentModel m_logo;
+    ContentModel m_audio;
     Fader m_logoFader;
     Fader m_blackFader;
     QList<QUrl> m_preloads;

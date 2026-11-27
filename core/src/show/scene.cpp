@@ -225,7 +225,8 @@ QJsonObject toJson(const Scene &scene)
             {QStringLiteral("logo"), scene.logo},
             {QStringLiteral("black"), scene.black},
             {QStringLiteral("logoContent"), contentJson(scene.logoContent)},
-            {QStringLiteral("overrideTransition"), transitionJson(scene.overrideTransition)}};
+            {QStringLiteral("overrideTransition"), transitionJson(scene.overrideTransition)},
+            {QStringLiteral("audio"), contentJson(scene.audio)}};
 }
 
 std::optional<Scene> sceneFromJson(const QJsonObject &json)
@@ -262,6 +263,12 @@ std::optional<Scene> sceneFromJson(const QJsonObject &json)
         if (!transition)
             return std::nullopt;
         scene.overrideTransition = *transition;
+    }
+    if (json.contains(QStringLiteral("audio"))) {
+        const auto audio = contentFrom(json.value(QStringLiteral("audio")));
+        if (!audio)
+            return std::nullopt;
+        scene.audio = *audio;
     }
     return scene;
 }

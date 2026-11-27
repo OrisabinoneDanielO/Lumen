@@ -149,7 +149,7 @@ Item {
                 // leaving the box sets them.
                 Row {
                     Layout.alignment: Qt.AlignBottom
-                    visible: root.controller.shownIsVideo
+                    visible: root.controller.shownIsVideo && !root.controller.shownIsAudio
                     spacing: 4
                     component TimeBox: Rectangle {
                         id: box

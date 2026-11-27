@@ -60,7 +60,9 @@ namespace lumen::core::render {
 //     the video on the Media layer ("action": "pause" | "play" | "seek",
 //     "positionMs"); "status" reports "videoPosition" ({"path",
 //     "positionMs", "durationMs", "playing"}, or empty).
-inline constexpr int protocolVersion = 11;
+// v12: sound beside the slides: the scene's "audio" (a video content of an
+//     audio file, or empty), played by the audience output only.
+inline constexpr int protocolVersion = 12;
 
 // Longest line either side accepts, to bound memory use.
 inline constexpr qsizetype maxLineBytes = 1024 * 1024;

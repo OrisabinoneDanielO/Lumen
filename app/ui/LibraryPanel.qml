@@ -486,10 +486,12 @@ Rectangle {
                         required thumbnail
                         required property string duration
                         required property bool loop
+                        required property string kind
                         objectName: "mediaCard-" + index
                         dragSource: "media"
                         dragRow: index
-                        badge: duration === "" ? "" : loop ? qsTr("Loop · %1").arg(duration) : duration
+                        badge: kind === "audio" ? (loop ? qsTr("Audio · Loop · %1").arg(duration) : qsTr("Audio · %1").arg(duration))
+                               : duration === "" ? "" : loop ? qsTr("Loop · %1").arg(duration) : duration
                         selected: index === root.controller.selectedMedia
                         // Click: in Preview. Double-click: on the screen now.
                         // Pointed at: the output opens it already, so it
@@ -643,7 +645,7 @@ Rectangle {
         sourceComponent: FileDialog {
             title: qsTr("Import videos and pictures")
             fileMode: FileDialog.OpenFiles
-            nameFilters: [qsTr("Videos and pictures (*.mp4 *.m4v *.mov *.webm *.mkv *.avi *.mpg *.mpeg *.wmv *.png *.jpg *.jpeg *.bmp *.gif *.webp)"),
+            nameFilters: [qsTr("Videos, pictures and audio (*.mp4 *.m4v *.mov *.webm *.mkv *.avi *.mpg *.mpeg *.wmv *.png *.jpg *.jpeg *.bmp *.gif *.webp *.mp3 *.wav *.m4a *.aac *.ogg *.oga *.flac *.opus *.wma)"),
                           qsTr("All files (*)")]
             Component.onCompleted: open()
             onAccepted: {

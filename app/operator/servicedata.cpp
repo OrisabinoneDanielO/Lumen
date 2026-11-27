@@ -1,4 +1,5 @@
 #include "servicedata.h"
+#include "medialibrary.h"
 
 #include <cmath>
 
@@ -155,7 +156,9 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
                 if ((element.type == ElementType::Video || element.type == ElementType::Image)
                     && !element.mediaAssetId.isEmpty() && media.mediaKind.isEmpty()) {
                     if (auto asset = Repository<MediaAsset>(db).get(element.mediaAssetId); asset.ok()) {
-                        media.mediaKind = element.type == ElementType::Video ? QStringLiteral("video") : QStringLiteral("image");
+                        media.mediaKind = element.type != ElementType::Video          ? QStringLiteral("image")
+                                          : MediaLibrary::isAudio(asset.value().filePath) ? QStringLiteral("audio")
+                                                                                          : QStringLiteral("video");
                         media.mediaPath = asset.value().filePath;
                         media.thumbnail = asset.value().thumbnailPath;
                     }
@@ -165,6 +168,8 @@ Result<ItemView> loadPresentationView(Database &db, const QString &presentationI
                            media.mediaKind, media.mediaPath, media.thumbnail, slideTimer, timerName, {}};
             // The operator's choice for this video (Play once by default).
             made.mediaLoop = p.metadata.value(QStringLiteral("videoLoop")).toBool();
+            if (made.mediaKind == QLatin1String("audio") && made.text.isEmpty())
+                made.text = QObject::tr("Audio: %1").arg(p.title); // what its card says
             // Chords as written inline (older imports kept only the names).
             if (slide.chords.contains(u'['))
                 made.chords = slide.chords;

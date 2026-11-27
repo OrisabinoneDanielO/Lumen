@@ -125,6 +125,23 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(m_output->videosPlaying(), 0, 5000);
     }
 
+    // Audio beside the slides: the audience output plays it; the layers
+    // stay as they are.
+    void audioBesideTheSlides()
+    {
+        Scene scene;
+        scene.sequence = ++m_sequence;
+        scene.layer(Layer::Slide).content = Content::textContent(QStringLiteral("Welcome"));
+        scene.audio = Content::video(QStringLiteral(LUMEN_MEDIA_DIR "/tone-2s.wav"), true, 0.0);
+        m_output->setScene(scene);
+        QTRY_VERIFY_WITH_TIMEOUT(m_output->audioPlaying(), 5000);
+        QCOMPARE(m_output->scene().layer(Layer::Slide).content.text, QStringLiteral("Welcome"));
+        scene.audio = Content::empty();
+        scene.sequence = ++m_sequence;
+        m_output->setScene(scene);
+        QTRY_VERIFY_WITH_TIMEOUT(!m_output->audioPlaying(), 3000);
+    }
+
     void motionLoopPlaysAndLoops()
     {
         const int seconds = qEnvironmentVariableIntValue("LUMEN_VIDEO_SECONDS") > 0
