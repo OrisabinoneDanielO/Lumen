@@ -48,6 +48,10 @@ qt_add_resources(lumen_core "output_fonts"
         fonts/NotoSans-Bold.ttf
         fonts/NotoSerif-Regular.ttf
         fonts/NotoSerif-Bold.ttf
+        fonts/NotoSansDevanagari-Regular.ttf
+        fonts/NotoSansDevanagari-Bold.ttf
+        fonts/NotoSansMalayalam-Regular.ttf
+        fonts/NotoSansMalayalam-Bold.ttf
         fonts/OFL.txt
 )
 

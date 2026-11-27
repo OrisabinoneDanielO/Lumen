@@ -12,6 +12,7 @@
 #include <QSet>
 #include <QSqlDatabase>
 #include <QSqlQuery>
+#include <QFont>
 #include <QTest>
 #include <QTextLayout>
 #include <QtQuickTest/quicktest.h>
@@ -106,6 +107,20 @@ private slots:
     {
         m_output.reset();
         m_bibles.close();
+    }
+
+    // Hindi and Malayalam letters come from bundled fonts, never from the
+    // system's (the system's measure differently: text overflowed on macOS).
+    void scriptsHaveBundledFonts()
+    {
+        const QStringList families = registerOutputFonts();
+        QVERIFY(families.contains(QStringLiteral("Noto Sans Devanagari")));
+        QVERIFY(families.contains(QStringLiteral("Noto Sans Malayalam")));
+        for (const QString &family : {QStringLiteral("Noto Sans"), QStringLiteral("Noto Serif")}) {
+            // (Qt keeps the names in lower case.)
+            QVERIFY(QFont::substitutes(family).contains(QStringLiteral("Noto Sans Devanagari"), Qt::CaseInsensitive));
+            QVERIFY(QFont::substitutes(family).contains(QStringLiteral("Noto Sans Malayalam"), Qt::CaseInsensitive));
+        }
     }
 
     // ---- long verses fit ------------------------------------------------------

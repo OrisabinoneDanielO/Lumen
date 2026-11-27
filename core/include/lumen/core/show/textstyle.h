@@ -40,7 +40,8 @@ struct TextStyle
 };
 
 // The output's bundled fonts (Noto Sans, Noto Serif: SIL OFL 1.1, wide Latin
-// coverage including Yoruba, Igbo and Hausa). Registers them with Qt once;
+// coverage including Yoruba, Igbo and Hausa; Noto Sans Devanagari and
+// Malayalam stand in for letters they lack). Registers them with Qt once;
 // returns their family names.
 QStringList registerOutputFonts();
 
