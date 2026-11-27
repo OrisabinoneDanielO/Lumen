@@ -41,6 +41,11 @@ class ScriptureController : public QObject
     Q_PROPERTY(bool showCopyright READ showCopyright WRITE setShowCopyright NOTIFY changed)
     // How many verses the first slide holds (highlighted in the list).
     Q_PROPERTY(int firstSlideVerses READ firstSlideVerses NOTIFY changed)
+    // Finding verses by their words, in the chosen translation: each result
+    // {label "John 13:34", book, chapter, verse, text}; and what was found.
+    Q_PROPERTY(QString wordQuery READ wordQuery NOTIFY changed)
+    Q_PROPERTY(QVariantList wordResults READ wordResults NOTIFY changed)
+    Q_PROPERTY(QString wordSummary READ wordSummary NOTIFY changed)
     Q_PROPERTY(QString copyright READ copyright NOTIFY changed)
     Q_PROPERTY(QString previewText READ previewText NOTIFY changed)
     Q_PROPERTY(QString previewReference READ previewReference NOTIFY changed)
@@ -74,6 +79,11 @@ public:
     QString previewSecondText() const;
     int firstSlideVerses() const { return m_firstSlideVerses; }
     bool showCopyright() const { return m_showCopyright; }
+    QString wordQuery() const { return m_wordQuery; }
+    QVariantList wordResults() const { return m_wordResults; }
+    QString wordSummary() const { return m_wordSummary; }
+    // "love one another"; "\"in the beginning\"" for a phrase; "" to stop.
+    Q_INVOKABLE void findWords(const QString &query);
     void setShowCopyright(bool show);
     QString copyright() const;
     QString previewText() const;
@@ -131,6 +141,9 @@ private:
     int m_second = -1;
     int m_firstSlideVerses = 0;
     bool m_showCopyright = true;
+    QString m_wordQuery;
+    QVariantList m_wordResults;
+    QString m_wordSummary;
     // The copyright lines the slides carry, joined. Shown: every Bible's,
     // in full, on every slide. Hidden: only Bibles whose licence asks for
     // credit (CC BY-SA), shortened, on the passage's first slide.

@@ -3,6 +3,8 @@
 #include "lumen/core/scripture/biblestore.h"
 
 #include <QFile>
+#include <algorithm>
+#include <QElapsedTimer>
 #include <QUrl>
 #include <QTemporaryDir>
 #include <QDir>
@@ -445,6 +447,63 @@ private slots:
         // Its notice says to check the licence before public use.
         QVERIFY(ui.scripture->copyright().contains(QStringLiteral("check its licence")));
         ui.scripture->setStores(m_store.get(), nullptr);
+    }
+
+    // Finding a verse by its words, as in EasyWorship: all the words, a
+    // phrase in quotes, without accents; a click puts it in the reference.
+    void findVersesByWords()
+    {
+        // The store: quick, in Bible order, accents and case ignored.
+        QElapsedTimer timer;
+        timer.start();
+        int total = 0;
+        auto hits = m_store->search(QStringLiteral("engwebp"), QStringLiteral("love one another"), 100, &total);
+        QVERIFY(hits.ok());
+        qInfo("\"love one another\": %d verses in %lld ms", total, timer.elapsed());
+        QVERIFY(timer.elapsed() < 1500);
+        QVERIFY(total >= 5);
+        const auto john = std::find_if(hits.value().begin(), hits.value().end(),
+                                       [](const VerseHit &h) { return h.book == QLatin1String("JHN") && h.chapter == 13 && h.verse == 34; });
+        QVERIFY(john != hits.value().end());
+        QVERIFY(bookOrdinal(hits.value().front().book) <= bookOrdinal(hits.value().back().book));
+        auto phrase = m_store->search(QStringLiteral("engwebp"), QStringLiteral("\"In the beginning\""));
+        QVERIFY(phrase.ok() && !phrase.value().empty());
+        QCOMPARE(phrase.value().front().book, QStringLiteral("GEN"));
+        auto yoruba = m_store->search(QStringLiteral("yor"), QStringLiteral("olorun fe araye"));
+        QVERIFY(yoruba.ok());
+        QVERIFY(std::any_of(yoruba.value().begin(), yoruba.value().end(),
+                            [](const VerseHit &h) { return h.book == QLatin1String("JHN") && h.chapter == 3 && h.verse == 16; }));
+        QVERIFY(m_store->search(QStringLiteral("engwebp"), QStringLiteral("zzqqxx")).value().empty());
+
+        // In the window.
+        OperatorHarness ui;
+        ui.bibles = m_store.get();
+        QString error;
+        QVERIFY2(ui.load(false, &error), qPrintable(error));
+        QTest::keyClick(ui.window, Qt::Key_B, Qt::ControlModifier);
+        QTRY_VERIFY(ui.item("scriptureDialog"));
+        QVERIFY(ui.click("translation-engwebp"));
+        QVERIFY(ui.click("scriptureFind"));
+        QQuickWindow *window = ui.item("scriptureDialog")->window();
+        for (const char c : QByteArray("love one another"))
+            QTest::keyClick(window, c);
+        QTest::keyClick(window, Qt::Key_Return);
+        QTRY_VERIFY(ui.scripture->wordResults().size() >= 5);
+        QVERIFY(ui.scripture->wordSummary().contains(QStringLiteral("WEB")));
+        int row = -1;
+        for (int i = 0; i < ui.scripture->wordResults().size(); ++i) {
+            if (ui.scripture->wordResults().at(i).toMap().value("label").toString() == QStringLiteral("John 13:34"))
+                row = i;
+        }
+        QVERIFY(row >= 0);
+        QTRY_VERIFY(ui.item(QStringLiteral("wordResult-%1").arg(row)));
+        ui.settle();
+        QVERIFY(ui.click(QStringLiteral("wordResult-%1").arg(row)));
+        QTRY_COMPARE(ui.scripture->label(), QStringLiteral("John 13:34"));
+        QVERIFY(ui.scripture->previewText().contains(QStringLiteral("love one another")));
+        // Another translation: the same words searched there.
+        QVERIFY(ui.click("translation-eng-kjv2006"));
+        QTRY_VERIFY(ui.scripture->wordSummary().contains(QStringLiteral("KJV")));
     }
 
     void referencePartsInTheWindow()

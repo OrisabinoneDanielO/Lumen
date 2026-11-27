@@ -96,6 +96,8 @@ void ScriptureController::setTranslation(int index)
         return;
     m_translation = index;
     refresh();
+    if (!m_wordQuery.trimmed().isEmpty())
+        findWords(m_wordQuery); // the same words in the new translation
 }
 
 void ScriptureController::setReferencePosition(const QString &position)
@@ -116,6 +118,33 @@ void ScriptureController::setSecondTranslation(int index)
         return;
     m_second = index;
     refresh();
+}
+
+void ScriptureController::findWords(const QString &query)
+{
+    m_wordQuery = query;
+    m_wordResults.clear();
+    m_wordSummary.clear();
+    if (!query.trimmed().isEmpty() && !m_sources.empty()) {
+        const Source &source = m_sources[std::size_t(m_translation)];
+        int total = 0;
+        auto hits = source.store->search(source.translation.id, query, 100, &total);
+        if (!hits.ok()) {
+            m_wordSummary = hits.error().message;
+        } else {
+            for (const VerseHit &hit : hits.value())
+                m_wordResults << QVariantMap{{"label", QStringLiteral("%1 %2:%3").arg(hit.bookName).arg(hit.chapter).arg(hit.verse)},
+                                             {"book", hit.bookName},
+                                             {"chapter", hit.chapter},
+                                             {"verse", hit.verse},
+                                             {"text", hit.text}};
+            m_wordSummary = total == 0       ? tr("No verses in %1 have those words").arg(source.translation.abbreviation)
+                            : total > 100    ? tr("%1 verses in %2; the first 100 shown").arg(total).arg(source.translation.abbreviation)
+                            : total == 1     ? tr("1 verse in %1").arg(source.translation.abbreviation)
+                                             : tr("%1 verses in %2").arg(total).arg(source.translation.abbreviation);
+        }
+    }
+    emit changed();
 }
 
 void ScriptureController::setShowCopyright(bool show)
