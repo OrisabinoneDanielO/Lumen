@@ -11,6 +11,8 @@ add_library(lumen_operator STATIC
     operatorcontroller.cpp
     usagelog.h
     usagelog.cpp
+    language.h
+    language.cpp
     scripturecontroller.h
     scripturecontroller.cpp
     themes.h
@@ -74,4 +76,4 @@ add_library(Lumen::Operator ALIAS lumen_operator)
 target_include_directories(lumen_operator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(lumen_operator
     PUBLIC Lumen::Data Lumen::Show Lumen::MtcInput Lumen::Songs Lumen::Scripture Qt6::Core Qt6::Gui Qt6::Multimedia Qt6::Network
-    PRIVATE Qt6::Pdf Qt6::Xml Qt6::GuiPrivate lumen_warnings)
+    PRIVATE Qt6::Pdf Qt6::Xml Qt6::GuiPrivate Qt6::Qml lumen_warnings)

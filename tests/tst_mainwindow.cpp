@@ -1,3 +1,4 @@
+#include "language.h"
 #include "operatorcontroller.h"
 #include "sampleservice.h"
 #include "servicedata.h"
@@ -94,6 +95,7 @@ private:
     std::unique_ptr<app::OperatorController> m_controller;
     std::unique_ptr<QQmlApplicationEngine> m_engine;
     QQuickWindow *m_window = nullptr;
+    std::unique_ptr<app::Language> m_language;
 
 private slots:
     void init()
@@ -111,6 +113,7 @@ private slots:
         m_controller.reset();
         m_show.reset();
         m_db.reset();
+        m_language.reset();
     }
 
     void windowHasTitle_data() { addModes(); }
@@ -260,19 +263,31 @@ private slots:
     // buttons and the output lights side by side and on screen, and Preview,
     // Live and the Previous / Next buttons in view (they used to fall off
     // at laptop sizes).
+    // In every finished language too: translated labels are often longer.
     void layoutFitsEachSize_data()
     {
         QTest::addColumn<QSize>("size");
-        for (const QSize size : {QSize(1024, 640), QSize(1280, 720), QSize(1366, 768), QSize(1440, 900), QSize(1920, 1080)})
-            QTest::newRow(qPrintable(QStringLiteral("%1x%2").arg(size.width()).arg(size.height()))) << size;
+        QTest::addColumn<QString>("language");
+        app::Language languages;
+        for (const QVariant &language : languages.languages()) {
+            const QString code = language.toMap().value("code").toString();
+            for (const QSize size : {QSize(1024, 640), QSize(1280, 720), QSize(1366, 768), QSize(1440, 900), QSize(1920, 1080)})
+                QTest::newRow(qPrintable(QStringLiteral("%1 %2x%3").arg(code).arg(size.width()).arg(size.height())))
+                    << size << code;
+        }
     }
     void layoutFitsEachSize()
     {
         QFETCH(QSize, size);
+        QFETCH(QString, language);
+        m_language = std::make_unique<app::Language>();
+        QVERIFY(m_language->choose(language));
         load(true);
         m_window->resize(size);
         QTRY_COMPARE(m_window->width(), size.width());
         QTest::qWait(50);
+        if (const QString dir = qEnvironmentVariable("LUMEN_SCREENSHOT_DIR"); !dir.isEmpty())
+            m_window->grabWindow().save(QStringLiteral("%1/fit-%2-%3.png").arg(dir, language).arg(size.width()));
         const QRectF window(0, 0, m_window->width(), m_window->height());
         const auto rectOf = [this](const QString &name) {
             QQuickItem *item = findItem(m_window->contentItem(), name);

@@ -124,7 +124,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends cmake ninja-build g++ dpkg-dev file \
             qt6-base-dev qt6-base-private-dev qt6-declarative-dev qt6-multimedia-dev qt6-pdf-dev \
-            libqt6sql6-sqlite libasound2-dev libgl-dev
+            libqt6sql6-sqlite libasound2-dev libgl-dev qt6-l10n-tools qt6-tools-dev
       - name: Build
         run: |
           cmake --preset release -DLUMEN_BUILD_TESTS=OFF
@@ -163,7 +163,7 @@ jobs:
         run: |
           dnf install -y cmake ninja-build gcc-c++ rpm-build file \
             qt6-qtbase-devel qt6-qtbase-private-devel qt6-qtdeclarative-devel qt6-qtmultimedia-devel \
-            qt6-qtpdf-devel alsa-lib-devel mesa-libGL-devel
+            qt6-qtpdf-devel alsa-lib-devel mesa-libGL-devel qt6-qttools-devel qt6-linguist
       - name: Build
         run: |
           cmake --preset release -DLUMEN_BUILD_TESTS=OFF

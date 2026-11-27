@@ -21,6 +21,7 @@ Rectangle {
     // What follows the pointer while dragging (Main.qml's DragGhost).
     property Item dragGhost: null
     property bool scriptureAvailable: true
+    property QtObject language: null
     // A newer version found by an update check (shown in the menu).
     property string updateVersion: ""
 
@@ -33,6 +34,17 @@ Rectangle {
     // The item whose menu is open (right-click), or -1.
     property int itemMenuFor: -1
     // Escape: closes the Plan menu or an item's menu (true if one was open).
+    // An item's kind ("SONG", a code) as the operator reads it.
+    function kindName(kind) {
+        switch (kind) {
+        case "SONG": return qsTr("SONG")
+        case "BIBLE": return qsTr("BIBLE")
+        case "SLIDES": return qsTr("SLIDES")
+        case "MEDIA": return qsTr("MEDIA")
+        case "TIMER": return qsTr("TIMER")
+        default: return kind
+        }
+    }
     function closeMenus() {
         const open = menuPage !== "" || itemMenuFor >= 0
         menuPage = ""
@@ -215,7 +227,7 @@ Rectangle {
                         radius: 8
                         color: current ? Theme.selected : rowMouse.containsMouse ? Theme.raised : "transparent"
                         Accessible.role: Accessible.ListItem
-                        Accessible.name: header ? title : (kind ? kind + ": " : "") + title + (live ? qsTr(", live") : "")
+                        Accessible.name: header ? title : (kind ? root.kindName(kind) + ": " : "") + title + (live ? qsTr(", live") : "")
 
                         // Headers: a label dividing the service ("Worship").
                         SectionLabel {
@@ -243,7 +255,7 @@ Rectangle {
                             }
                             SectionLabel {
                                 Layout.preferredWidth: 52
-                                text: planRow.kind
+                                text: root.kindName(planRow.kind)
                                 font.pixelSize: 10
                             }
                             ColumnLayout {
@@ -559,6 +571,18 @@ Rectangle {
                         }
                     }
                     MenuEntry {
+                        objectName: "planLanguage"
+                        visible: root.language !== null && root.language.languages.length > 1
+                        text: qsTr("Language…")
+                        detail: {
+                            if (!root.language)
+                                return ""
+                            const found = root.language.languages.find(l => l.code === root.language.current)
+                            return found ? found.name : ""
+                        }
+                        onTriggered: root.menuPage = "language"
+                    }
+                    MenuEntry {
                         objectName: "planScreens"
                         text: qsTr("Screens…")
                         onTriggered: {
@@ -647,6 +671,25 @@ Rectangle {
                 }
 
                 // Backups, newest first. Restoring restarts Lumen.
+                // Language: each in its own words, with its English name.
+                Column {
+                    width: parent.width
+                    visible: root.menuPage === "language"
+                    Repeater {
+                        model: root.language ? root.language.languages : []
+                        delegate: MenuEntry {
+                            required property var modelData
+                            objectName: "language-" + modelData.code
+                            text: (modelData.code === root.language.current ? "✓ " : "") + modelData.name
+                            detail: modelData.name !== modelData.english ? modelData.english : ""
+                            onTriggered: {
+                                root.menuPage = ""
+                                root.language.choose(modelData.code)
+                            }
+                        }
+                    }
+                }
+
                 // Song usage: which period, then where to save it.
                 Column {
                     width: parent.width

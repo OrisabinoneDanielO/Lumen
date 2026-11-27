@@ -11,7 +11,7 @@ Rectangle {
     property int fontSize: 12
     signal clicked
 
-    implicitWidth: label.implicitWidth + 24
+    implicitWidth: labelText.implicitWidth + (hintText.visible ? hintText.implicitWidth + label.spacing : 0) + 24
     implicitHeight: 36
     radius: 8
     color: {
@@ -34,7 +34,13 @@ Rectangle {
         anchors.centerIn: parent
         spacing: 5
 
+        // Squeezed by its layout (a longer translation): the words shrink a
+        // little to fit rather than run out of the button.
         LText {
+            id: labelText
+            width: Math.min(implicitWidth, Math.max(0, root.width - 24 - (hintText.visible ? hintText.implicitWidth + label.spacing : 0)))
+            fontSizeMode: Text.HorizontalFit
+            minimumPixelSize: Math.max(8, root.fontSize - 3)
             text: root.text
             font.pixelSize: root.fontSize
             font.weight: root.variant === "primary" ? Font.Bold
@@ -43,6 +49,7 @@ Rectangle {
                  : root.variant === "warn" ? Theme.warnText : Theme.text
         }
         LText {
+            id: hintText
             visible: root.hint !== "" && root.showHint
             text: root.hint
             font.pixelSize: root.fontSize

@@ -30,6 +30,8 @@ class StageController : public QObject
 
 public:
     StageController(OperatorController &op, TimerController &timers, QObject *parent = nullptr);
+    // The layouts' names in the current language.
+    void retranslate();
 
     QObject *layouts() { return &m_layouts; }
     int layout() const { return m_layout; }

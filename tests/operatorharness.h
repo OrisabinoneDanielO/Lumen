@@ -26,6 +26,7 @@
 #include "oscserver.h"
 #include "remoteserver.h"
 #include "propscontroller.h"
+#include "language.h"
 #include "stagecontroller.h"
 #include "timercontroller.h"
 
@@ -55,6 +56,7 @@ public:
     ~OperatorHarness()
     {
         engine.reset();
+        language.reset(); // back to English for the next test
         updates.reset();
         screens.reset();
         cues.reset();
@@ -137,7 +139,9 @@ public:
         deckOptions.office = app::DeckImporter::Office::Never;
         controller->attachPresentations(*decks, deckOptions);
 
+        language = std::make_unique<app::Language>();
         engine = std::make_unique<QQmlApplicationEngine>();
+        language->setEngine(engine.get());
         engine->setInitialProperties(
             {{QStringLiteral("controller"), QVariant::fromValue<QObject *>(controller.get())},
              {QStringLiteral("scripture"), QVariant::fromValue<QObject *>(scripture.get())},
@@ -153,7 +157,8 @@ public:
              {QStringLiteral("midi"), QVariant::fromValue<QObject *>(midi.get())},
              {QStringLiteral("cues"), QVariant::fromValue<QObject *>(cues.get())},
              {QStringLiteral("screenSetup"), QVariant::fromValue<QObject *>(screens.get())},
-             {QStringLiteral("updates"), QVariant::fromValue<QObject *>(updates.get())}});
+             {QStringLiteral("updates"), QVariant::fromValue<QObject *>(updates.get())},
+             {QStringLiteral("language"), QVariant::fromValue<QObject *>(language.get())}});
         engine->loadFromModule("Lumen.Ui", "Main");
         if (engine->rootObjects().isEmpty()) {
             *error = QStringLiteral("Main.qml did not load");
@@ -290,6 +295,7 @@ public:
     // Where update checks go (tests point it at a local server before load()).
     app::UpdateChecker::Options updateOptions;
     std::unique_ptr<app::UpdateChecker> updates;
+    std::unique_ptr<app::Language> language;
     std::unique_ptr<app::CueController> cues;
     std::unique_ptr<app::OperatorController> controller;
     std::unique_ptr<QQmlApplicationEngine> engine;

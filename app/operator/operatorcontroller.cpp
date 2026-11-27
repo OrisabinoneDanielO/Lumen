@@ -116,6 +116,13 @@ void OperatorController::attachLibrary(core::data::Database &db, core::songs::So
     refreshSavedPlans();
 }
 
+void OperatorController::refreshTexts()
+{
+    m_planMessage.clear(); // it was in the old language
+    refreshSavedPlans();
+    emit stateChanged();
+}
+
 bool OperatorController::exportSongUsage(const QUrl &file, int months)
 {
     if (!m_usage)

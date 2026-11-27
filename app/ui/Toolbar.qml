@@ -28,8 +28,32 @@ Rectangle {
     // are named for screen readers), then the Clear buttons shorten to
     // "Clear: BG Slide Props Msg All" and the name next to the logo goes.
     // Every button and the output lights stay on screen.
-    readonly property bool compact: width < 1500
-    readonly property bool narrow: width < 1250
+    // Translations are often longer than English: the widths where this
+    // happens move by how much wider the translated labels are, and a third
+    // step ("tight", never needed in English) uses short words.
+    readonly property bool compact: width < 1500 + extraLong
+    readonly property bool narrow: width < 1250 + extraLong
+    readonly property bool tight: width < 1024 + extraShort
+    FontMetrics {
+        id: metrics
+        font.family: Theme.fontFamily
+        font.pixelSize: 12
+    }
+    function widthOf(texts) {
+        return texts.reduce((sum, t) => sum + metrics.advanceWidth(t), 0)
+    }
+    readonly property real extraLong: Math.max(0,
+        widthOf([qsTr("Show"), qsTr("Edit"), qsTr("Timers"), qsTr("Props"), qsTr("Message"), qsTr("Clear BG"),
+                 qsTr("Clear Slide"), qsTr("Clear Props"), qsTr("Clear Msg"), qsTr("Clear All"), qsTr("Logo"),
+                 qsTr("Black"), qsTr("Main"), qsTr("Stage"), qsTr("Stream")])
+        - widthOf(["Show", "Edit", "Timers", "Props", "Message", "Clear BG", "Clear Slide", "Clear Props",
+                   "Clear Msg", "Clear All", "Logo", "Black", "Main", "Stage", "Stream"]))
+    readonly property real extraShort: Math.max(0,
+        widthOf([qsTr("Show"), qsTr("Edit"), qsTr("Timers"), qsTr("Props"), qsTr("Message"), qsTr("Clear"),
+                 qsTr("BG"), qsTr("Slide"), qsTr("Props"), qsTr("Msg"), qsTr("All"), qsTr("Logo"), qsTr("Black"),
+                 qsTr("Main"), qsTr("Stage"), qsTr("Stream")])
+        - widthOf(["Show", "Edit", "Timers", "Props", "Message", "Clear", "BG", "Slide", "Props", "Msg", "All",
+                   "Logo", "Black", "Main", "Stage", "Stream"]))
 
     Rectangle {
         anchors.bottom: parent.bottom
@@ -137,7 +161,8 @@ Rectangle {
             spacing: 6
             LButton {
                 objectName: "timersButton"
-                text: root.timerSummary !== "" ? root.timerSummary : qsTr("Timers")
+                text: root.timerSummary !== "" ? root.timerSummary
+                      : root.tight ? qsTr("Timers", "toolbar, short") : qsTr("Timers")
                 onClicked: root.timersRequested()
             }
             LButton {
@@ -147,13 +172,13 @@ Rectangle {
             }
             LButton {
                 objectName: "messageButton"
-                text: qsTr("Message")
+                text: root.tight ? qsTr("Msg") : qsTr("Message")
                 variant: root.controller.messageShown !== "" ? "primary" : "default"
                 onClicked: root.messageRequested()
             }
             Item { width: 6; height: 1 }
             LText {
-                visible: root.narrow
+                visible: root.narrow && !root.tight
                 anchors.verticalCenter: parent.verticalCenter
                 text: qsTr("Clear")
                 font.pixelSize: 12
@@ -201,13 +226,13 @@ Rectangle {
         // Main, Stage (batch 13) and Stream (batch 15): click Main to turn
         // the output off or on, Stage or Stream for their settings.
         Row {
-            spacing: root.narrow ? 8 : 12
+            spacing: root.tight ? 6 : root.narrow ? 8 : 12
 
             Repeater {
                 model: [
-                    { name: qsTr("Main"), connected: root.controller.outputConnected },
-                    { name: qsTr("Stage"), connected: root.stageConnected },
-                    { name: qsTr("Stream"), connected: root.streamConnected }
+                    { name: root.tight ? qsTr("Main", "toolbar, short") : qsTr("Main"), connected: root.controller.outputConnected },
+                    { name: root.tight ? qsTr("Stage", "toolbar, short") : qsTr("Stage"), connected: root.stageConnected },
+                    { name: root.tight ? qsTr("Stream", "toolbar, short") : qsTr("Stream"), connected: root.streamConnected }
                 ]
 
                 delegate: Row {

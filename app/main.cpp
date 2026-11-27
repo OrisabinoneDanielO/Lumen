@@ -1,5 +1,6 @@
 #include "operatorcontroller.h"
 #include "scripturecontroller.h"
+#include "language.h"
 #include "servicedata.h"
 #include "themecontroller.h"
 #include "themes.h"
@@ -81,6 +82,8 @@ constexpr auto experimentalNdiKey = "experimental/ndi"; // untested: off by defa
 // The slide editor: on by default since batch 16 (set to false to hide Edit).
 constexpr auto experimentalEditorKey = "experimental/editor";
 constexpr auto linesPerSlideKey = "songs/linesPerSlide"; // auto-split limit, 2 by default
+constexpr auto languageKey = "ui/language";              // "fr", "es", ...; empty: the computer's
+constexpr auto draftLanguagesKey = "experimental/draftLanguages"; // unfinished translations too
 constexpr auto backupFolderKey = "backups/folder"; // default: "backups" beside the library
 
 // The link to the render process and the bridge that feeds it the scene.
@@ -714,7 +717,18 @@ int main(int argc, char *argv[])
     if (!checking && updates.automatic())
         QTimer::singleShot(10000, &updates, &app::UpdateChecker::check);
 
+    // The window's language: the operator's choice, else the computer's if
+    // Lumen has it (before the window loads, so it opens in it).
+    app::Language language(settings.value(QLatin1String(draftLanguagesKey), false).toBool());
+    language.choose(language.startLanguage(settings.value(QLatin1String(languageKey)).toString()));
+    QObject::connect(&language, &app::Language::changed, &app, [&language, &controller, &stageController] {
+        QSettings().setValue(QLatin1String(languageKey), language.current());
+        controller.refreshTexts(); // words made in C++ (menus, messages)
+        stageController.retranslate();
+    });
+
     QQmlApplicationEngine engine;
+    language.setEngine(&engine);
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         [] { QCoreApplication::exit(EXIT_FAILURE); }, Qt::QueuedConnection);
@@ -736,7 +750,8 @@ int main(int argc, char *argv[])
                                                               ? QVariant::fromValue<QObject *>(&cueController)
                                                               : QVariant::fromValue<QObject *>(nullptr)},
                                  {QStringLiteral("screenSetup"), QVariant::fromValue<QObject *>(&screenSetup)},
-                                 {QStringLiteral("updates"), QVariant::fromValue<QObject *>(&updates)}});
+                                 {QStringLiteral("updates"), QVariant::fromValue<QObject *>(&updates)},
+                                 {QStringLiteral("language"), QVariant::fromValue<QObject *>(&language)}});
     engine.loadFromModule("Lumen.Ui", "Main");
 
     // Another start of Lumen asked for this window.
