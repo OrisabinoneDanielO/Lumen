@@ -9,6 +9,8 @@ add_library(lumen_operator STATIC
     rowmodel.cpp
     operatorcontroller.h
     operatorcontroller.cpp
+    usagelog.h
+    usagelog.cpp
     scripturecontroller.h
     scripturecontroller.cpp
     themes.h

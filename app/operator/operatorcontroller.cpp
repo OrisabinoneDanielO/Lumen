@@ -109,8 +109,32 @@ void OperatorController::attachLibrary(core::data::Database &db, core::songs::So
 {
     m_db = &db;
     m_songs = &songs;
+    m_usage = std::make_unique<UsageLog>(db);
     searchSongs(m_search);
     refreshSavedPlans();
+}
+
+bool OperatorController::exportSongUsage(const QUrl &file, int months)
+{
+    if (!m_usage)
+        return false;
+    const QDate to = QDate::currentDate();
+    const QDate from = months > 0 ? to.addMonths(-months).addDays(1) : QDate(2000, 1, 1);
+    const auto rows = m_usage->report(from, to);
+    const auto saved = rows.ok() ? m_usage->exportCsv(file.toLocalFile(), from, to) : core::Status(rows.error());
+    if (!saved.ok()) {
+        m_planMessage = tr("Song usage not saved: %1").arg(saved.error().message);
+    } else {
+        int uses = 0;
+        for (const auto &row : rows.value())
+            uses += row.uses;
+        m_planMessage = rows.value().empty() ? tr("Song usage saved: no songs were shown in that time")
+                                             : tr("Song usage saved: %1, %2")
+                                                   .arg(rows.value().size() == 1 ? tr("1 song") : tr("%1 songs").arg(rows.value().size()),
+                                                        uses == 1 ? tr("1 use") : tr("%1 uses").arg(uses));
+    }
+    emit stateChanged();
+    return saved.ok();
 }
 
 void OperatorController::searchSongs(const QString &query)
@@ -1002,6 +1026,11 @@ bool OperatorController::goLive(int index)
     const ItemView *view = selected();
     if (m_editMode || !view || index < 0 || index >= int(view->slides.size()))
         return false;
+    // CCLI reporting: a song counts once a day.
+    if (m_usage && view->kind == QLatin1String("SONG")) {
+        if (const auto recorded = m_usage->record(view->presentationId); !recorded.ok())
+            qWarning("Song usage not recorded: %s", qPrintable(recorded.error().message));
+    }
     m_positionItem = m_current;
     m_positionKey = keyOf(*view);
     m_positionSlide = index;

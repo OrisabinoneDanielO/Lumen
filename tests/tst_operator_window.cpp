@@ -1,4 +1,7 @@
 #include "operatorharness.h"
+#include <QUrl>
+#include <QFile>
+#include "usagelog.h"
 
 #include <QFileInfo>
 #include <QJsonArray>
@@ -374,6 +377,58 @@ private slots:
         QTRY_COMPARE(planTitle(now + 1), song);
         QVERIFY(!m_ui->controller->addToPlanAt(QStringLiteral("hymnal"), 0, 0));
         QCOMPARE(m_ui->controller->plan()->property("count").toInt(), now + 2);
+    }
+
+    // CCLI reporting: songs shown live are counted once a day and exported
+    // as CSV from Plan > Song usage.
+    void songUsageReport()
+    {
+        open();
+        const QString amazing = m_ui->controller->plan()->property("count").toInt() > 2 ? planTitle(2) : QString();
+        QCOMPARE(amazing, QStringLiteral("Amazing Grace"));
+        m_ui->click("planItem-2");
+        m_ui->key(Qt::Key_Space);
+        m_ui->key(Qt::Key_Space); // the same song again: still once today
+        QVERIFY(m_ui->click("planItem-3")); // Holy, Holy, Holy
+        m_ui->key(Qt::Key_Space);
+        QVERIFY(m_ui->click("planItem-1")); // not a song: not counted
+        m_ui->key(Qt::Key_Space);
+
+        // Earlier Sundays, recorded directly.
+        app::UsageLog log(m_ui->database());
+        m_ui->controller->selectItem(2);
+        const QString id = m_ui->controller->selectedPresentationId();
+        QVERIFY(log.record(id, QDate::currentDate().addDays(-7)).ok());
+        QVERIFY(log.record(id, QDate::currentDate().addDays(-7)).ok()); // once a day
+        QVERIFY(log.record(id, QDate::currentDate().addMonths(-8)).ok());
+
+        auto rows = log.report(QDate::currentDate().addMonths(-3), QDate::currentDate());
+        QVERIFY(rows.ok());
+        QCOMPARE(int(rows.value().size()), 2);
+        QCOMPARE(rows.value()[0].title, QStringLiteral("Amazing Grace"));
+        QCOMPARE(rows.value()[0].uses, 2); // today and last week; not 8 months ago
+        QCOMPARE(rows.value()[0].first, QDate::currentDate().addDays(-7));
+        QCOMPARE(rows.value()[0].author, QStringLiteral("John Newton"));
+        QCOMPARE(rows.value()[1].title, QStringLiteral("Holy, Holy, Holy"));
+
+        QTemporaryDir dir;
+        const QString file = dir.filePath(QStringLiteral("usage.csv"));
+        QVERIFY(m_ui->controller->exportSongUsage(QUrl::fromLocalFile(file), 0));
+        QVERIFY(m_ui->controller->planMessage().contains(QStringLiteral("2 songs")));
+        QFile csv(file);
+        QVERIFY(csv.open(QIODevice::ReadOnly));
+        const QStringList lines = QString::fromUtf8(csv.readAll()).remove(QChar(0xFEFF)).split(QStringLiteral("\r\n"), Qt::SkipEmptyParts);
+        QCOMPARE(lines.size(), 3);
+        QCOMPARE(lines[0], QStringLiteral("Title,Author,CCLI song number,Copyright,Times used,First used,Last used"));
+        QVERIFY2(lines[1].startsWith(QStringLiteral("Amazing Grace,John Newton,")), qPrintable(lines[1]));
+        QVERIFY(lines[1].contains(QStringLiteral(",3,") ));
+        QVERIFY2(lines[2].startsWith(QStringLiteral("\"Holy, Holy, Holy\",")), qPrintable(lines[2]));
+
+        // In the Plan menu.
+        QVERIFY(m_ui->click("planMenuButton"));
+        QVERIFY(m_ui->click("planUsage"));
+        QTRY_VERIFY(m_ui->item("usage-3")->isVisible());
+        m_ui->key(Qt::Key_Escape);
     }
 
     // The Main light asks before turning the output off.
