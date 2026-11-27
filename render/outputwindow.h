@@ -66,6 +66,10 @@ public:
     void setWallClock(qint64 wallMs) { m_model.setWallClock(wallMs, m_clock.now()); }
     QJsonObject timelineStatus() const { return m_model.timelineStatus(m_clock.now()); }
     QJsonArray videoErrors() const { return m_model.videoErrors(); }
+    // The Media layer's video: "pause", "play" or "seek" (to positionMs);
+    // where it is now (empty: none).
+    void videoControl(const QString &action, qint64 positionMs) { m_model.videoControl(action, positionMs); }
+    QJsonObject videoPosition() const { return m_model.videoPosition(); }
     // Tests: MIDI timecode bytes, received now.
     void feedMidi(const QByteArray &bytes) { m_model.feedMidi(bytes, m_clock.now()); }
 

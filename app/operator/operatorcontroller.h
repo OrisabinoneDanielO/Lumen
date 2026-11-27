@@ -78,6 +78,14 @@ class OperatorController : public QObject
     Q_PROPERTY(int transitionMs READ transitionMs WRITE setTransitionMs NOTIFY transitionChanged)
     Q_PROPERTY(QVariantList transitions READ transitions CONSTANT) // {key, name}
     Q_PROPERTY(bool shownVideoLoops READ shownVideoLoops WRITE setShownVideoLoops NOTIFY stateChanged)
+    // The shown video's start and end points ("m:ss"; end empty: the end).
+    Q_PROPERTY(QString shownVideoStart READ shownVideoStart NOTIFY stateChanged)
+    Q_PROPERTY(QString shownVideoEnd READ shownVideoEnd NOTIFY stateChanged)
+    // The video on the screen now (the Media layer), as its output reports.
+    Q_PROPERTY(bool liveVideo READ liveVideo NOTIFY stateChanged)
+    Q_PROPERTY(double liveVideoPositionMs READ liveVideoPositionMs NOTIFY videoPositionChanged)
+    Q_PROPERTY(double liveVideoDurationMs READ liveVideoDurationMs NOTIFY videoPositionChanged)
+    Q_PROPERTY(bool liveVideoPlaying READ liveVideoPlaying NOTIFY videoPositionChanged)
     Q_PROPERTY(int liveSlide READ liveSlide NOTIFY stateChanged)       // in the grid, or -1
     Q_PROPERTY(int previewSlide READ previewSlide NOTIFY stateChanged) // in the grid, or -1
     Q_PROPERTY(int selectedSlide READ selectedSlide NOTIFY stateChanged) // Edit mode
@@ -196,6 +204,20 @@ public:
     // once and stops (kept with the video in the library).
     bool shownIsVideo() const;
     bool shownVideoLoops() const;
+    QString shownVideoStart() const;
+    QString shownVideoEnd() const;
+    // Sets the shown video's start and end ("1:05", "65", "1:05.5"; an empty
+    // end: play to the end). False (with a plan message) if unreadable.
+    Q_INVOKABLE bool setShownVideoTrim(const QString &start, const QString &end);
+    bool liveVideo() const;
+    double liveVideoPositionMs() const { return liveVideo() ? double(m_livePositionMs) : 0.0; }
+    double liveVideoDurationMs() const { return liveVideo() ? double(m_liveDurationMs) : 0.0; }
+    bool liveVideoPlaying() const { return liveVideo() && m_livePlaying; }
+    Q_INVOKABLE void toggleVideoPlaying();
+    Q_INVOKABLE void seekVideo(double positionMs);
+    // "1:05" from 65000; parses "1:05", "65" or "1:05.5" (-1: unreadable).
+    static QString formatTime(qint64 ms);
+    static qint64 parseTime(const QString &text);
     Q_INVOKABLE void setShownVideoLoops(bool loops);
 
     QString transition() const { return m_transition; }
@@ -333,6 +355,9 @@ signals:
     void stateChanged();
     void scriptureRequested(); // Ctrl+B
     void previewVideoChanged(const QString &path);
+    void videoPositionChanged();
+    // For the outputs: pause, play or seek the video on the Media layer.
+    void videoControlRequested(const QString &action, qint64 positionMs);
     void decksImported(const QString &summary);
     void slideSentLive(int index); // a slide of the selected item (cue recording, batch 20)
     void restartRequested();
@@ -366,6 +391,10 @@ private:
     std::optional<ItemView> m_librarySong;
     QString m_transition = QStringLiteral("cut");
     QHash<QString, QString> m_videoErrors; // local path -> why the output could not play it
+    QString m_livePath; // the video the last status was about
+    qint64 m_livePositionMs = 0;
+    qint64 m_liveDurationMs = 0;
+    bool m_livePlaying = false;
     QString problemFor(const QString &path) const;
     int m_transitionMs = 600;
     void applyTransition();

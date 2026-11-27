@@ -41,6 +41,15 @@ void OutputBridge::preload(const QString &videoPath)
         emit sendFailed(sent.error().message);
 }
 
+void OutputBridge::videoControl(const QString &action, qint64 positionMs)
+{
+    if (auto sent = m_link.send({{QStringLiteral("cmd"), QStringLiteral("video")},
+                                 {QStringLiteral("action"), action},
+                                 {QStringLiteral("positionMs"), positionMs}});
+        !sent.ok())
+        emit sendFailed(sent.error().message);
+}
+
 void OutputBridge::push(const Scene &scene)
 {
     auto sent = m_link.send({{QStringLiteral("cmd"), QStringLiteral("scene")},

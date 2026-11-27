@@ -470,6 +470,9 @@ int main(int argc, char *argv[])
         if (output) {
             QObject::connect(&controller, &app::OperatorController::previewVideoChanged, output->bridge.get(),
                              &show::OutputBridge::preload);
+            // Pause, play and seek from the Live column.
+            QObject::connect(&controller, &app::OperatorController::videoControlRequested, output->bridge.get(),
+                             &show::OutputBridge::videoControl);
         }
     };
     const bool outputWanted = parser.isSet(noOutputOption) ? false

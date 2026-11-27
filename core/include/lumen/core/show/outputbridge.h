@@ -36,6 +36,9 @@ public:
 
     // Asks the renderer to open a video ahead of use (batch 9).
     void preload(const QString &videoPath);
+    // The video on the Media layer: "pause", "play" or "seek" (to
+    // positionMs).
+    void videoControl(const QString &action, qint64 positionMs);
 
 signals:
     void sendFailed(const QString &error);

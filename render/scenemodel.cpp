@@ -177,6 +177,24 @@ void SceneModel::reportVideoError(const QString &path, const QString &message)
     m_videoErrors.insert(local, message.isEmpty() ? QStringLiteral("could not be played") : message);
 }
 
+void SceneModel::reportVideoPosition(const QString &path, qint64 positionMs, qint64 durationMs, bool playing)
+{
+    const QUrl url(path);
+    m_videoPosition = {{"path", url.isLocalFile() ? url.toLocalFile() : path},
+                       {"positionMs", positionMs},
+                       {"durationMs", durationMs},
+                       {"playing", playing}};
+}
+
+QJsonObject SceneModel::videoPosition() const
+{
+    // Only while that video is still on the Media layer.
+    const Content &media = m_scene.layer(core::show::Layer::Media).content;
+    if (media.kind != Content::Kind::Video || m_videoPosition.value("path").toString() != media.videoPath)
+        return {};
+    return m_videoPosition;
+}
+
 QJsonArray SceneModel::videoErrors() const
 {
     QJsonArray list;
