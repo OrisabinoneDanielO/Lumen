@@ -297,3 +297,7 @@ target_link_libraries(tst_chords PRIVATE Lumen::Songs)
 lumen_add_test(tst_shared_screen tst_shared_screen.cpp)
 target_link_libraries(tst_shared_screen PRIVATE Lumen::Operator Qt6::Test)
 target_compile_definitions(tst_shared_screen PRIVATE LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
+
+# The free songs every library starts with.
+lumen_add_test(tst_free_songs tst_free_songs.cpp)
+target_link_libraries(tst_free_songs PRIVATE Lumen::Operator Lumen::Songs)

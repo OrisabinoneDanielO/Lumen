@@ -8,6 +8,7 @@
 #include "messagetemplates.h"
 #include "sharing.h"
 #include "sharedscreen.h"
+#include "freesongs.h"
 #include "cuecontroller.h"
 #include "livecontrol.h"
 #include "midiinput.h"
@@ -814,6 +815,24 @@ int main(int argc, char *argv[])
             turnOutputOn();
             return output ? output->link.get() : nullptr;
         });
+
+    // The free songs (songs/README.md): added to the library once for each
+    // version of the collection, a moment after the window is up (about
+    // three seconds; songs already there are left alone). Not in short test
+    // runs.
+    const int freeSongsVersion = app::builtInFreeSongsVersion();
+    if (!parser.isSet(quitAfter) && settings.value(QStringLiteral("songs/freeCollection"), 0).toInt() < freeSongsVersion) {
+        QTimer::singleShot(1500, &app, [&, freeSongsVersion] {
+            const auto added = app::addFreeSongs(*library, songLibrary, app::builtInFreeSongs());
+            if (!added.ok()) {
+                qWarning("Free songs not added: %s", qPrintable(added.error().message));
+                return;
+            }
+            QSettings().setValue(QStringLiteral("songs/freeCollection"), freeSongsVersion);
+            controller.refreshLibrary();
+            qInfo("Free songs added to the library: %d", added.value());
+        });
+    }
 
     if (parser.isSet(quitAfter))
         QTimer::singleShot(parser.value(quitAfter).toInt(), &app, &QCoreApplication::quit);
