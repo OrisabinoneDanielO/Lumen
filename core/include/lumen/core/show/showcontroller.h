@@ -45,6 +45,10 @@ public:
     // kept running while the UI restarted. Later changes continue its
     // sequence numbers. Emits nothing: the renderer already shows it.
     void adopt(const Scene &scene);
+    // Shows a scene decided elsewhere (another computer's screen this one
+    // sends to): like any change, with the next sequence number, and emits
+    // sceneChanged.
+    void replaceScene(const Scene &scene) { commit(scene); }
 
 signals:
     void sceneChanged(const lumen::core::show::Scene &scene);

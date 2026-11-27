@@ -7,6 +7,7 @@
 #include "editorcontroller.h"
 #include "messagetemplates.h"
 #include "sharing.h"
+#include "sharedscreen.h"
 #include "cuecontroller.h"
 #include "livecontrol.h"
 #include "midiinput.h"
@@ -404,7 +405,36 @@ int main(int argc, char *argv[])
         sharing.setEnabled(true);
     QObject::connect(&sharing, &app::Sharing::changed, &app, [&sharing] {
         QSettings().setValue(QLatin1String(sharingEnabledKey), sharing.enabled());
+        QSettings().setValue(QStringLiteral("sharing/takesScreen"), sharing.takesScreen());
     });
+
+    // Two operators, one screen (sharedscreen.h). Here: another computer may
+    // send to this screen when allowed (off by default, remembered).
+    app::ScreenHost screenHost(show, QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation))
+                                         .filePath(QStringLiteral("screen-files")));
+    sharing.setTakesScreen(settings.value(QStringLiteral("sharing/takesScreen"), false).toBool());
+    sharing.setScreenHandler([&screenHost](const QString &cmd, const QJsonObject &request, const QByteArray &payload) {
+        return screenHost.handle(cmd, request, payload);
+    });
+    screenHost.setExtraState([&controller, &show] {
+        if (!controller.liveVideo())
+            return QJsonObject{};
+        return QJsonObject{{"videoPosition",
+                            QJsonObject{{"path", show.scene().layer(show::Layer::Media).content.videoPath},
+                                        {"positionMs", qint64(controller.liveVideoPositionMs())},
+                                        {"durationMs", qint64(controller.liveVideoDurationMs())},
+                                        {"playing", controller.liveVideoPlaying()}}}};
+    });
+    // Its operator pauses or jumps along a video: this output does it.
+    QObject::connect(&screenHost, &app::ScreenHost::videoControlRequested, &controller,
+                     &app::OperatorController::videoControlRequested);
+    // Or: this computer sends to another's screen.
+    app::ScreenLink screenLink(show);
+    QObject::connect(&screenLink, &app::ScreenLink::changed, &controller, [&] {
+        controller.setRemoteScreen(screenLink.active() ? screenLink.target() : QString());
+    });
+    QObject::connect(&controller, &app::OperatorController::videoControlRequested, &screenLink, &app::ScreenLink::videoControl);
+    QObject::connect(&screenLink, &app::ScreenLink::remoteStatus, &controller, &app::OperatorController::setOutputStatus);
     QObject::connect(&sharing, &app::Sharing::imported, &controller, &app::OperatorController::refreshLibrary);
 
     // Remote control (batch 19): the phone remote, OSC and MIDI, each off
@@ -683,7 +713,8 @@ int main(int argc, char *argv[])
             });
         } else {
             actualMain.clear();
-            controller.setOutputStatus({});
+            if (!screenLink.active()) // its status comes from the other screen
+                controller.setOutputStatus({});
         }
         if (stage) {
             (void)stage->ask({{QStringLiteral("cmd"), QStringLiteral("status")}}, [&](const QJsonObject &status) {
@@ -749,6 +780,7 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("streamController"), QVariant::fromValue<QObject *>(&streamController)},
                                  {QStringLiteral("editorController"), QVariant::fromValue<QObject *>(&editorController)},
                                  {QStringLiteral("sharing"), QVariant::fromValue<QObject *>(&sharing)},
+                                 {QStringLiteral("screenLink"), QVariant::fromValue<QObject *>(&screenLink)},
                                  {QStringLiteral("remote"), QVariant::fromValue<QObject *>(&remote)},
                                  {QStringLiteral("osc"), QVariant::fromValue<QObject *>(&osc)},
                                  {QStringLiteral("midi"), QVariant::fromValue<QObject *>(&midi)},

@@ -395,6 +395,24 @@ private slots:
         ui.settle();
         QVERIFY(ui.click("shareCopyPlan-0"));
         QTRY_COMPARE(int(Repository<Plan>(ui.database()).list().value().size()), before + 1);
+
+        // Two operators, one screen: not offered until the screen allows it.
+        QVERIFY(!ui.item("screenLinkToggle")->isVisible());
+        QVERIFY(ui.click("shareTakesScreen"));
+        QVERIFY(ui.sharing->takesScreen());
+        QVERIFY(ui.click("shareConnect")); // again, to learn it takes a screen
+        QTRY_VERIFY(ui.sharing->remoteTakesScreen());
+        ui.settle();
+        QTRY_VERIFY(ui.item("screenLinkToggle")->isVisible());
+        QVERIFY(ui.click("screenLinkToggle"));
+        QTRY_VERIFY(ui.screenLink->active());
+        QTRY_VERIFY(ui.screenLink->status().startsWith(QStringLiteral("Live goes to Test PC")));
+        QTRY_VERIFY(ui.item("liveRemoteScreen")->isVisible());
+        QVERIFY(ui.click("screenLinkToggle")); // Stop sending
+        QVERIFY(!ui.screenLink->active());
+        QTRY_VERIFY(!ui.item("liveRemoteScreen")->isVisible());
+        QVERIFY(ui.click("shareTakesScreen"));
+        QVERIFY(!ui.sharing->takesScreen());
         QVERIFY(ui.click("shareToggle"));
         QVERIFY(!ui.sharing->enabled());
     }

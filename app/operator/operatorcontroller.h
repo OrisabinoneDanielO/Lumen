@@ -90,6 +90,8 @@ class OperatorController : public QObject
     Q_PROPERTY(QString shownVideoEnd READ shownVideoEnd NOTIFY stateChanged)
     // The video on the screen now (the Media layer), as its output reports.
     Q_PROPERTY(bool liveVideo READ liveVideo NOTIFY stateChanged)
+    // Live goes to another computer's screen (its name), or "".
+    Q_PROPERTY(QString remoteScreen READ remoteScreen NOTIFY stateChanged)
     Q_PROPERTY(double liveVideoPositionMs READ liveVideoPositionMs NOTIFY videoPositionChanged)
     Q_PROPERTY(double liveVideoDurationMs READ liveVideoDurationMs NOTIFY videoPositionChanged)
     Q_PROPERTY(bool liveVideoPlaying READ liveVideoPlaying NOTIFY videoPositionChanged)
@@ -226,6 +228,14 @@ public:
     // end: play to the end). False (with a plan message) if unreadable.
     Q_INVOKABLE bool setShownVideoTrim(const QString &start, const QString &end);
     bool liveVideo() const;
+    QString remoteScreen() const { return m_remoteScreen; }
+    void setRemoteScreen(const QString &name)
+    {
+        if (name == m_remoteScreen)
+            return;
+        m_remoteScreen = name;
+        emit stateChanged();
+    }
     double liveVideoPositionMs() const { return liveVideo() ? double(m_livePositionMs) : 0.0; }
     double liveVideoDurationMs() const { return liveVideo() ? double(m_liveDurationMs) : 0.0; }
     bool liveVideoPlaying() const { return liveVideo() && m_livePlaying; }
@@ -414,6 +424,7 @@ private:
     QString m_transition = QStringLiteral("cut");
     QHash<QString, QString> m_videoErrors; // local path -> why the output could not play it
     QString m_livePath; // the video the last status was about
+    QString m_remoteScreen;
     qint64 m_livePositionMs = 0;
     qint64 m_liveDurationMs = 0;
     bool m_livePlaying = false;

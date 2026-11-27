@@ -25,6 +25,8 @@ Window {
     property QtObject editorController: null
     // Sharing on the local network (batch 18); optional.
     property QtObject sharing: null
+    // Sending this computer's live output to another's screen (may be null).
+    property QtObject screenLink: null
     // Remote control (batch 19); optional.
     property QtObject remote: null
     property QtObject osc: null
@@ -516,6 +518,7 @@ Window {
         z: 50
         sourceComponent: SharePopover {
             sharing: window.sharing
+            screenLink: window.screenLink
             controller: window.controller
             onCloseRequested: sharePopover.active = false
         }
