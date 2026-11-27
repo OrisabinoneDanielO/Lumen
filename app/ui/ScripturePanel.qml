@@ -41,6 +41,60 @@ Window {
     readonly property string hint: qsTr("%1: Space for the chapter").arg(root.scripture.bookFor(bookInput.text))
 
     function refresh() { root.scripture.lookup(root.composed()) }
+
+    // Many Bibles: up to eight show as buttons (the chosen one, those used
+    // lately, then the bundled order), the rest in the list (All
+    // translations), grouped by language.
+    property var recentIds: []
+    property string listMode: "" // "", "primary" or "second": the list is open
+    property string listFilter: ""
+    function quickTranslations(exclude) {
+        const all = root.scripture.translations.map((t, i) => Object.assign({ index: i }, t))
+        const picked = []
+        const add = t => {
+            if (t && t.index !== exclude && !picked.some(p => p.id === t.id) && picked.length < 8)
+                picked.push(t)
+        }
+        if (root.scripture.translation !== exclude)
+            add(all[root.scripture.translation])
+        if (root.scripture.secondTranslation >= 0 && exclude >= 0)
+            add(all[root.scripture.secondTranslation])
+        for (const id of root.recentIds)
+            add(all.find(t => t.id === id))
+        for (const t of all)
+            add(t)
+        return picked.sort((a, b) => a.index - b.index) // buttons stay in place
+    }
+    function remember(index) {
+        const t = root.scripture.translations[index]
+        if (t)
+            root.recentIds = [t.id].concat(root.recentIds.filter(id => id !== t.id)).slice(0, 8)
+    }
+    // The list: language headings, then that language's translations.
+    function listRows() {
+        const f = root.listFilter.trim().toLowerCase()
+        const rows = root.scripture.translations.map((t, i) => Object.assign({ index: i, heading: false }, t))
+            .filter(t => f === "" || (t.abbreviation + " " + t.title + " " + t.language).toLowerCase().includes(f))
+            .filter(t => root.listMode !== "second" || t.index !== root.scripture.translation)
+        rows.sort((a, b) => a.language === b.language ? a.index - b.index : a.language.localeCompare(b.language))
+        const out = []
+        for (const r of rows) {
+            if (out.length === 0 || out[out.length - 1].language !== r.language)
+                out.push({ heading: true, language: r.language, id: "h-" + r.language, index: -1, abbreviation: "", title: "" })
+            out.push(r)
+        }
+        return out
+    }
+    function pickFromList(index) {
+        if (root.listMode === "second")
+            root.scripture.secondTranslation = index
+        else
+            root.scripture.selectTranslation(index)
+        root.remember(index)
+        root.listMode = ""
+        root.listFilter = ""
+        verseInput.forceActiveFocus()
+    }
     // Into a part, all of it highlighted to type over.
     function focusPart(part) {
         part.forceActiveFocus()
@@ -364,11 +418,11 @@ Window {
                     color: Theme.textMuted
                 }
                 Repeater {
-                    model: root.scripture.translations
+                    model: root.quickTranslations(-1)
                     delegate: Rectangle {
                         id: chip
                         required property var modelData
-                        required property int index
+                        readonly property int index: modelData.index
                         readonly property bool chosen: index === root.scripture.translation
 
                         objectName: "translation-" + modelData.id
@@ -394,9 +448,30 @@ Window {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 root.scripture.selectTranslation(chip.index)
+                                root.remember(chip.index)
                                 verseInput.forceActiveFocus()
                             }
                         }
+                    }
+                }
+                Rectangle {
+                    objectName: "translationMore"
+                    visible: root.scripture.translations.length > 8
+                    width: moreLabel.implicitWidth + 24
+                    height: 32
+                    radius: 6
+                    color: Theme.raised
+                    border.color: Theme.border
+                    LText {
+                        id: moreLabel
+                        anchors.centerIn: parent
+                        text: qsTr("All translations (%1) ▾").arg(root.scripture.translations.length)
+                        font.pixelSize: 12
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.listMode = root.listMode === "primary" ? "" : "primary"
                     }
                 }
                 Rectangle {
@@ -450,8 +525,7 @@ Window {
                 Repeater {
                     // "Off", then every translation but the chosen one.
                     model: [{ index: -1, abbreviation: qsTr("Off"), id: "off" }].concat(
-                               root.scripture.translations.map((t, i) => ({ index: i, abbreviation: t.abbreviation, id: t.id }))
-                                   .filter(t => t.index !== root.scripture.translation))
+                               root.quickTranslations(root.scripture.translation))
                     delegate: Rectangle {
                         id: secondChip
                         required property var modelData
@@ -479,9 +553,31 @@ Window {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 root.scripture.secondTranslation = secondChip.modelData.index
+                                if (secondChip.modelData.index >= 0)
+                                    root.remember(secondChip.modelData.index)
                                 verseInput.forceActiveFocus()
                             }
                         }
+                    }
+                }
+                Rectangle {
+                    objectName: "secondMore"
+                    visible: root.scripture.translations.length > 8
+                    width: secondMoreLabel.implicitWidth + 24
+                    height: 32
+                    radius: 6
+                    color: Theme.raised
+                    border.color: Theme.border
+                    LText {
+                        id: secondMoreLabel
+                        anchors.centerIn: parent
+                        text: qsTr("Other… ▾")
+                        font.pixelSize: 12
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.listMode = root.listMode === "second" ? "" : "second"
                     }
                 }
             }
@@ -759,6 +855,105 @@ Window {
                 }
             }
         }
+    }
+
+    // All translations, grouped by language, with a filter. A click outside
+    // or Escape closes it.
+    MouseArea {
+        anchors.fill: parent
+        visible: root.listMode !== ""
+        z: 50
+        onClicked: { root.listMode = ""; root.listFilter = "" }
+    }
+    Rectangle {
+        objectName: "translationList"
+        visible: root.listMode !== ""
+        z: 51
+        x: 20
+        y: 120
+        width: Math.min(520, root.width - 40)
+        height: Math.min(listColumn.implicitHeight + 16, root.height - y - 20)
+        radius: 8
+        color: Theme.window
+        border.color: Theme.border
+        onVisibleChanged: if (visible) listFilterField.focusInput()
+        ColumnLayout {
+            id: listColumn
+            anchors.fill: parent
+            anchors.margins: 8
+            spacing: 6
+            SearchField {
+                id: listFilterField
+                objectName: "translationFilter"
+                inputName: "translationFilterText"
+                Layout.fillWidth: true
+                placeholder: root.listMode === "second" ? qsTr("Side by side with… (type to filter)")
+                                                         : qsTr("Type a language or name to filter")
+                text: root.listFilter
+                onTextChanged: root.listFilter = text
+                onAccepted: {
+                    const rows = root.listRows().filter(r => !r.heading)
+                    if (rows.length > 0)
+                        root.pickFromList(rows[0].index)
+                }
+            }
+            ListView {
+                id: translationListView
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(contentHeight, 420)
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                model: root.listMode !== "" ? root.listRows() : []
+                delegate: Rectangle {
+                    id: listRow
+                    required property var modelData
+                    objectName: modelData.heading ? "translationHeading-" + modelData.language : "translationItem-" + modelData.id
+                    width: translationListView.width
+                    height: modelData.heading ? 26 : 34
+                    radius: 6
+                    color: !modelData.heading && rowMouse.containsMouse ? Theme.raised : "transparent"
+                    readonly property bool chosen: !modelData.heading
+                                                   && modelData.index === (root.listMode === "second" ? root.scripture.secondTranslation
+                                                                                                      : root.scripture.translation)
+                    SectionLabel {
+                        visible: listRow.modelData.heading
+                        anchors.left: parent.left
+                        anchors.leftMargin: 8
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 4
+                        text: listRow.modelData.language.toUpperCase()
+                    }
+                    RowLayout {
+                        visible: !listRow.modelData.heading
+                        anchors.fill: parent
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 8
+                        spacing: 10
+                        LText {
+                            Layout.preferredWidth: 110
+                            text: listRow.modelData.abbreviation
+                            font.weight: listRow.chosen ? Font.Bold : Font.DemiBold
+                            color: listRow.chosen ? "#BFD3FF" : Theme.text
+                        }
+                        LText {
+                            Layout.fillWidth: true
+                            text: listRow.modelData.title
+                            font.pixelSize: 12
+                            color: Theme.textMuted
+                        }
+                    }
+                    MouseArea {
+                        id: rowMouse
+                        anchors.fill: parent
+                        enabled: !listRow.modelData.heading
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.pickFromList(listRow.modelData.index)
+                    }
+                }
+            }
+        }
+        Keys.onEscapePressed: { root.listMode = ""; root.listFilter = "" }
     }
 
     Loader {
