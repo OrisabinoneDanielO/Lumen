@@ -12,6 +12,8 @@
 #include <QObject>
 #include <QTimer>
 
+#include <functional>
+
 class QTcpServer;
 class QTcpSocket;
 class QUdpSocket;
@@ -49,6 +51,11 @@ class Sharing : public QObject
     Q_PROPERTY(QObject *remoteSongs READ remoteSongs CONSTANT)
     Q_PROPERTY(QString status READ status NOTIFY changed)
     Q_PROPERTY(bool busy READ busy NOTIFY changed)
+    // Other computers may send to this computer's screen (off by default).
+    Q_PROPERTY(bool takesScreen READ takesScreen WRITE setTakesScreen NOTIFY changed)
+    // The connected computer lets this one send to its screen.
+    Q_PROPERTY(bool remoteTakesScreen READ remoteTakesScreen NOTIFY changed)
+    Q_PROPERTY(QString remoteName READ remoteName NOTIFY changed)
 
 public:
     struct Options
@@ -75,6 +82,16 @@ public:
     QObject *remoteSongs() { return &m_songModel; }
     QString status() const { return m_status; }
     bool busy() const { return m_busy; }
+    bool remoteTakesScreen() const { return m_remoteTakesScreen; }
+    bool takesScreen() const { return m_takesScreen; }
+    void setTakesScreen(bool on)
+    {
+        if (on == m_takesScreen)
+            return;
+        m_takesScreen = on;
+        emit changed();
+    }
+    QString remoteName() const { return m_remoteName; }
 
     // Looks for other Lumen computers (without sharing this one).
     Q_INVOKABLE void discover();
@@ -89,6 +106,22 @@ public:
     Q_INVOKABLE bool copySongs(const QVariantList &remoteSongRows);
     // Sends one of this library's plans to the connected computer.
     Q_INVOKABLE bool sendPlan(const QString &planId);
+
+    // The connected computer (connectTo), for the live screen link.
+    struct Connection
+    {
+        QHostAddress host;
+        quint16 port = 0;
+        QString code;
+        QString name;
+    };
+    Connection connection() const { return {m_remoteHost, m_remotePort, m_remoteCode, m_remoteName}; }
+
+    // Commands starting "screen" (another computer sending to this screen,
+    // screenhost.h) go to this handler; none: they are refused. The reply
+    // may carry bytes too.
+    using ScreenHandler = std::function<QJsonObject(const QString &cmd, const QJsonObject &request, const QByteArray &payload)>;
+    void setScreenHandler(ScreenHandler handler) { m_screenHandler = std::move(handler); }
 
     // Results of the last transfer, for tests and the UI.
     QString lastPlanId() const { return m_lastPlanId; }
@@ -137,6 +170,10 @@ private:
     QHostAddress m_remoteHost;
     quint16 m_remotePort = 0;
     QString m_remoteCode;
+    QString m_remoteName;
+    bool m_remoteTakesScreen = false;
+    bool m_takesScreen = false;
+    ScreenHandler m_screenHandler;
     QString m_status;
     bool m_busy = false;
     QString m_lastPlanId;

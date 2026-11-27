@@ -20,6 +20,7 @@
 #include "editorcontroller.h"
 #include "messagetemplates.h"
 #include "sharing.h"
+#include "sharedscreen.h"
 #include "cuecontroller.h"
 #include "livecontrol.h"
 #include "midiinput.h"
@@ -64,7 +65,9 @@ public:
         osc.reset();
         remote.reset();
         live.reset();
+        screenLink.reset();
         sharing.reset();
+        screenHost.reset();
         editor.reset();
         templates.reset();
         props.reset();
@@ -124,6 +127,15 @@ public:
         editor = std::make_unique<app::EditorController>(*controller);
         editor->attach(*m_db, songs.get());
         sharing = std::make_unique<app::Sharing>(*m_db, QStringLiteral("Test PC"), thumbnails.path());
+        // Two operators, one screen, as main.cpp sets it up.
+        screenHost = std::make_unique<app::ScreenHost>(show, thumbnails.filePath(QStringLiteral("screen-files")));
+        sharing->setScreenHandler([host = screenHost.get()](const QString &cmd, const QJsonObject &request, const QByteArray &payload) {
+            return host->handle(cmd, request, payload);
+        });
+        screenLink = std::make_unique<app::ScreenLink>(show);
+        QObject::connect(screenLink.get(), &app::ScreenLink::changed, controller.get(), [this] {
+            controller->setRemoteScreen(screenLink->active() ? screenLink->target() : QString());
+        });
         live = std::make_unique<app::LiveControl>(*controller);
         remote = std::make_unique<app::RemoteServer>(*live, 0);
         osc = std::make_unique<app::OscServer>(*live, 0);
@@ -152,6 +164,7 @@ public:
              {QStringLiteral("messageTemplates"), QVariant::fromValue<QObject *>(templates.get())},
              {QStringLiteral("editorController"), QVariant::fromValue<QObject *>(editor.get())},
              {QStringLiteral("sharing"), QVariant::fromValue<QObject *>(sharing.get())},
+             {QStringLiteral("screenLink"), QVariant::fromValue<QObject *>(screenLink.get())},
              {QStringLiteral("remote"), QVariant::fromValue<QObject *>(remote.get())},
              {QStringLiteral("osc"), QVariant::fromValue<QObject *>(osc.get())},
              {QStringLiteral("midi"), QVariant::fromValue<QObject *>(midi.get())},
@@ -287,6 +300,8 @@ public:
     std::unique_ptr<app::MessageTemplates> templates;
     std::unique_ptr<app::EditorController> editor;
     std::unique_ptr<app::Sharing> sharing;
+    std::unique_ptr<app::ScreenHost> screenHost;
+    std::unique_ptr<app::ScreenLink> screenLink;
     std::unique_ptr<app::LiveControl> live;
     std::unique_ptr<app::RemoteServer> remote;
     std::unique_ptr<app::OscServer> osc;

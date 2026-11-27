@@ -196,7 +196,8 @@ void Sharing::serve(QTcpSocket *socket)
             }
             *header = QJsonDocument::fromJson(buffer->left(end)).object();
             buffer->remove(0, end + 1);
-            *expected = header->value("cmd").toString() == QLatin1String("send") ? header->value("size").toInteger() : 0;
+            const QString cmd = header->value("cmd").toString();
+            *expected = cmd == QLatin1String("send") || cmd == QLatin1String("screenFile") ? header->value("size").toInteger() : 0;
             if (*expected < 0 || *expected > maxPayload) {
                 socket->write(line({{"ok", false}, {"error", "too large"}}));
                 socket->disconnectFromHost();
@@ -235,6 +236,11 @@ QJsonObject Sharing::handle(const QString &caller, const QJsonObject &request, c
     wrongCount = 0;
 
     const QString cmd = request.value("cmd").toString();
+    if (cmd.startsWith(QLatin1String("screen"))) {
+        if (!m_screenHandler || !m_takesScreen)
+            return {{"ok", false}, {"error", "this computer does not take a screen from others"}};
+        return m_screenHandler(cmd, request, payload);
+    }
     QTemporaryDir dir;
     const QString file = dir.filePath(QStringLiteral("shared.lumen"));
     if (cmd == QLatin1String("list")) {
@@ -253,7 +259,8 @@ QJsonObject Sharing::handle(const QString &caller, const QJsonObject &request, c
                                                 {"author", p.metadata.value("author").toString()}});
             }
         }
-        return {{"ok", true}, {"name", m_name}, {"plans", planRows}, {"songs", songRows}};
+        return {{"ok", true}, {"name", m_name}, {"plans", planRows}, {"songs", songRows},
+                {"screen", m_screenHandler && m_takesScreen}}; // takes another computer's live output
     }
     if (cmd == QLatin1String("plan") || cmd == QLatin1String("songs")) {
         QStringList ids;
@@ -409,6 +416,8 @@ bool Sharing::connectToAddress(const QString &hostAndPort, const QString &code)
         songRows << v.toObject().toVariantMap();
     m_planModel.setRows(plansRows);
     m_songModel.setRows(songRows);
+    m_remoteName = reply.value().value("name").toString();
+    m_remoteTakesScreen = reply.value().value("screen").toBool();
     m_status = tr("Connected to \"%1\": %2 plans, %3 songs")
                    .arg(reply.value().value("name").toString())
                    .arg(plansRows.size())

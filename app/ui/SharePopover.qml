@@ -9,6 +9,7 @@ Rectangle {
 
     required property QtObject sharing
     required property QtObject controller
+    property QtObject screenLink: null
     signal closeRequested()
 
     property int peer: -1
@@ -99,6 +100,27 @@ Rectangle {
                         font.pixelSize: 11
                         color: Theme.textMuted
                     }
+                }
+            }
+            // Two operators, one screen: the other computer's live output
+            // shows on this computer's screen too.
+            RowLayout {
+                visible: root.sharing.enabled
+                Layout.fillWidth: true
+                spacing: 8
+                LText {
+                    Layout.fillWidth: true
+                    text: root.sharing.takesScreen
+                          ? qsTr("Other computers with the code can put slides on this screen.")
+                          : qsTr("Let another computer (a laptop running scripture, say) put slides on this screen.")
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 12
+                }
+                Small {
+                    objectName: "shareTakesScreen"
+                    text: root.sharing.takesScreen ? qsTr("Stop") : qsTr("Allow")
+                    variant: root.sharing.takesScreen ? "default" : "primary"
+                    onClicked: root.sharing.takesScreen = !root.sharing.takesScreen
                 }
             }
 
@@ -194,6 +216,28 @@ Rectangle {
                 elide: Text.ElideNone
                 font.pixelSize: 11
                 color: Theme.live
+            }
+
+            // Send what goes live here to the connected computer's screen.
+            RowLayout {
+                visible: root.screenLink !== null && (root.screenLink.active || root.sharing.remoteTakesScreen)
+                Layout.fillWidth: true
+                spacing: 8
+                LText {
+                    objectName: "screenLinkStatus"
+                    Layout.fillWidth: true
+                    text: root.screenLink && root.screenLink.active ? root.screenLink.status
+                          : qsTr("\"%1\" lets you put your slides on its screen.").arg(root.sharing.remoteName)
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 12
+                }
+                Small {
+                    objectName: "screenLinkToggle"
+                    text: root.screenLink && root.screenLink.active ? qsTr("Stop sending")
+                                                                   : qsTr("Send my live output there")
+                    variant: root.screenLink && root.screenLink.active ? "default" : "primary"
+                    onClicked: root.screenLink.active ? root.screenLink.stop() : root.screenLink.start(root.sharing)
+                }
             }
 
             // What the other computer has.

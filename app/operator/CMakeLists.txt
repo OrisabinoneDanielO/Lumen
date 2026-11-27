@@ -51,6 +51,8 @@ add_library(lumen_operator STATIC
     editorcontroller.cpp
     sharing.h
     sharing.cpp
+    sharedscreen.h
+    sharedscreen.cpp
     livecontrol.h
     livecontrol.cpp
     remoteserver.h

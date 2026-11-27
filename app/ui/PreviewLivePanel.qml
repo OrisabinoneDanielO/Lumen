@@ -200,6 +200,27 @@ Rectangle {
                             font.pixelSize: 11
                         }
                     }
+                    // Live goes to another computer's screen (Share panel).
+                    Rectangle {
+                        objectName: "liveRemoteScreen"
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        anchors.margins: 3
+                        height: Math.max(24, remoteText.implicitHeight + 6)
+                        visible: root.controller.remoteScreen !== ""
+                        color: "#CC17325A"
+                        LText {
+                            id: remoteText
+                            anchors.centerIn: parent
+                            width: parent.width - 8
+                            horizontalAlignment: Text.AlignHCenter
+                            wrapMode: Text.WordWrap
+                            text: qsTr("On %1's screen").arg(root.controller.remoteScreen)
+                            color: "#FFFFFF"
+                            font.pixelSize: 11
+                        }
+                    }
                     Rectangle {
                         objectName: "liveOutputOff"
                         anchors.left: parent.left
@@ -207,7 +228,7 @@ Rectangle {
                         anchors.bottom: parent.bottom
                         anchors.margins: 3
                         height: Math.max(24, outputOffText.implicitHeight + 6)
-                        visible: !root.controller.outputConnected
+                        visible: !root.controller.outputConnected && root.controller.remoteScreen === ""
                         color: Theme.warnBackground
                         LText {
                             id: outputOffText

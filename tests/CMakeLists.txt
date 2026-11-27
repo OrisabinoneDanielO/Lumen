@@ -292,3 +292,8 @@ endif()
 # Chords in lyrics and transposition.
 lumen_add_test(tst_chords tst_chords.cpp)
 target_link_libraries(tst_chords PRIVATE Lumen::Songs)
+
+# Two operators, one screen: a laptop sends to the projector computer's screen.
+lumen_add_test(tst_shared_screen tst_shared_screen.cpp)
+target_link_libraries(tst_shared_screen PRIVATE Lumen::Operator Qt6::Test)
+target_compile_definitions(tst_shared_screen PRIVATE LUMEN_MEDIA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/media")
