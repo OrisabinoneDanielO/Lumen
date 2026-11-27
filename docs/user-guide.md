@@ -18,7 +18,7 @@ Start Lumen from the Start menu, Applications or your desktop's app list (or `lu
 
 **Plan ▾ → Language…** shows the window in English, French, Spanish or Portuguese; it changes at once. Lumen starts in your computer's language when it has it. Yoruba, Igbo, Hausa and Swahili are waiting for translators (see `i18n/README.md`).
 
-Drag the borders between the service plan, the slides, the Preview and Live column and the library to give each the room you want; double-click a border for the default. On smaller windows the toolbar shortens its labels (the F-key shortcuts still work), and Preview, Live and the Previous / Next buttons always stay in view; the layers and controls below them scroll.
+Clicking outside an open menu or panel closes it, and that click does nothing else, so a stray click never changes the screen; the toolbar (Clear, Logo, Black) always acts at once. Drag the borders between the service plan, the slides, the Preview and Live column and the library to give each the room you want; double-click a border for the default. On smaller windows the toolbar shortens its labels (the F-key shortcuts still work), and Preview, Live and the Previous / Next buttons always stay in view; the layers and controls below them scroll.
 
 ## When a video cannot be played
 

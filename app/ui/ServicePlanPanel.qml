@@ -45,6 +45,8 @@ Rectangle {
         default: return kind
         }
     }
+    // What is open now, for the window's click-outside rule (Main.qml).
+    readonly property var openMenus: [planMenu, itemMenu].filter(m => m.visible)
     function closeMenus() {
         const open = menuPage !== "" || itemMenuFor >= 0
         menuPage = ""

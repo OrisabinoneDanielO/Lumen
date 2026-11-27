@@ -18,6 +18,14 @@ Rectangle {
     signal themesRequested()
     // What follows the pointer while dragging onto the plan (Main.qml).
     property Item dragGhost: null
+    // The import details boxes, for the window's click-outside rule.
+    readonly property var openMenus: [details, deckDetails].filter(m => m.visible)
+    function closeMenus() {
+        const open = details.visible || deckDetails.visible
+        details.visible = false
+        deckDetails.visible = false
+        return open
+    }
     // Scripture and Themes are separate parts (null when not loaded).
     property bool scriptureAvailable: true
     property bool themesAvailable: true

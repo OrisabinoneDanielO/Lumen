@@ -461,6 +461,52 @@ private slots:
         QTRY_COMPARE(m_ui->item("black")->property("text").toString(), QStringLiteral("Black"));
     }
 
+    // Clicking outside an open menu or popover closes it, and that click
+    // does nothing else.
+    void clickingOutsideCloses()
+    {
+        open();
+        // The Plan menu: a click on a plan item closes it and selects nothing.
+        QVERIFY(m_ui->click("planMenuButton"));
+        QTRY_VERIFY(m_ui->item("planMenu")->isVisible());
+        QVERIFY(m_ui->click("planUsage")); // inside: it works (a page of the menu)
+        QTRY_VERIFY(m_ui->item("usage-3")->isVisible());
+        const int before = m_ui->controller->currentItem();
+        QVERIFY(m_ui->click("previewLive"));
+        QTRY_VERIFY(!m_ui->item("planMenu")->isVisible());
+        QCOMPARE(m_ui->controller->currentItem(), before);
+
+        // A toolbar popover: typing inside keeps it open; a click on a slide
+        // closes it without sending the slide live.
+        m_ui->click("planItem-2");
+        QTRY_VERIFY(m_ui->item("slide-1"));
+        QVERIFY(m_ui->click("propsButton"));
+        QTRY_VERIFY(m_ui->item("propLine1"));
+        QVERIFY(m_ui->click("propLine1"));
+        QVERIFY(m_ui->item("propsPopover")->property("active").toBool());
+        QVERIFY(m_ui->click("slide-1"));
+        QTRY_VERIFY(!m_ui->item("propsPopover")->property("active").toBool());
+        QCOMPARE(m_ui->show.scene().sequence, quint64(0)); // nothing went live
+
+        // The toolbar still acts at once: Black with a popover open.
+        QVERIFY(m_ui->click("propsButton"));
+        QTRY_VERIFY(m_ui->item("propsPopover")->property("active").toBool());
+        QVERIFY(m_ui->click("black"));
+        QVERIFY(m_ui->controller->blackOn());
+        QVERIFY(m_ui->click("black"));
+        QVERIFY(m_ui->click("propsButton")); // and closes its own panel
+        QTRY_VERIFY(!m_ui->item("propsPopover")->property("active").toBool());
+
+        // The Transition list.
+        QVERIFY(m_ui->click("transitionBox"));
+        QTRY_VERIFY(m_ui->item("transitionMenu")->isVisible());
+        QVERIFY(m_ui->click("servicePlan"));
+        QTRY_VERIFY(!m_ui->item("transitionMenu")->isVisible());
+        // Nothing open: clicks act as usual again.
+        QVERIFY(m_ui->click("slide-1"));
+        QVERIFY(m_ui->show.scene().sequence > 0);
+    }
+
     // The Main light asks before turning the output off.
     void outputOffIsConfirmed()
     {
