@@ -115,6 +115,7 @@ add_library(lumen_scripture STATIC
     include/lumen/core/scripture/reference.h
     include/lumen/core/scripture/biblestore.h
     src/scripture/bible.cpp
+    src/scripture/otherformats.cpp
     src/scripture/reference.cpp
     src/scripture/biblestore.cpp
 )

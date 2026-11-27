@@ -3,6 +3,7 @@
 #include "lumen/core/scripture/reference.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -53,6 +54,102 @@ private:
     BookNames m_names;
 
 private slots:
+    // Other programs' Bible formats (OpenLP, OpenSong), so a church can bring
+    // a Bible it may use. Public-domain KJV verses as samples.
+    void zefaniaXml()
+    {
+        const auto books = parseZefania(QByteArrayLiteral(
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?><XMLBIBLE biblename=\"KJV\">"
+            "<BIBLEBOOK bnumber=\"1\" bname=\"Genesis\" bsname=\"Gen\"><CHAPTER cnumber=\"1\">"
+            "<VERS vnumber=\"1\">In the beginning God created the heaven and the earth.</VERS>"
+            "<VERS vnumber=\"2\">And the earth was without form, <NOTE>a note</NOTE>and void.</VERS></CHAPTER></BIBLEBOOK>"
+            "<BIBLEBOOK bnumber=\"43\" bname=\"John\"><CHAPTER cnumber=\"3\"><VERS vnumber=\"16\">For God so loved the world.</VERS>"
+            "</CHAPTER></BIBLEBOOK></XMLBIBLE>"));
+        QVERIFY(books.ok());
+        QCOMPARE(int(books.value().size()), 2);
+        QCOMPARE(books.value()[0].code, QStringLiteral("GEN"));
+        QCOMPARE(books.value()[0].abbreviation, QStringLiteral("Gen"));
+        QCOMPARE(books.value()[0].chapters.at(1).at(1).text, QStringLiteral("And the earth was without form, and void."));
+        QCOMPARE(books.value()[1].code, QStringLiteral("JHN"));
+        QCOMPARE(books.value()[1].chapters.at(3).at(0).number, 16);
+    }
+
+    void openSongXml()
+    {
+        // Latin-1, as older OpenSong files are; books by name, else place.
+        QByteArray xml("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><bible>"
+                       "<b n=\"Genesis\"><c n=\"1\"><v n=\"1\">In the beginning God created the heaven and the earth.</v></c></b>"
+                       "<b n=\"Exodus\"><c n=\"1\"><v n=\"1\">Now these are the names \xe9.</v></c></b></bible>");
+        const auto books = parseOpenSong(xml);
+        QVERIFY(books.ok());
+        QCOMPARE(int(books.value().size()), 2);
+        QCOMPARE(books.value()[1].code, QStringLiteral("EXO"));
+        QCOMPARE(books.value()[1].chapters.at(1).at(0).text, QStringLiteral("Now these are the names é."));
+        // Names in another language: by place.
+        const auto yoruba = parseOpenSong(QByteArrayLiteral("<bible><b n=\"Genesisi\"><c n=\"1\"><v n=\"1\">Ní atetekọṣe</v></c></b>"
+                                                            "<b n=\"Eksodu\"><c n=\"1\"><v n=\"1\">Wọnyi</v></c></b></bible>"));
+        QVERIFY(yoruba.ok());
+        QCOMPARE(yoruba.value()[1].code, QStringLiteral("EXO"));
+        QCOMPARE(yoruba.value()[1].name, QStringLiteral("Eksodu"));
+    }
+
+    void openLpCsv()
+    {
+        const QByteArray books("1,1,\"Genesisi\",\"Gen\"\n43,2,\"Johanu\",\"Joh\"\n");
+        // A verse number left at the start, and a line break inside quotes,
+        // as one converter writes them.
+        const QByteArray verses("Genesisi,1,1,\"\n1 Ní atetekọṣe Ọlọrun dá ọrun ati aiye\"\n"
+                                "Johanu,3,16,\" 16 Nitori Ọlọrun fẹ araiye tobẹ, ti o fi Ọmọ bibi rẹ̀ kanṣoṣo funni\"\n"
+                                "43,3,17,\"Kò ran Ọmọ rẹ̀, \"\"to say\"\", wá aiye\"\n");
+        const auto parsed = parseOpenLpCsv(books, verses);
+        QVERIFY(parsed.ok());
+        QCOMPARE(int(parsed.value().size()), 2);
+        QCOMPARE(parsed.value()[0].chapters.at(1).at(0).text, QStringLiteral("Ní atetekọṣe Ọlọrun dá ọrun ati aiye"));
+        QCOMPARE(parsed.value()[1].code, QStringLiteral("JHN"));
+        QCOMPARE(parsed.value()[1].name, QStringLiteral("Johanu"));
+        QVERIFY(parsed.value()[1].chapters.at(3).at(0).text.startsWith(QStringLiteral("Nitori Ọlọrun")));
+        QCOMPARE(parsed.value()[1].chapters.at(3).at(1).text, QStringLiteral("Kò ran Ọmọ rẹ̀, \"to say\", wá aiye"));
+
+        // Through the same door as USFM: the folder, or either file; an
+        // OpenSong file with no .xml ending.
+        QTemporaryDir dir;
+        QFile b(dir.filePath("books.csv")), v(dir.filePath("verses.csv"));
+        QVERIFY(b.open(QIODevice::WriteOnly) && b.write(books) > 0);
+        QVERIFY(v.open(QIODevice::WriteOnly) && v.write(verses) > 0);
+        b.close();
+        v.close();
+        QCOMPARE(int(readBibleFiles(dir.path()).value().size()), 2);
+        QCOMPARE(int(readBibleFiles(dir.filePath("verses.csv")).value().size()), 2);
+        QFile song(dir.filePath("KingJames.xmm"));
+        QVERIFY(song.open(QIODevice::WriteOnly));
+        song.write("<bible><b n=\"John\"><c n=\"3\"><v n=\"16\">For God so loved the world.</v></c></b></bible>");
+        song.close();
+        const auto fromFile = readBibleFiles(dir.filePath("KingJames.xmm"));
+        QVERIFY(fromFile.ok());
+        QCOMPARE(fromFile.value().front().code, QStringLiteral("JHN"));
+    }
+
+    // LUMEN_TRY_BIBLES="a;b": reads real files (not in the repository) and
+    // says what they hold.
+    void tryBibles()
+    {
+        const QString list = qEnvironmentVariable("LUMEN_TRY_BIBLES");
+        if (list.isEmpty())
+            QSKIP("LUMEN_TRY_BIBLES not set");
+        for (const QString &path : list.split(u';', Qt::SkipEmptyParts)) {
+            const auto books = readBibleFiles(path);
+            QVERIFY2(books.ok(), qPrintable(path + ": " + (books.ok() ? QString() : books.error().message)));
+            int verses = 0;
+            QString john;
+            for (const ParsedBook &book : books.value()) {
+                verses += book.verseCount();
+                if (book.code == QLatin1String("JHN") && book.chapters.count(3) && book.chapters.at(3).size() >= 16)
+                    john = book.name + " 3:16 " + book.chapters.at(3).at(15).text.left(60);
+            }
+            qInfo("%s: %d books, %d verses; %s", qPrintable(QFileInfo(path).fileName()), int(books.value().size()), verses, qPrintable(john));
+        }
+    }
+
     // Typing ahead: "J" suggests John 1:1, Space takes the book, then the
     // chapter, then the verse; the most read book wins among those that fit.
     void typingAhead()

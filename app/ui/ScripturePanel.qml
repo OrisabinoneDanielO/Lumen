@@ -494,6 +494,28 @@ Window {
                         onClicked: folderDialog.active = true
                     }
                 }
+                // One file: Zefania or OpenSong XML, USFX, or OpenLP's
+                // verses.csv (with books.csv beside it).
+                Rectangle {
+                    objectName: "addBibleFile"
+                    width: addFileLabel.implicitWidth + 24
+                    height: 32
+                    radius: 6
+                    color: "transparent"
+                    border.color: Theme.border
+                    LText {
+                        id: addFileLabel
+                        anchors.centerIn: parent
+                        text: qsTr("+ Add from file…")
+                        font.pixelSize: 12
+                        color: Theme.link
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: fileDialog.active = true
+                    }
+                }
                 LText {
                     height: 32
                     verticalAlignment: Text.AlignVCenter
@@ -960,13 +982,27 @@ Window {
         id: folderDialog
         active: false
         sourceComponent: FolderDialog {
-            title: qsTr("Add a Bible from a folder of USFM files")
+            title: qsTr("Add a Bible from a folder (USFM files, or OpenLP books.csv and verses.csv)")
             Component.onCompleted: open()
             onAccepted: {
                 root.scripture.addBible(selectedFolder)
                 folderDialog.active = false
             }
             onRejected: folderDialog.active = false
+        }
+    }
+    Loader {
+        id: fileDialog
+        active: false
+        sourceComponent: FileDialog {
+            title: qsTr("Add a Bible from a file")
+            nameFilters: [qsTr("Bibles (*.xml *.xmm *.usfx *.csv)"), qsTr("All files (*)")]
+            Component.onCompleted: open()
+            onAccepted: {
+                root.scripture.addBible(selectedFile)
+                fileDialog.active = false
+            }
+            onRejected: fileDialog.active = false
         }
     }
 }

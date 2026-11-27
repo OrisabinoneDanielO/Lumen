@@ -3,6 +3,9 @@
 #include "lumen/core/scripture/biblestore.h"
 
 #include <QFile>
+#include <QUrl>
+#include <QTemporaryDir>
+#include <QDir>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -394,6 +397,45 @@ private slots:
         ui.controller->selectItem(ui.controller->plan()->property("count").toInt() - 1);
         QVERIFY(ui.controller->goLive(0));
         QCOMPARE(liveStyle().value("footerPosition").toString(), QStringLiteral("above"));
+    }
+
+    // A church brings its own Bible: OpenLP CSV (books.csv and verses.csv),
+    // picked by its verses.csv, named after its folder, looked up like any.
+    void addOwnBible()
+    {
+        OperatorHarness ui;
+        ui.bibles = m_store.get();
+        QString error;
+        QVERIFY2(ui.load(false, &error), qPrintable(error));
+        QTemporaryDir dir;
+        auto user = BibleStore::open(dir.filePath(QStringLiteral("user-bibles.db")), false);
+        QVERIFY(user.ok());
+        ui.scripture->setStores(m_store.get(), user.value().get());
+        const int before = int(ui.scripture->translations().size());
+        QVERIFY(QDir(dir.path()).mkdir(QStringLiteral("YorubaBible1900")));
+        QFile books(dir.filePath(QStringLiteral("YorubaBible1900/books.csv")));
+        QFile verses(dir.filePath(QStringLiteral("YorubaBible1900/verses.csv")));
+        QVERIFY(books.open(QIODevice::WriteOnly) && verses.open(QIODevice::WriteOnly));
+        books.write("43,2,\"Johanu\",\"Joh\"\n");
+        verses.write("Johanu,3,16,\" 16 Nitori Ọlọrun fẹ araiye tobẹ̃ gẹ\"\nJohanu,3,17,\"Nitori Ọlọrun kò rán Ọmọ rẹ̀\"\n");
+        books.close();
+        verses.close();
+        const QString summary = ui.scripture->addBible(QUrl::fromLocalFile(dir.filePath(QStringLiteral("YorubaBible1900/verses.csv"))));
+        QVERIFY2(summary.startsWith(QStringLiteral("Added YorubaBible1900")), qPrintable(summary));
+        QCOMPARE(int(ui.scripture->translations().size()), before + 1);
+        int added = -1;
+        for (int i = 0; i < ui.scripture->translations().size(); ++i) {
+            if (ui.scripture->translations().at(i).toMap().value("id").toString() == QStringLiteral("user-yorubabible1900"))
+                added = i;
+        }
+        QVERIFY(added >= 0);
+        ui.scripture->selectTranslation(added);
+        ui.scripture->lookup(QStringLiteral("johanu 3 16"));
+        QCOMPARE(ui.scripture->label(), QStringLiteral("Johanu 3:16"));
+        QCOMPARE(ui.scripture->previewText(), QStringLiteral("Nitori Ọlọrun fẹ araiye tobẹ̃ gẹ"));
+        // Its notice says to check the licence before public use.
+        QVERIFY(ui.scripture->copyright().contains(QStringLiteral("check its licence")));
+        ui.scripture->setStores(m_store.get(), nullptr);
     }
 
     void referencePartsInTheWindow()

@@ -76,8 +76,10 @@ private:
     bool m_readOnly;
 };
 
-// Imports a translation from USFM files (a folder of .usfm/.sfm files) or a
-// USFX .xml file. Notes, headings and markup are removed.
+// Imports a translation from USFM files (a folder of .usfm/.sfm files), a
+// USFX, Zefania or OpenSong XML file (any extension), or an OpenLP CSV pair
+// (books.csv and verses.csv: the folder, or either file). Notes, headings
+// and markup are removed.
 Result<std::vector<ParsedBook>> readBibleFiles(const QString &folderOrFile);
 
 } // namespace lumen::core::scripture

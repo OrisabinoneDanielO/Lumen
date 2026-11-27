@@ -56,4 +56,14 @@ Result<ParsedBook> parseUsfmBook(const QString &usfm);
 // Parses a USFX file (one XML file holding every book).
 Result<std::vector<ParsedBook>> parseUsfx(const QByteArray &xml);
 
+// Formats other presentation programs use (OpenLP, OpenSong), so a church
+// can bring a Bible it has the right to use:
+// Zefania XML (<XMLBIBLE>, books numbered 1-66).
+Result<std::vector<ParsedBook>> parseZefania(const QByteArray &xml);
+// OpenSong XML (<bible><b n><c n><v n>, books in canonical order).
+Result<std::vector<ParsedBook>> parseOpenSong(const QByteArray &xml);
+// OpenLP CSV: books.csv (id 1-66, testament, name, abbreviation) and
+// verses.csv (book name or id, chapter, verse, text).
+Result<std::vector<ParsedBook>> parseOpenLpCsv(const QByteArray &books, const QByteArray &verses);
+
 } // namespace lumen::core::scripture

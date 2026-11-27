@@ -478,7 +478,9 @@ QString ScriptureController::addBible(const QUrl &location)
     }
 
     const QFileInfo info(path);
-    const QString name = info.isDir() ? info.fileName() : info.completeBaseName();
+    // OpenLP CSV (books.csv, verses.csv): named after its folder.
+    const bool csv = info.suffix().compare(QLatin1String("csv"), Qt::CaseInsensitive) == 0;
+    const QString name = info.isDir() ? info.fileName() : csv ? info.dir().dirName() : info.completeBaseName();
     QString id = name.toLower();
     id.replace(QRegularExpression(QStringLiteral("[^a-z0-9_-]")), QStringLiteral("_"));
     // A copyright page beside the files, if the package has one.
