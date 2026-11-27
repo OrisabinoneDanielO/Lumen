@@ -22,6 +22,7 @@ Rectangle {
     readonly property real frameWidth: Math.max(160, Math.min(flick.width, (root.height - 32 - 210) / 2 * 16 / 9))
     signal messageRequested()
     // Escape: closes the Transition list (true if it was open).
+    readonly property var openMenus: transitionMenu.visible ? [transitionMenu] : []
     function closeMenus() {
         const open = transitionMenu.visible
         transitionMenu.visible = false

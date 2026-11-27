@@ -93,6 +93,8 @@ Window {
             closed = true
         if (previewLivePanel.closeMenus())
             closed = true
+        if (library.closeMenus())
+            closed = true
         return closed
     }
 
@@ -125,6 +127,7 @@ Window {
             spacing: 0
 
             Toolbar {
+                id: toolbar
                 objectName: "toolbar"
                 Layout.fillWidth: true
                 Layout.preferredHeight: implicitHeight
@@ -576,5 +579,50 @@ Window {
     DragGhost {
         id: dragGhost
         objectName: "dragGhost"
+    }
+
+    // Clicking outside an open menu, popover or details box closes it, and
+    // that click does nothing else (a stray click never changes the screen),
+    // except in the toolbar, whose buttons always work.
+    // Left out: the Screens setup (it has its own backdrop) and Cues (open
+    // beside the slides while recording).
+    readonly property var openAreas: {
+        const open = []
+        for (const loader of [timersPopover, updatePopover, remotePopover, sharePopover,
+                              streamPopover, propsPopover, stagePopover]) {
+            if (loader.active && loader.item)
+                open.push(loader.item)
+        }
+        if (messagePopover.visible)
+            open.push(messagePopover)
+        if (outputConfirm.visible)
+            open.push(outputConfirm)
+        return open.concat(planPanel.openMenus, previewLivePanel.openMenus, library.openMenus)
+    }
+    MouseArea {
+        id: dismissArea
+        objectName: "dismissArea"
+        anchors.fill: parent
+        z: 1000
+        enabled: window.openAreas.length > 0 && !screensPopover.active
+        acceptedButtons: Qt.AllButtons
+        onPressed: mouse => {
+            // The toolbar always acts at once (Clear, Logo and Black are
+            // safety buttons; its buttons open and close their own panels).
+            const t = toolbar.mapFromItem(dismissArea, mouse.x, mouse.y)
+            if (t.x >= 0 && t.y >= 0 && t.x < toolbar.width && t.y < toolbar.height) {
+                mouse.accepted = false
+                return
+            }
+            for (const area of window.openAreas) {
+                const p = area.mapFromItem(dismissArea, mouse.x, mouse.y)
+                if (p.x >= 0 && p.y >= 0 && p.x < area.width && p.y < area.height) {
+                    mouse.accepted = false // inside: the menu gets the click
+                    return
+                }
+            }
+            window.closePopovers()
+            keyRoot.forceActiveFocus()
+        }
     }
 }
