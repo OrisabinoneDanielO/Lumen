@@ -55,7 +55,7 @@ In Show mode, click a slide to send it live, or use the keyboard: Space or → n
 
 ## Songs
 
-**Import songs…** or **Import folder…** in the library reads plain-text lyrics (`.txt`, with or without `Verse 1`/`Chorus` headers) and OpenLyrics (`.xml`). Sections are split into slides of 2 lines (setting `songs/linesPerSlide`; a `---` line forces a break). Search matches the start of words in titles, authors, CCLI numbers and lyrics, ignoring case and accents. Click a song to show it, then **Add to plan**.
+Every library starts with about 1,200 free hymns and songs, with chords, in English and eight other languages (public domain or Creative Commons, from WorshipCommons and the OpenLP collection; see `songs/README.md`). Delete any you do not want. **Import songs…** or **Import folder…** in the library reads plain-text lyrics (`.txt`, with or without `Verse 1`/`Chorus` headers) and OpenLyrics (`.xml`). Sections are split into slides of 2 lines (setting `songs/linesPerSlide`; a `---` line forces a break). Search matches the start of words in titles, authors, CCLI numbers and lyrics, ignoring case and accents. Click a song to show it, then **Add to plan**.
 
 ## Scripture
 

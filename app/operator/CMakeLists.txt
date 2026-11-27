@@ -10,6 +10,8 @@ add_library(lumen_operator STATIC
     operatorcontroller.h
     operatorcontroller.cpp
     usagelog.h
+    freesongs.h
+    freesongs.cpp
     usagelog.cpp
     language.h
     language.cpp
@@ -79,3 +81,9 @@ target_include_directories(lumen_operator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(lumen_operator
     PUBLIC Lumen::Data Lumen::Show Lumen::MtcInput Lumen::Songs Lumen::Scripture Qt6::Core Qt6::Gui Qt6::Multimedia Qt6::Network
     PRIVATE Qt6::Pdf Qt6::Xml Qt6::GuiPrivate Qt6::Qml lumen_warnings)
+
+# The free songs every library starts with (songs/free, see songs/README.md).
+qt_add_resources(lumen_operator "lumen_free_songs"
+    PREFIX "/lumen/songs"
+    BASE "${CMAKE_SOURCE_DIR}/songs/free"
+    FILES "${CMAKE_SOURCE_DIR}/songs/free/songs.json")
