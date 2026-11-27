@@ -77,7 +77,9 @@ QStringList registerOutputFonts()
         return {};
     static const QStringList families = [] {
         QStringList out;
-        for (const char *file : {"NotoSans-Regular", "NotoSans-Bold", "NotoSerif-Regular", "NotoSerif-Bold"}) {
+        for (const char *file : {"NotoSans-Regular", "NotoSans-Bold", "NotoSerif-Regular", "NotoSerif-Bold",
+                                 "NotoSansDevanagari-Regular", "NotoSansDevanagari-Bold", "NotoSansMalayalam-Regular",
+                                 "NotoSansMalayalam-Bold"}) {
             const int id = QFontDatabase::addApplicationFont(QStringLiteral(":/lumen/fonts/%1.ttf").arg(QLatin1String(file)));
             if (id >= 0) {
                 for (const QString &family : QFontDatabase::applicationFontFamilies(id)) {
@@ -86,6 +88,12 @@ QStringList registerOutputFonts()
                 }
             }
         }
+        // Hindi and Malayalam Bibles: letters Noto Sans and Serif lack come
+        // from these, never from whatever the system has, so text is
+        // measured with the same glyphs it is drawn with.
+        const QStringList scripts{QStringLiteral("Noto Sans Devanagari"), QStringLiteral("Noto Sans Malayalam")};
+        for (const QString &family : {QStringLiteral("Noto Sans"), QStringLiteral("Noto Serif")})
+            QFont::insertSubstitutions(family, scripts);
         return out;
     }();
     return families;
